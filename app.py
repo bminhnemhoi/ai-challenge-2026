@@ -90,12 +90,43 @@ def export_submission(req: SubmissionExportRequest):
         headers={"Content-Disposition": f"attachment; filename=submission_{req.query_id}.csv"}
     )
 
+def generate_placeholder_svg(video_id: str, filename: str) -> str:
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1e1b4b"/>
+          <stop offset="100%" stop-color="#0f172a"/>
+        </linearGradient>
+      </defs>
+      <rect width="480" height="270" fill="url(#bg)"/>
+      <rect x="12" y="12" width="456" height="246" rx="10" fill="none" stroke="rgba(99, 102, 241, 0.4)" stroke-dasharray="6 4" stroke-width="2"/>
+      <g transform="translate(216, 65)">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </g>
+      <text x="240" y="145" font-family="-apple-system, sans-serif" font-size="20" font-weight="700" fill="#f8fafc" text-anchor="middle">{video_id}</text>
+      <text x="240" y="175" font-family="-apple-system, sans-serif" font-size="14" font-weight="500" fill="#94a3b8" text-anchor="middle">Frame: {filename}</text>
+      <text x="240" y="205" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#06b6d4" text-anchor="middle">VECTOR INDEX MATCHED</text>
+    </svg>"""
+
 @app.get("/api/keyframe/{video_id}/{filename}")
 def get_keyframe_image(video_id: str, filename: str):
+    # Check direct path
     image_path = os.path.join(KEYFRAMES_DIR, video_id, filename)
-    if not os.path.exists(image_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(image_path)
+    if os.path.exists(image_path):
+        return FileResponse(image_path)
+        
+    # Check nested path
+    nested_path = os.path.join(KEYFRAMES_DIR, "keyframes", video_id, filename)
+    if os.path.exists(nested_path):
+        return FileResponse(nested_path)
+
+    # Return SVG placeholder if image zip was not downloaded locally
+    svg_content = generate_placeholder_svg(video_id, filename)
+    return Response(content=svg_content, media_type="image/svg+xml")
 
 # Serve static frontend files
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
