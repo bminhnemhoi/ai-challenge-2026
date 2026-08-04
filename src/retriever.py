@@ -78,8 +78,14 @@ class TextualKISRetriever:
         # Simple translation check / query text processing
         clean_query = query.strip()
         
-        # Encode text query
-        inputs = self.processor(text=[clean_query], return_tensors="pt", padding=True).to(self.device)
+        # Encode text query with truncation (CLIP text encoder max_length = 77)
+        inputs = self.processor(
+            text=[clean_query],
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=77
+        ).to(self.device)
         with torch.no_grad():
             outputs = self.model.get_text_features(**inputs)
             if hasattr(outputs, "pooler_output"):
