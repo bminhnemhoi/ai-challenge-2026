@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hệ thống Tìm kiếm Video AIC 2026 Local Search Engine - Textual KIS, Visual Q&A, TRAKE">
+    <title>AIC 2026 - Local Video Retrieval Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation / Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo-badge">AIC 2026</div>
+                <h1>Local Video Retrieval Engine</h1>
+            </div>
+            <div class="header-actions">
+                <button id="btn-export-sub" class="btn btn-secondary" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Xuất File Nộp Bài (CSV)
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Task Navigation Tabs -->
+        <nav class="nav-tabs" role="tablist">
+            <button class="tab-btn active" id="tab-kis" data-tab="kis" role="tab" aria-selected="true">
+                <span class="tab-number">Dạng 1</span>
+                <span class="tab-label">Textual KIS (Tìm kiếm văn bản)</span>
+            </button>
+            <button class="tab-btn" id="tab-vqa" data-tab="vqa" role="tab" aria-selected="false">
+                <span class="tab-number">Dạng 2</span>
+                <span class="tab-label">Visual Q&A (Hỏi - Đáp)</span>
+            </button>
+            <button class="tab-btn" id="tab-trake" data-tab="trake" role="tab" aria-selected="false">
+                <span class="tab-number">Dạng 3</span>
+                <span class="tab-label">TRAKE (Chuỗi sự kiện theo thời gian)</span>
+            </button>
+        </nav>
+
+        <!-- Query Panels Container -->
+        <main class="main-content">
+            <!-- TAB 1: TEXTUAL KIS -->
+            <section id="panel-kis" class="tab-panel active" role="tabpanel">
+                <div class="search-box-card">
+                    <div class="search-input-group">
+                        <label for="input-kis-query" class="input-label">Mô tả sự kiện bằng văn bản (Textual Query):</label>
+                        <div class="search-bar-wrapper">
+                            <input type="text" id="input-kis-query" class="search-input" 
+                                placeholder="Ví dụ: Tìm video về một diễn giả mặc áo đỏ phát biểu tại cuộc họp báo..." 
+                                autocomplete="off">
+                            <button id="btn-search-kis" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Tìm Kiếm (KIS)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="search-options">
+                        <div class="option-item">
+                            <label for="select-topk">Số lượng kết quả (Top-K):</label>
+                            <select id="select-topk" class="select-control">
+                                <option value="10">Top 10</option>
+                                <option value="20">Top 20</option>
+                                <option value="50">Top 50</option>
+                                <option value="100" selected>Top 100 (Chuẩn nộp bài)</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label for="select-nms">Khử trùng khung hình (NMS Frame Gap):</label>
+                            <select id="select-nms" class="select-control">
+                                <option value="0">Tắt (Giữ tất cả frame)</option>
+                                <option value="3">3 frames</option>
+                                <option value="5" selected>5 frames (Khuyên dùng)</option>
+                                <option value="10">10 frames</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: VISUAL Q&A -->
+            <section id="panel-vqa" class="tab-panel" role="tabpanel">
+                <div class="search-box-card">
+                    <div class="search-input-group">
+                        <label for="input-vqa-context" class="input-label">1. Bối cảnh sự kiện (Event Context):</label>
+                        <input type="text" id="input-vqa-context" class="search-input" 
+                            placeholder="Ví dụ: Trong video quay cảnh lễ trao giải thưởng âm nhạc...">
+                    </div>
+                    <div class="search-input-group" style="margin-top: 1rem;">
+                        <label for="input-vqa-question" class="input-label">2. Câu hỏi chi tiết (Question):</label>
+                        <div class="search-bar-wrapper">
+                            <input type="text" id="input-vqa-question" class="search-input" 
+                                placeholder="Ví dụ: Có bao nhiêu người lên sân khấu để nhận giải?">
+                            <button id="btn-search-vqa" class="btn btn-primary">
+                                Tìm & Trả Lời (VQA)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: TRAKE -->
+            <section id="panel-trake" class="tab-panel" role="tabpanel">
+                <div class="search-box-card">
+                    <div class="trake-header">
+                        <h3>Căn chỉnh Chuỗi Sự kiện theo Thời gian (TRAKE)</h3>
+                        <p class="subtitle">Định vị chính xác chuỗi $N$ khoảnh khắc ngữ nghĩa (semantic keyframes) theo thứ tự tăng dần thời gian.</p>
+                    </div>
+                    <div id="trake-events-list" class="trake-events-container">
+                        <div class="event-input-row">
+                            <span class="event-badge">Sự kiện 1</span>
+                            <input type="text" class="search-input trake-event-input" placeholder="Event 1 (vd: Chạy đà chạm đất...)">
+                        </div>
+                        <div class="event-input-row">
+                            <span class="event-badge">Sự kiện 2</span>
+                            <input type="text" class="search-input trake-event-input" placeholder="Event 2 (vd: Giậm nhảy rời mặt đất...)">
+                        </div>
+                    </div>
+                    <div class="trake-actions">
+                        <button id="btn-add-trake-event" class="btn btn-secondary">+ Thêm Sự Kiện</button>
+                        <button id="btn-search-trake" class="btn btn-primary">Định Vị Chuỗi TRAKE</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RESULTS SECTION -->
+            <section class="results-container">
+                <div class="results-header">
+                    <div class="results-title-group">
+                        <h2>Kết Quả Tìm Kiếm</h2>
+                        <span id="results-count" class="badge-count">0 kết quả</span>
+                    </div>
+                    <div id="loading-spinner" class="spinner-inline hidden">
+                        <div class="spinner"></div> Đang tìm kiếm...
+                    </div>
+                </div>
+
+                <!-- Keyframe Gallery Grid -->
+                <div id="keyframe-grid" class="keyframe-grid">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <p>Nhập mô tả và nhấn <strong>Tìm Kiếm</strong> để xem các khung hình tương quan tốt nhất.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Image Preview Lightbox Modal -->
+    <div id="preview-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-card">
+            <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+            <div class="modal-body">
+                <img id="modal-img" src="" alt="Keyframe Preview">
+                <div class="modal-info">
+                    <h3 id="modal-video-title">Video ID</h3>
+                    <p id="modal-frame-info">Frame ID: 0</p>
+                    <p id="modal-score-info">Score: 0.0000</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
