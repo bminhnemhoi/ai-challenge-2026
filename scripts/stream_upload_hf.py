@@ -77,7 +77,7 @@ def main():
                 repo_id=REPO_ID,
                 repo_type="dataset",
                 token=HF_TOKEN,
-                multi_commits=True
+                commit_message=f"Upload keyframes from {zip_name}"
             )
             print(f"Successfully uploaded {zip_name} in {time.time() - start_t:.2f}s!", flush=True)
 
