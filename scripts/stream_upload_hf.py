@@ -72,19 +72,17 @@ def main():
 
             print(f"Uploading images from {zip_name} to Hugging Face Hub...", flush=True)
             try:
-                api.upload_large_folder(
-                    folder_path=upload_target,
-                    repo_id=REPO_ID,
-                    repo_type="dataset",
-                    token=HF_TOKEN
-                )
-            except AttributeError:
                 api.upload_folder(
                     folder_path=upload_target,
                     repo_id=REPO_ID,
                     repo_type="dataset",
-                    token=HF_TOKEN,
-                    commit_message=f"Upload keyframes from {zip_name}"
+                    multi_commits=True
+                )
+            except Exception:
+                api.upload_folder(
+                    folder_path=upload_target,
+                    repo_id=REPO_ID,
+                    repo_type="dataset"
                 )
             print(f"Successfully uploaded {zip_name} in {time.time() - start_t:.2f}s!", flush=True)
 
