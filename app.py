@@ -49,6 +49,60 @@ def startup_event():
     else:
         print("Data index not found. Please run `index_builder.py` first.")
 
+from concurrent.futures import ThreadPoolExecutor
+image_prefetch_executor = ThreadPoolExecutor(max_workers=16)
+
+def _prefetch_single_image(video_id: str, filename: str):
+    image_path = os.path.join(KEYFRAMES_DIR, video_id, filename)
+    if os.path.exists(image_path):
+        return
+    cached_path = os.path.join(CACHE_DIR, video_id, filename)
+    if os.path.exists(cached_path):
+        return
+    
+    hf_url = f"{HF_DATASET_RESOLVE_URL}/{video_id}/{filename}"
+    try:
+        req = urllib.request.Request(
+            hf_url,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content = resp.read()
+            os.makedirs(os.path.join(CACHE_DIR, video_id), exist_ok=True)
+            with open(cached_path, "wb") as f:
+                f.write(content)
+    except Exception:
+        pass
+
+def prefetch_results_images(results: List[dict]):
+    for item in results:
+        v_id = item.get("video_id")
+        f_name = item.get("frame_filename")
+        if v_id and f_name:
+            image_prefetch_executor.submit(_prefetch_single_image, v_id, f_name)
+
+@app.post("/api/search/textual_kis")
+def search_textual_kis(req: KISSearchRequest):
+    """
+    Search endpoint for Task 1: Textual KIS
+    """
+    if not retriever:
+        raise HTTPException(status_code=500, detail="Retriever not initialized")
+        
+    try:
+        results = retriever.search(text_query=req.text_query, top_k=req.top_k)
+        # Fire parallel background prefetching for all top results
+        prefetch_results_images(results)
+        
+        return {
+            "status": "success",
+            "query": req.text_query,
+            "count": len(results),
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/search/kis")
 def search_kis(req: KISQueryRequest):
     if not req.query.strip():
