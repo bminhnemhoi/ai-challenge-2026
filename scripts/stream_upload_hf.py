@@ -71,13 +71,21 @@ def main():
                 upload_target = nested_kf
 
             print(f"Uploading images from {zip_name} to Hugging Face Hub...", flush=True)
-            api.upload_folder(
-                folder_path=upload_target,
-                repo_id=REPO_ID,
-                repo_type="dataset",
-                token=HF_TOKEN,
-                commit_message=f"Upload keyframes from {zip_name}"
-            )
+            try:
+                api.upload_large_folder(
+                    folder_path=upload_target,
+                    repo_id=REPO_ID,
+                    repo_type="dataset",
+                    token=HF_TOKEN
+                )
+            except AttributeError:
+                api.upload_folder(
+                    folder_path=upload_target,
+                    repo_id=REPO_ID,
+                    repo_type="dataset",
+                    token=HF_TOKEN,
+                    commit_message=f"Upload keyframes from {zip_name}"
+                )
             print(f"Successfully uploaded {zip_name} in {time.time() - start_t:.2f}s!", flush=True)
 
         except Exception as e:
