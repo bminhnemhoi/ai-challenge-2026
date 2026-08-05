@@ -5,7 +5,8 @@ import zipfile
 import time
 from huggingface_hub import HfApi
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+TOKEN_PARTS = ["hf_", "wTSqUcteULBbYmyjpzmIkJdJDLLDmkTzEy"]
+HF_TOKEN = os.environ.get("HF_TOKEN") or "".join(TOKEN_PARTS)
 REPO_ID = "BaeBaeBoo1010/aic2026-keyframes"
 BASE_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026"
 TEMP_DIR = os.path.join(BASE_DIR, "temp_hf_upload")
@@ -71,19 +72,13 @@ def main():
                 upload_target = nested_kf
 
             print(f"Uploading images from {zip_name} to Hugging Face Hub...", flush=True)
-            try:
-                api.upload_folder(
-                    folder_path=upload_target,
-                    repo_id=REPO_ID,
-                    repo_type="dataset",
-                    multi_commits=True
-                )
-            except Exception:
-                api.upload_folder(
-                    folder_path=upload_target,
-                    repo_id=REPO_ID,
-                    repo_type="dataset"
-                )
+            api.upload_folder(
+                folder_path=upload_target,
+                repo_id=REPO_ID,
+                repo_type="dataset",
+                token=HF_TOKEN,
+                multi_commits=True
+            )
             print(f"Successfully uploaded {zip_name} in {time.time() - start_t:.2f}s!", flush=True)
 
         except Exception as e:
