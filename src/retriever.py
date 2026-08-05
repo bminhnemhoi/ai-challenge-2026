@@ -78,28 +78,44 @@ class TextualKISRetriever:
         # Simple translation check / query text processing
         clean_query = query.strip()
         
-        # Encode text query with truncation (CLIP text encoder max_length = 77)
-        inputs = self.processor(
-            text=[clean_query],
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=77
-        ).to(self.device)
-        with torch.no_grad():
-            outputs = self.model.get_text_features(**inputs)
-            if hasattr(outputs, "pooler_output"):
-                text_features = outputs.pooler_output
-            elif hasattr(outputs, "text_embeds"):
-                text_features = outputs.text_embeds
-            elif isinstance(outputs, torch.Tensor):
-                text_features = outputs
-            else:
-                text_features = outputs[0]
-            
-            # L2 normalize
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-            text_vec = text_features.cpu().numpy().squeeze(0) # Shape: (D,)
+        # Check if query has non-ASCII (Vietnamese) characters for translation
+        en_query = None
+        has_non_ascii = any(ord(char) > 127 for char in clean_query)
+        if has_non_ascii:
+            try:
+                from deep_translator import GoogleTranslator
+                en_query = GoogleTranslator(source="auto", target="en").translate(clean_query)
+            except Exception:
+                en_query = None
+
+        def encode_text(t_str: str) -> np.ndarray:
+            inputs = self.processor(
+                text=[t_str],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=77
+            ).to(self.device)
+            with torch.no_grad():
+                outputs = self.model.get_text_features(**inputs)
+                if hasattr(outputs, "text_embeds"):
+                    tf = outputs.text_embeds
+                elif hasattr(outputs, "pooler_output"):
+                    tf = outputs.pooler_output
+                elif isinstance(outputs, torch.Tensor):
+                    tf = outputs
+                else:
+                    tf = outputs[0]
+                tf = tf / tf.norm(dim=-1, keepdim=True)
+                return tf.cpu().numpy().squeeze(0)
+
+        vi_vec = encode_text(clean_query)
+        if en_query and en_query.strip() != clean_query:
+            en_vec = encode_text(en_query)
+            text_vec = 0.75 * en_vec + 0.25 * vi_vec
+            text_vec = text_vec / np.linalg.norm(text_vec)
+        else:
+            text_vec = vi_vec
 
         # Cosine similarity via dot product (since both vectors are L2 normalized)
         similarities = np.dot(self.embeddings, text_vec) # Shape: (N,)
@@ -110,6 +126,8 @@ class TextualKISRetriever:
         results = []
         visited_frames = {} # video_id -> list of selected frame_indices for NMS
 
+        effective_nms_gap = max(nms_frame_gap, 15) # Ensure at least 15 frames gap for scene diversity
+
         for idx in sorted_indices:
             score = float(similarities[idx])
             item = self.metadata[idx]
@@ -117,8 +135,8 @@ class TextualKISRetriever:
             f_idx = item["frame_idx"]
 
             # Frame Non-Maximum Suppression (NMS) to avoid filling top_k with adjacent identical frames
-            if nms_frame_gap > 0 and v_id in visited_frames:
-                too_close = any(abs(f_idx - prev_f) < nms_frame_gap for prev_f in visited_frames[v_id])
+            if effective_nms_gap > 0 and v_id in visited_frames:
+                too_close = any(abs(f_idx - prev_f) < effective_nms_gap for prev_f in visited_frames[v_id])
                 if too_close:
                     continue
 
