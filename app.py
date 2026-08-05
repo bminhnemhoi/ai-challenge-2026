@@ -90,9 +90,11 @@ def export_submission(req: SubmissionExportRequest):
         headers={"Content-Disposition": f"attachment; filename=submission_{req.query_id}.csv"}
     )
 
-from fastapi.responses import FileResponse, Response, StreamingResponse, RedirectResponse
+import urllib.request
 
-HF_DATASET_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main"
+HF_DATASET_RAW_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/raw/main"
+CACHE_DIR = os.path.join(DATA_DIR, ".cache_keyframes")
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 def generate_placeholder_svg(video_id: str, filename: str) -> str:
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
@@ -116,21 +118,38 @@ def generate_placeholder_svg(video_id: str, filename: str) -> str:
       <text x="240" y="205" font-family="-apple-system, sans-serif" font-size="12" font-weight="600" fill="#06b6d4" text-anchor="middle">VECTOR INDEX MATCHED</text>
     </svg>"""
 
+HF_DATASET_RESOLVE_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main"
+
 @app.get("/api/keyframe/{video_id}/{filename}")
 def get_keyframe_image(video_id: str, filename: str):
-    # Check direct local path
+    # 1. Check direct local keyframe path
     image_path = os.path.join(KEYFRAMES_DIR, video_id, filename)
     if os.path.exists(image_path):
         return FileResponse(image_path)
         
-    # Check nested local path
-    nested_path = os.path.join(KEYFRAMES_DIR, "keyframes", video_id, filename)
-    if os.path.exists(nested_path):
-        return FileResponse(nested_path)
+    # 2. Check cached keyframe path (Instant < 1ms response)
+    cached_path = os.path.join(CACHE_DIR, video_id, filename)
+    if os.path.exists(cached_path):
+        return FileResponse(cached_path)
 
-    # Redirect to Hugging Face Dataset CDN for instant remote image rendering
-    hf_image_url = f"{HF_DATASET_URL}/{video_id}/{filename}"
-    return RedirectResponse(url=hf_image_url)
+    # 3. Fetch binary JPEG directly from Hugging Face CDN, cache locally, and serve
+    hf_url = f"{HF_DATASET_RESOLVE_URL}/{video_id}/{filename}"
+    try:
+        req = urllib.request.Request(
+            hf_url,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content = resp.read()
+            # Save image to local cache for instant future loads
+            os.makedirs(os.path.join(CACHE_DIR, video_id), exist_ok=True)
+            with open(cached_path, "wb") as f:
+                f.write(content)
+            return Response(content=content, media_type="image/jpeg")
+    except Exception as e:
+        # Fallback to SVG placeholder on network timeout/error
+        svg_content = generate_placeholder_svg(video_id, filename)
+        return Response(content=svg_content, media_type="image/svg+xml")
 
 # Serve static frontend files
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")

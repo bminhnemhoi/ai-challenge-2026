@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="card-img-wrapper">
-                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy">
+                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy" decoding="async">
                     <span class="card-rank">#${index + 1}</span>
                     <span class="card-score">${(item.score).toFixed(4)}</span>
                 </div>
