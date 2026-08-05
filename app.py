@@ -90,6 +90,10 @@ def export_submission(req: SubmissionExportRequest):
         headers={"Content-Disposition": f"attachment; filename=submission_{req.query_id}.csv"}
     )
 
+from fastapi.responses import FileResponse, Response, StreamingResponse, RedirectResponse
+
+HF_DATASET_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main"
+
 def generate_placeholder_svg(video_id: str, filename: str) -> str:
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
       <defs>
@@ -114,19 +118,19 @@ def generate_placeholder_svg(video_id: str, filename: str) -> str:
 
 @app.get("/api/keyframe/{video_id}/{filename}")
 def get_keyframe_image(video_id: str, filename: str):
-    # Check direct path
+    # Check direct local path
     image_path = os.path.join(KEYFRAMES_DIR, video_id, filename)
     if os.path.exists(image_path):
         return FileResponse(image_path)
         
-    # Check nested path
+    # Check nested local path
     nested_path = os.path.join(KEYFRAMES_DIR, "keyframes", video_id, filename)
     if os.path.exists(nested_path):
         return FileResponse(nested_path)
 
-    # Return SVG placeholder if image zip was not downloaded locally
-    svg_content = generate_placeholder_svg(video_id, filename)
-    return Response(content=svg_content, media_type="image/svg+xml")
+    # Redirect to Hugging Face Dataset CDN for instant remote image rendering
+    hf_image_url = f"{HF_DATASET_URL}/{video_id}/{filename}"
+    return RedirectResponse(url=hf_image_url)
 
 # Serve static frontend files
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
