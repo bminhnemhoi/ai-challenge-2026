@@ -81,34 +81,14 @@ def prefetch_results_images(results: List[dict]):
         if v_id and f_name:
             image_prefetch_executor.submit(_prefetch_single_image, v_id, f_name)
 
-@app.post("/api/search/textual_kis")
-def search_textual_kis(req: KISSearchRequest):
-    """
-    Search endpoint for Task 1: Textual KIS
-    """
-    if not retriever:
-        raise HTTPException(status_code=500, detail="Retriever not initialized")
-        
-    try:
-        results = retriever.search(text_query=req.text_query, top_k=req.top_k)
-        # Fire parallel background prefetching for all top results
-        prefetch_results_images(results)
-        
-        return {
-            "status": "success",
-            "query": req.text_query,
-            "count": len(results),
-            "results": results
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/api/search/kis")
 def search_kis(req: KISQueryRequest):
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query string cannot be empty.")
     try:
         results = retriever.search(req.query, top_k=req.top_k, nms_frame_gap=req.nms_gap)
+        # Fire 16-worker parallel background prefetching for all search result keyframes
+        prefetch_results_images(results)
         return {
             "query": req.query,
             "count": len(results),
