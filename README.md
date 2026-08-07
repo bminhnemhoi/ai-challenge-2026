@@ -135,19 +135,13 @@ cd ai-challenge-2026
 pip install torch transformers pillow numpy pandas fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 3. Tải & Giải Nén Tự Động Toàn Bộ Dữ Liệu Local (`data/`)
-*(Chạy 1 câu lệnh dưới đây để tải toàn bộ `objects`, `media-info`, `clip-features-32`, `map-keyframes` về thư mục `data/` trong ~30 giây)*:
+### 3. Tải & Giải Nén Tự Động Tất Cả Dữ Liệu Local (`data/`)
+*(Duy nhất 1 câu lệnh dưới đây để tự động tải `objects`, `media-info`, `clip-features-32`, `map-keyframes` và tự động tạo chỉ mục vector `embeddings.npy` & `metadata.json` cho cả 3 bài thi)*:
 ```bash
-python3 scripts/download_task2_3_data.py
+python3 scripts/download_data.py
 ```
 
-### 4. Tạo bộ chỉ mục Vector BTC (177,321 Keyframes)
-```bash
-python3 src/core/btc_index_builder.py
-```
-*(Chỉ mất ~1.5 giây để hợp nhất toàn bộ bộ chỉ mục vào máy cá nhân!)*
-
-### 5. Khởi chạy Web Server & Tạo Nhánh Làm Việc
+### 4. Khởi chạy Web Server & Tạo Nhánh Làm Việc
 ```bash
 # 1. Chạy Web Server Local
 python3 -m uvicorn app:app --host 127.0.0.1 --port 8000
