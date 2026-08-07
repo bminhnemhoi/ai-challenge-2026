@@ -2,7 +2,7 @@
 import os
 import sys
 import argparse
-from src.retriever import TextualKISRetriever
+from src.task1_kis import TextualKISRetriever
 
 def main():
     parser = argparse.ArgumentParser(description="AIC 2026 - Task 1 Textual KIS CLI Search")
@@ -15,7 +15,7 @@ def main():
     
     if not os.path.exists(os.path.join(data_dir, "embeddings.npy")):
         print("Data index not built yet! Building index now...")
-        from src.index_builder import KeyframeIndexBuilder
+        from src.core.index_builder import KeyframeIndexBuilder
         keyframes_dir = "/Users/xuannguyen/Desktop/AI-Challenge-2026/keyframes"
         builder = KeyframeIndexBuilder(keyframes_dir, data_dir)
         builder.build_index()

@@ -9,10 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from src.retriever import TextualKISRetriever
-from src.evaluator import AIC2026Evaluator
+from src.task1_kis import TextualKISRetriever
+from src.task2_vqa import VisualQAEngine
+from src.task3_trake import TRAKEEngine
+from src.core import AIC2026Evaluator
 
-app = FastAPI(title="AIC 2026 Local Search Engine", version="1.0")
+app = FastAPI(title="AIC 2026 Unified Search Engine", version="2.0")
 
 # Enable CORS for local development
 app.add_middleware(
@@ -27,6 +29,8 @@ DATA_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026/data"
 KEYFRAMES_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026/keyframes"
 
 retriever = TextualKISRetriever(data_dir=DATA_DIR)
+vqa_engine = VisualQAEngine(data_dir=DATA_DIR)
+trake_engine = TRAKEEngine(data_dir=DATA_DIR)
 
 class KISQueryRequest(BaseModel):
     query: str
