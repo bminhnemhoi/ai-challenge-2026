@@ -120,22 +120,42 @@ AI-Challenge-2026/
 
 ---
 
-## ⚙️ Hướng Dẫn Cài Đặt & Khởi Chạy
+## ⚙️ Hướng Dẫn Khởi Chạy Cho Thành Viên Mới (Onboarding & Setup Guide)
 
-### 1. Cài đặt môi trường Python
+Dành cho các thành viên khi **Fork / Clone** dự án về máy cá nhân:
+
+### 1. Clone Repository về máy
+```bash
+git clone https://github.com/khanhle1406/ai-challenge-2026.git
+cd ai-challenge-2026
+```
+
+### 2. Cài đặt các thư viện Python
 ```bash
 pip install torch transformers pillow numpy pandas fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 2. Xây dựng bộ chỉ mục Vector BTC (177,321 Keyframes)
+### 3. Tải & Giải Nén Tự Động Toàn Bộ Dữ Liệu Local (`data/`)
+*(Chạy 1 câu lệnh dưới đây để tải toàn bộ `objects`, `media-info`, `clip-features-32`, `map-keyframes` về thư mục `data/` trong ~30 giây)*:
 ```bash
-python3 src/btc_index_builder.py
+python3 scripts/download_task2_3_data.py
 ```
-*(Thời gian thực thi chỉ ~1.5 giây để hợp nhất toàn bộ 873 file vector .npy vào bộ nhớ!)*
 
-### 3. Khởi chạy Web Server Search Engine
+### 4. Tạo bộ chỉ mục Vector BTC (177,321 Keyframes)
 ```bash
+python3 src/core/btc_index_builder.py
+```
+*(Chỉ mất ~1.5 giây để hợp nhất toàn bộ bộ chỉ mục vào máy cá nhân!)*
+
+### 5. Khởi chạy Web Server & Tạo Nhánh Làm Việc
+```bash
+# 1. Chạy Web Server Local
 python3 -m uvicorn app:app --host 127.0.0.1 --port 8000
+
+# 2. Tạo nhánh Git riêng cho bài của mình để bắt đầu viết code
+git checkout -b feature/task2-vqa   # (Nếu làm Task 2 VQA)
+# hoặc
+git checkout -b feature/task3-trake # (Nếu làm Task 3 TRAKE)
 ```
 
 Mở trình duyệt truy cập: **`http://localhost:8000`**

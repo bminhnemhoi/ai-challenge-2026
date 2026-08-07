@@ -12,7 +12,7 @@ URLS = {
     "keyframes_l21": "https://aic-data.ledo.io.vn/Keyframes_L21.zip"
 }
 
-BASE_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 KEYFRAMES_DIR = os.path.join(BASE_DIR, "keyframes")
