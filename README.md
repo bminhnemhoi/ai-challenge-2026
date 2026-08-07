@@ -87,18 +87,29 @@ AI-Challenge-2026/
   - Thành viên 1 ➔ Nhánh `feature/task1-kis`
   - Thành viên 2 & 3 ➔ Nhánh `feature/task2-vqa`
   - Thành viên 4 ➔ Nhánh `feature/task3-trake`
-* **Lệnh khởi tạo nhánh và đẩy code**:
-  ```bash
-  # 1. Tạo nhánh riêng và chuyển sang làm việc
-  git checkout -b feature/task2-vqa
-  
-  # 2. Làm việc trong thư mục của mình (ví dụ: src/task2_vqa/)
-  git add src/task2_vqa/
-  git commit -m "Tích hợp mô hình LLaVA VLM cho Task 2 VQA"
-  
-  # 3. Đẩy nhánh lên GitHub và tạo Pull Request (PR) để gộp vào main
-  git push origin feature/task2-vqa
-  ```
+* **Lệnh đẩy code trực tiếp lên GitHub (Không cần qua bước duyệt PR)**:
+
+```bash
+# Bước 1: Kéo code mới nhất từ GitHub về máy
+git checkout main
+git pull origin main
+
+# Bước 2: Viết code trong thư mục phụ trách của mình (ví dụ: src/task2_vqa/)
+git add src/task2_vqa/
+git commit -m "Cập nhật mô hình LLaVA VLM cho Task 2 VQA"
+
+# Bước 3: Đẩy trực tiếp lên GitHub (Hệ thống tự động nhận ngay)
+git push origin main
+```
+
+*(Nếu muốn viết code trên nhánh riêng trước khi đẩy lên main)*:
+```bash
+# Tạo nhánh riêng ➔ Viết code ➔ Đẩy nhánh riêng lên GitHub
+git checkout -b feature/task2-vqa
+git add src/task2_vqa/
+git commit -m "Viết thử nghiệm Task 2"
+git push origin feature/task2-vqa
+```
 
 ### 3. 📝 Quy Chuẩn Dữ Liệu Phản Hồi API (Data Contract Standard)
 Để đảm bảo nút **"Xuất File Nộp Bài (CSV)"** trên Web App hoạt động mượt mà cho cả 3 bài thi, các engine bắt buộc trả về danh sách mảng JSON theo chuẩn:
