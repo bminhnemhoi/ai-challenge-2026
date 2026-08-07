@@ -75,6 +75,51 @@ AI-Challenge-2026/
 
 ---
 
+## 🤝 Quy Định Hướng Dẫn Làm Việc Nhóm (Team Workflow Guidelines)
+
+### 1. 🔒 Nguyên Tắc Phân Quyền & Độc Lập Thư Mục (Scope Isolation)
+* Các thành viên **chỉ làm việc 100% trong thư mục phụ trách của mình** (`src/task1_kis/`, `src/task2_vqa/`, `src/task3_trake/`).
+* **Thư mục dùng chung (`src/core/`)**: Chứa mã nguồn nền tảng (Index Builder, Evaluator, Cache). Không chỉnh sửa thư mục này trừ khi có sự đồng ý của toàn nhóm.
+
+### 2. 🌿 Quy Trình Quản Lý Git (Git Branching & Pull Requests)
+* **Nhánh chính (`main`)**: Nơi chứa sản phẩm ổn định đã qua kiểm thử. **Tuyệt đối không push trực tiếp code thử nghiệm lên `main`**.
+* **Đặt tên nhánh làm việc theo Task**:
+  - Thành viên 1 ➔ Nhánh `feature/task1-kis`
+  - Thành viên 2 & 3 ➔ Nhánh `feature/task2-vqa`
+  - Thành viên 4 ➔ Nhánh `feature/task3-trake`
+* **Lệnh khởi tạo nhánh và đẩy code**:
+  ```bash
+  # 1. Tạo nhánh riêng và chuyển sang làm việc
+  git checkout -b feature/task2-vqa
+  
+  # 2. Làm việc trong thư mục của mình (ví dụ: src/task2_vqa/)
+  git add src/task2_vqa/
+  git commit -m "Tích hợp mô hình LLaVA VLM cho Task 2 VQA"
+  
+  # 3. Đẩy nhánh lên GitHub và tạo Pull Request (PR) để gộp vào main
+  git push origin feature/task2-vqa
+  ```
+
+### 3. 📝 Quy Chuẩn Dữ Liệu Phản Hồi API (Data Contract Standard)
+Để đảm bảo nút **"Xuất File Nộp Bài (CSV)"** trên Web App hoạt động mượt mà cho cả 3 bài thi, các engine bắt buộc trả về danh sách mảng JSON theo chuẩn:
+```json
+[
+  {
+    "video_id": "L21_V001",
+    "frame_idx": 150,
+    "score": 0.95,
+    "answer": "Đáp án chữ cho Task 2 VQA",
+    "sequence_frames": [45, 120, 210]
+  }
+]
+```
+
+### 4. 🌐 Quy Định Nối Backend (`app.py`) & Frontend (`frontend/`)
+* **Backend (`app.py`)**: Mỗi thành viên chỉ khai báo/chỉnh sửa API route của riêng mình (`@app.post("/api/search/kis")`, `@app.post("/api/search/vqa")`, `@app.post("/api/search/trake")`).
+* **Frontend (`frontend/`)**: Giao diện đã chia sẵn 3 Tab độc lập (`tab-kis`, `tab-vqa`, `tab-trake`). Bạn có quyền tự do chỉnh sửa thêm ô nhập liệu hoặc nút bấm **ngay trong phạm vi Tab của bài mình**.
+
+---
+
 ## ⚙️ Hướng Dẫn Cài Đặt & Khởi Chạy
 
 ### 1. Cài đặt môi trường Python
