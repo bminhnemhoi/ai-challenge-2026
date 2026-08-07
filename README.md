@@ -26,33 +26,52 @@ Hệ thống được thiết kế để xử lý toàn bộ **873 Video (177,32
 * Loại bỏ triệt để các ảnh trùng lặp liên tiếp trong cùng một video, đảm bảo danh sách Top-100 nộp bài hiển thị đa dạng các phân cảnh video khác nhau.
 
 ### 5. ☁️ Cloud-to-Cloud Transfer Notebook (Google Colab 1Gbps)
-* Cung cấp sẵn file Notebook [upload_to_huggingface_colab.ipynb](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/upload_to_huggingface_colab.ipynb) kéo trực tiếp dữ liệu từ máy chủ BTC sang Hugging Face Hub với tốc độ **1 Gbps** mà không cần bật máy tính cá nhân.
+* Cung cấp sẵn file Notebook [upload_to_huggingface_colab.ipynb](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/upload_to_huggingface_colab.ipynb) kéo trực tiếp dữ liệu từ máy chủ BTC sang Hugging Face Hub với tốc độ ** 1 Gbps** mà không cần bật máy tính cá nhân.
 
 ---
 
-## 🛠️ Cấu Trúc Dự Án (Project Structure)
+## 🛠️ Cấu Trúc Dự Án (Monorepo Project Structure)
 
 ```text
 AI-Challenge-2026/
 ├── src/
-│   ├── __init__.py
-│   ├── btc_index_builder.py          # Quét & hợp nhất 873 file CLIP .npy & map-keyframes từ BTC
-│   ├── index_builder.py              # Trích xuất CLIP embedding thủ công cho keyframe local
-│   ├── retriever.py                  # Search Engine (Cosine Similarity + Dual Vi-En Ensemble + NMS)
-│   └── evaluator.py                  # Bộ chấm điểm chuẩn R-Score & Final Score
+│   ├── __init__.py                   # Master Package Exporter
+│   ├── core/                         # Thư mục dùng chung (Shared Core Modules)
+│   │   ├── __init__.py
+│   │   ├── btc_index_builder.py      # Quét & hợp nhất 873 file CLIP .npy & map-keyframes từ BTC
+│   │   ├── index_builder.py          # Trích xuất CLIP embedding thủ công
+│   │   └── evaluator.py              # Bộ tính điểm chuẩn R-Score & Final Score
+│   ├── task1_kis/                    # 👤 Thành viên 1: Textual KIS
+│   │   ├── __init__.py
+│   │   └── retriever.py              # CLIP Text-to-Image Retriever + Dual Vi-En Ensemble
+│   ├── task2_vqa/                    # 👤 Thành viên 2 & 3: Visual Q&A (VLM + OCR)
+│   │   ├── __init__.py
+│   │   └── vqa_engine.py             # Visual Question Answering Engine
+│   └── task3_trake/                  # 👤 Thành viên 4: TRAKE (Temporal Alignment)
+│       ├── __init__.py
+│       └── trake_engine.py           # Temporal Sequence Matching Engine
 ├── scripts/
 │   ├── download_data.py              # Script tải & giải nén dữ liệu cốt lõi BTC
 │   └── stream_upload_hf.py           # Script stream upload dữ liệu lên Hugging Face
 ├── upload_to_huggingface_colab.ipynb # Jupyter Notebook chạy Cloud-to-Cloud trên Google Colab
 ├── query_kis.py                      # Công cụ tìm kiếm nhanh qua CLI
-├── app.py                            # FastAPI Backend Server (Multi-worker prefetch + Cache)
-├── frontend/
-│   ├── index.html                    # Dashboard UI (Textual KIS, Visual Q&A, TRAKE)
+├── app.py                            # FastAPI Backend Server dùng chung
+├── frontend/                         # Giao diện Web App dùng chung (3 Tab)
+│   ├── index.html                    # Dashboard UI
 │   ├── style.css                     # Modern Dark Mode Glassmorphism UI
 │   └── app.js                        # Client Logic & CSV Exporter
 ├── data/                             # Metadata.json, embeddings.npy, .cache_keyframes
 └── README.md
 ```
+
+### 👥 Phân Công Công Việc Nhóm 4 Người:
+
+| Thành viên | Phụ trách dạng bài | Nhiệm vụ chính | Thư mục phụ trách |
+| :--- | :--- | :--- | :--- |
+| **Thành viên 1** | **Task 1: Textual KIS** | Nâng cấp mô hình CLIP (ViT-L/14), gõ từ khóa tiếng Việt ➔ Tìm kiếm ảnh | `src/task1_kis/` |
+| **Thành viên 2** | **Task 2: Visual Q&A** *(Chủ lực 1)* | Tích hợp Vision-Language Model (VLM như LLaVA / Qwen2-VL) trả lời câu hỏi | `src/task2_vqa/` |
+| **Thành viên 3** | **Task 2: Visual Q&A** *(Chủ lực 2)* | Tích hợp đọc chữ trong ảnh (OCR PaddleOCR) & Nhận diện vật thể (YOLO) | `src/task2_vqa/` |
+| **Thành viên 4** | **Task 3: TRAKE** | Thuật toán xếp chuỗi thời gian (Dynamic Time Warping / Sequence Alignment) | `src/task3_trake/` |
 
 ---
 
