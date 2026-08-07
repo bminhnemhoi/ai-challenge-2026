@@ -1,6 +1,8 @@
 # Data & Large Files
 keyframes/
 data/
+downloads/
+.cache_keyframes/
 *.npy
 *.npz
 *.bin
