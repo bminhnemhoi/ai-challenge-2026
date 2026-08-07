@@ -11,12 +11,13 @@ def main():
     parser.add_argument("--nms", type=int, default=5, help="NMS frame gap (default: 5)")
     args = parser.parse_args()
 
-    data_dir = "/Users/xuannguyen/Desktop/AI-Challenge-2026/data"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.join(base_dir, "data")
     
     if not os.path.exists(os.path.join(data_dir, "embeddings.npy")):
         print("Data index not built yet! Building index now...")
         from src.core.index_builder import KeyframeIndexBuilder
-        keyframes_dir = "/Users/xuannguyen/Desktop/AI-Challenge-2026/keyframes"
+        keyframes_dir = os.path.join(base_dir, "keyframes")
         builder = KeyframeIndexBuilder(keyframes_dir, data_dir)
         builder.build_index()
 

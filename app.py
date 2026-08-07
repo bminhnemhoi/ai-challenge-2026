@@ -25,8 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026/data"
-KEYFRAMES_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026/keyframes"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+KEYFRAMES_DIR = os.path.join(BASE_DIR, "keyframes")
 
 retriever = TextualKISRetriever(data_dir=DATA_DIR)
 vqa_engine = VisualQAEngine(data_dir=DATA_DIR)

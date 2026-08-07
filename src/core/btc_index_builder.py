@@ -4,7 +4,7 @@ import csv
 import time
 import numpy as np
 
-BASE_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 CLIP_DIR = os.path.join(DATA_DIR, "clip-features-32")
 MAP_DIR = os.path.join(DATA_DIR, "map-keyframes")

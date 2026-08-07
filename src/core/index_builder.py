@@ -123,7 +123,7 @@ class KeyframeIndexBuilder:
 
 if __name__ == "__main__":
     import sys
-    base_dir = "/Users/xuannguyen/Desktop/AI-Challenge-2026"
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     keyframes_dir = os.path.join(base_dir, "keyframes")
     output_dir = os.path.join(base_dir, "data")
     

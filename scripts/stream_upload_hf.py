@@ -8,7 +8,7 @@ from huggingface_hub import HfApi
 TOKEN_PARTS = ["hf_", "wTSqUcteULBbYmyjpzmIkJdJDLLDmkTzEy"]
 HF_TOKEN = os.environ.get("HF_TOKEN") or "".join(TOKEN_PARTS)
 REPO_ID = "BaeBaeBoo1010/aic2026-keyframes"
-BASE_DIR = "/Users/xuannguyen/Desktop/AI-Challenge-2026"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_DIR = os.path.join(BASE_DIR, "temp_hf_upload")
 
 KEYFRAME_PACKAGES = [
