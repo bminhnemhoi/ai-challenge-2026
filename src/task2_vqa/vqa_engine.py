@@ -7,17 +7,49 @@ Format output: video_id, frame_idx, answer text.
 """
 
 from typing import List, Dict, Any, Optional
-from src.task1_kis import TextualKISRetriever
 
 class VisualQAEngine:
     """
     Visual Q&A Pipeline Engine for Task 2.
     Integrates VLM (LLaVA/Qwen2-VL) and OCR candidate retrieval via Keyframe Retriever.
     """
-    def __init__(self, data_dir: str):
+    def __init__(
+        self,
+        data_dir: str,
+        retriever: Any = None,
+        visual_context_engine: Any = None,
+    ):
         self.data_dir = data_dir
-        self.retriever = TextualKISRetriever(data_dir=data_dir)
+        if retriever is None:
+            # Keep the heavy CLIP/Torch dependency outside Member 3's modules and
+            # import it only when the shared VQA engine actually needs it.
+            from src.task1_kis import TextualKISRetriever
+            retriever = TextualKISRetriever(data_dir=data_dir)
+        self.retriever = retriever
+
+        if visual_context_engine is None:
+            try:
+                from .visual_context import VisualContextEngine
+            except ImportError:  # Supports direct in-folder execution.
+                from visual_context import VisualContextEngine
+            visual_context_engine = VisualContextEngine(data_dir=data_dir)
+        self.visual_context_engine = visual_context_engine
         self._is_loaded = False
+
+    def get_visual_context(
+        self,
+        image: Any,
+        video_id: Optional[str] = None,
+        frame_idx: Optional[int] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
+        """Return Member 3 OCR/object context for Member 2's VLM prompt."""
+        return self.visual_context_engine.analyze(
+            image=image,
+            video_id=video_id,
+            frame_idx=frame_idx,
+            **kwargs,
+        )
 
     def load_models(self):
         """Loads VLM, OCR, and underlying candidate keyframe index."""
