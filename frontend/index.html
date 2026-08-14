@@ -9,6 +9,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        @keyframes popFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(12px) scale(0.96);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .keyframe-card.pop-in {
+            animation: popFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -78,6 +93,12 @@
                                 <option value="5" selected>5 frames (Khuyên dùng)</option>
                                 <option value="10">10 frames</option>
                             </select>
+                        </div>
+                        <div class="option-item option-checkbox">
+                            <label for="check-reranker">
+                                <input type="checkbox" id="check-reranker" checked>
+                                🔥 Level 3 VLM Re-Ranking (Tái xếp hạng chính xác)
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -167,6 +188,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=stream_2"></script>
 </body>
 </html>

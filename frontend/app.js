@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // KIS Search Execution
+    // KIS Search Execution with Instant Streaming Chunk Rendering
     async function performKisSearch() {
         const query = inputKisQuery.value.trim();
         if (!query) {
@@ -50,14 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuery = query;
         const topK = parseInt(selectTopK.value, 10);
         const nmsGap = parseInt(selectNms.value, 10);
+        const useReranker = document.getElementById('check-reranker')?.checked ?? true;
 
         showLoading(true);
 
         try {
-            const response = await fetch('/api/search/kis', {
+            const response = await fetch('/api/search/kis_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, top_k: topK, nms_gap: nmsGap })
+                body: JSON.stringify({ query, top_k: topK, nms_gap: nmsGap, use_reranker: useReranker })
             });
 
             if (!response.ok) {
@@ -65,9 +66,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errData.detail || 'Lỗi hệ thống tìm kiếm!');
             }
 
-            const data = await response.json();
-            currentResults = data.results || [];
-            renderResults(currentResults);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let isFirstBatch = true;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // keep last incomplete line in buffer
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const chunk = JSON.parse(line);
+                        if (chunk.type === 'stage1_batch') {
+                            showLoading(false);
+                            if (isFirstBatch) {
+                                keyframeGrid.innerHTML = '';
+                                isFirstBatch = false;
+                            }
+                            appendBatchCards(chunk.results, chunk.total_count, '⚡ Đang nạp ảnh tức thì...');
+                        } else if (chunk.type === 'rerank_batch') {
+                            if (chunk.batch_idx === 0) {
+                                currentResults = [];
+                            }
+                            currentResults = currentResults.concat(chunk.results || []);
+                            renderResults(currentResults, '🔥 Đã tái xếp hạng VLM Level 3');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing stream chunk:', e);
+                    }
+                }
+            }
         } catch (err) {
             alert(`Lỗi khi tìm kiếm: ${err.message}`);
             console.error(err);
@@ -81,10 +115,45 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') performKisSearch();
     });
 
+    const HF_CDN_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main";
+
+    // Append Mini-Batch Cards Incrementally (Left to Right popIn Animation)
+    function appendBatchCards(batchResults, totalCount, statusBadge = '') {
+        const badgeHtml = statusBadge ? `<span style="margin-left: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">${statusBadge}</span>` : '';
+        resultsCount.innerHTML = `${keyframeGrid.children.length + batchResults.length} / ${totalCount} kết quả ${badgeHtml}`;
+        btnExportSub.disabled = false;
+
+        batchResults.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'keyframe-card pop-in';
+            card.style.animationDelay = `${index * 50}ms`;
+
+            const imgSrc = `${HF_CDN_URL}/${item.video_id}/${item.frame_filename}`;
+
+            card.innerHTML = `
+                <div class="card-img-wrapper">
+                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy" decoding="async">
+                    <div class="card-badge">Score: ${item.score.toFixed(4)}</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-title">${item.video_id}</div>
+                    <div class="card-sub">Frame: ${item.frame_filename} (${item.frame_idx})</div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                showImageModal(item, imgSrc);
+            });
+
+            keyframeGrid.appendChild(card);
+        });
+    }
+
     // Render Search Results Grid
-    function renderResults(results) {
+    function renderResults(results, statusBadge = '') {
         keyframeGrid.innerHTML = '';
-        resultsCount.textContent = `${results.length} kết quả`;
+        const badgeHtml = statusBadge ? `<span style="margin-left: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">${statusBadge}</span>` : '';
+        resultsCount.innerHTML = `${results.length} kết quả ${badgeHtml}`;
 
         if (!results || results.length === 0) {
             keyframeGrid.innerHTML = `
@@ -103,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'keyframe-card';
             
-            const imgSrc = `/api/keyframe/${item.video_id}/${item.frame_filename}`;
+            const imgSrc = `${HF_CDN_URL}/${item.video_id}/${item.frame_filename}`;
 
             card.innerHTML = `
                 <div class="card-img-wrapper">

@@ -2,12 +2,17 @@
 keyframes/
 data/
 downloads/
+cache/
+data/cache/
 .cache_keyframes/
 *.npy
 *.npz
 *.bin
 *.tar.gz
 *.zip
+*.jpg
+*.jpeg
+*.png
 
 # Python & Environment
 __pycache__/
