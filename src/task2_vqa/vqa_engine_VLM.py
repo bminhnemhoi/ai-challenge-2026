@@ -1,15 +1,3 @@
-"""
-Task 2: Visual Question Answering (VQA) Module.
-Assigned Members: Member 2 (VLM) & Member 3 (OCR & Object Detection)
-
-This module handles video context question answering for AIC 2026.
-Format output: video_id, frame_idx, answer text.
-
-NOTE (Member 2): this is the completed version of the shared file --
-`answer_question()` now runs the real Qwen3-VL engine over the retriever's
-top candidates (instead of the placeholder text from the original skeleton),
-using Member 3's OCR/object context as extra grounding for each frame.
-"""
 
 from __future__ import annotations
 
