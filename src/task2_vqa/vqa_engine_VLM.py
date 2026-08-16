@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -7,7 +6,7 @@ try:
     from .config import DEFAULT_VIDEO_DIR, VLM_TOP_K
     from .frame_utils import extract_frame_window, resolve_video_path
     from .postprocessor import build_submission_record, clean_answer
-except ImportError:  # allows running this file directly for local testing
+except ImportError: 
     from config import DEFAULT_VIDEO_DIR, VLM_TOP_K
     from frame_utils import extract_frame_window, resolve_video_path
     from postprocessor import build_submission_record, clean_answer
@@ -30,8 +29,6 @@ class VisualQAEngine:
     ):
         self.data_dir = data_dir
         if retriever is None:
-            # Keep the heavy CLIP/Torch dependency outside Member 3's modules and
-            # import it only when the shared VQA engine actually needs it.
             from src.task1_kis import TextualKISRetriever
             retriever = TextualKISRetriever(data_dir=data_dir)
         self.retriever = retriever
@@ -39,14 +36,11 @@ class VisualQAEngine:
         if visual_context_engine is None:
             try:
                 from .visual_context import VisualContextEngine
-            except ImportError:  # Supports direct in-folder execution.
+            except ImportError: 
                 from visual_context import VisualContextEngine
             visual_context_engine = VisualContextEngine(data_dir=data_dir)
         self.visual_context_engine = visual_context_engine
 
-        # vlm_engine is lazy-loaded in load_models() if not provided -- loading
-        # Qwen3-VL is expensive (several seconds + GBs of VRAM), so we don't want
-        # it to happen just from constructing this object (e.g. in unit tests).
         self.vlm_engine = vlm_engine
         self.video_dir = video_dir or DEFAULT_VIDEO_DIR
         self.vlm_top_k = vlm_top_k
@@ -125,8 +119,6 @@ class VisualQAEngine:
                 "score": 0.0,
             }]
 
-        # Only run the (slow) VLM on the highest-scoring candidates -- running it
-        # on all `top_k` retrieval hits would be far too slow to submit in time.
         results: List[Dict[str, Any]] = []
         for cand in candidates[: self.vlm_top_k]:
             vid, fidx = cand["video_id"], cand["frame_idx"]
