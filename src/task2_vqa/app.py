@@ -1,14 +1,3 @@
-"""FastAPI app for Task 2 (Visual Q&A) -- AIC 2026.
-
-Run locally (needs a GPU):
-    uvicorn app:app --host 0.0.0.0 --port 8000
-
-Environment variables (see config.py for defaults):
-    AIC_VIDEO_DIR         path to the folder containing the competition videos
-    AIC_DATA_DIR          path to Member 3's metadata dir (objects JSON, etc.)
-    AIC_VLM_TOP_K         how many top retrieval candidates actually run the VLM
-"""
-
 from __future__ import annotations
 
 import traceback
