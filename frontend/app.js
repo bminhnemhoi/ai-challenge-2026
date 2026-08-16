@@ -50,7 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuery = query;
         const topK = parseInt(selectTopK.value, 10);
         const nmsGap = parseInt(selectNms.value, 10);
-        const useReranker = document.getElementById('check-reranker')?.checked ?? true;
+        const useMetadataBm25 = document.getElementById('check-bm25')?.checked ?? true;
+        const useTemporalExpansion = document.getElementById('check-expansion')?.checked ?? true;
 
         showLoading(true);
 
@@ -58,7 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/search/kis_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query, top_k: topK, nms_gap: nmsGap, use_reranker: useReranker })
+                body: JSON.stringify({ 
+                    query, 
+                    top_k: topK, 
+                    nms_gap: nmsGap, 
+                    use_reranker: false,
+                    use_metadata_bm25: useMetadataBm25,
+                    use_temporal_expansion: useTemporalExpansion
+                })
             });
 
             if (!response.ok) {

@@ -68,7 +68,7 @@ AI-Challenge-2026/
 
 | Thành viên | Phụ trách dạng bài | Nhiệm vụ chính | Thư mục phụ trách |
 | :--- | :--- | :--- | :--- |
-| **Thành viên 1** | **Task 1: Textual KIS** | Nâng cấp mô hình CLIP (ViT-L/14), gõ từ khóa tiếng Việt ➔ Tìm kiếm ảnh | `src/task1_kis/` |
+| **Thành viên 1** | **Task 1: Textual KIS** | Google SigLIP 2 + BM25 + Opponent Color + Temporal Expansion ([Xem Hướng Dẫn Task 1](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/src/task1_kis/README.md)) | `src/task1_kis/` |
 | **Thành viên 2** | **Task 2: Visual Q&A** *(Chủ lực 1)* | Tích hợp Vision-Language Model (VLM như LLaVA / Qwen2-VL) trả lời câu hỏi | `src/task2_vqa/` |
 | **Thành viên 3** | **Task 2: Visual Q&A** *(Chủ lực 2)* | Tích hợp đọc chữ trong ảnh (OCR PaddleOCR) & Nhận diện vật thể (YOLO) | `src/task2_vqa/` |
 | **Thành viên 4** | **Task 3: TRAKE** | Thuật toán xếp chuỗi thời gian (Dynamic Time Warping / Sequence Alignment) | `src/task3_trake/` |

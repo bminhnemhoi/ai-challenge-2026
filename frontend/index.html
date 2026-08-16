@@ -7,6 +7,8 @@
     <title>AIC 2026 - Local Video Retrieval Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://huggingface.co" crossorigin>
+    <link rel="dns-prefetch" href="https://huggingface.co">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
@@ -86,7 +88,7 @@
                             </select>
                         </div>
                         <div class="option-item">
-                            <label for="select-nms">Khử trùng khung hình (NMS Frame Gap):</label>
+                            <label for="select-nms">Khử trùng khung hình (NMS Frathme Gap):</label>
                             <select id="select-nms" class="select-control">
                                 <option value="0">Tắt (Giữ tất cả frame)</option>
                                 <option value="3">3 frames</option>
@@ -95,9 +97,15 @@
                             </select>
                         </div>
                         <div class="option-item option-checkbox">
-                            <label for="check-reranker">
-                                <input type="checkbox" id="check-reranker" checked>
-                                🔥 Level 3 VLM Re-Ranking (Tái xếp hạng chính xác)
+                            <label for="check-bm25">
+                                <input type="checkbox" id="check-bm25" checked>
+                                🏷️ Metadata BM25 Hybrid (Tiêu đề & Sự kiện)
+                            </label>
+                        </div>
+                        <div class="option-item option-checkbox">
+                            <label for="check-expansion">
+                                <input type="checkbox" id="check-expansion" checked>
+                                ⏱️ Temporal Expansion (Bao phủ khoảng [s,e])
                             </label>
                         </div>
                     </div>

@@ -40,6 +40,8 @@ class KISQueryRequest(BaseModel):
     max_per_video: int = 2
     use_reranker: bool = False
     use_spatial_grid: bool = True
+    use_metadata_bm25: bool = True
+    use_temporal_expansion: bool = True
 
 class SubmissionExportRequest(BaseModel):
     query_id: str = "query_1"
@@ -65,7 +67,9 @@ def search_kis(req: KISQueryRequest):
             nms_frame_gap=req.nms_gap,
             max_per_video=req.max_per_video,
             use_reranker=req.use_reranker,
-            use_spatial_grid=req.use_spatial_grid
+            use_spatial_grid=req.use_spatial_grid,
+            use_metadata_bm25=req.use_metadata_bm25,
+            use_temporal_expansion=req.use_temporal_expansion
         )
         return {
             "query": req.query,
@@ -99,7 +103,9 @@ async def search_kis_stream(req: KISQueryRequest):
                     nms_frame_gap=req.nms_gap,
                     max_per_video=req.max_per_video,
                     use_reranker=False,
-                    use_spatial_grid=req.use_spatial_grid
+                    use_spatial_grid=req.use_spatial_grid,
+                    use_metadata_bm25=req.use_metadata_bm25,
+                    use_temporal_expansion=req.use_temporal_expansion
                 )
             )
 
@@ -127,10 +133,11 @@ async def search_kis_stream(req: KISQueryRequest):
                         nms_frame_gap=req.nms_gap,
                         max_per_video=req.max_per_video,
                         use_reranker=True,
-                        use_spatial_grid=req.use_spatial_grid
+                        use_spatial_grid=req.use_spatial_grid,
+                        use_metadata_bm25=req.use_metadata_bm25,
+                        use_temporal_expansion=req.use_temporal_expansion
                     )
                 )
-                prefetch_results_images(final_results)
 
                 # Stream Re-Ranked chunks in 4-image mini-batches
                 for i in range(0, len(final_results), batch_size):
