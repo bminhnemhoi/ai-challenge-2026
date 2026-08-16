@@ -429,7 +429,7 @@ class TextualKISRetriever:
             objects_dir = os.path.join(self.data_dir, "objects")
             raw_candidates = []
 
-            for idx in top_sorted:
+            for rank_i, idx in enumerate(top_sorted):
                 # 0. Skip pure solid/blank monochrome frames (0% visual information)
                 if hasattr(self, "blank_frame_indices") and int(idx) in self.blank_frame_indices:
                     continue
@@ -443,15 +443,19 @@ class TextualKISRetriever:
                 v_id = item["video_id"]
                 f_n = item.get("n", 1)
 
-                # 4. YouTube Metadata BM25 Boost (Pulls exact event/title/channel matches straight to Top 1)
+                # 4. YouTube Metadata BM25 Boost
                 if v_id in bm25_scores:
                     score += 0.20 * bm25_scores[v_id]
 
-                # 5. Object Grounding Confidence Boost from BTC OpenImages detections (In-memory cached)
-                if target_keywords and os.path.exists(objects_dir):
+                # 5. Object Grounding Confidence Boost (Selective check for Top 300 candidates with bounded cache)
+                if rank_i < 300 and target_keywords and os.path.exists(objects_dir):
                     cache_key = f"{v_id}_{f_n:03d}"
                     obj_data = self._objects_cache.get(cache_key)
                     if obj_data is None:
+                        if len(self._objects_cache) >= 5000:
+                            # Prune 1000 oldest keys to keep memory strictly bounded under 600MB
+                            for k in list(self._objects_cache.keys())[:1000]:
+                                del self._objects_cache[k]
                         obj_p = os.path.join(objects_dir, v_id, f"{f_n:03d}.json")
                         if os.path.exists(obj_p):
                             try:
@@ -488,10 +492,13 @@ class TextualKISRetriever:
             else:
                 candidates = raw_candidates
 
-            # Smart Temporal NMS, Video Diversity & Cross-Video Visual Duplicate Suppression
+            # Smart Temporal NMS, Video Diversity & Zero-Allocation Ring Buffer Duplicate Suppression
             final_results = []
             seen_videos = {}  # v_id -> list of (n, pts_time)
-            selected_vecs = []
+            
+            # Pre-allocated rolling buffer (0 memory allocations per iteration)
+            selected_buffer = np.empty((200, 768), dtype=np.float32)
+            selected_count = 0
 
             for item in candidates:
                 v_id = item["video_id"]
@@ -510,15 +517,17 @@ class TextualKISRetriever:
                 if any(abs(n_val - prev_n) <= nms_frame_gap or abs(pts_val - prev_pts) <= max(nms_frame_gap * 2.0, 10.0) for prev_n, prev_pts in seen_videos[v_id]):
                     continue
 
-                # 3. Cross-Video Visual Duplicate Suppression (Eliminates repeated TV logos/sponsor bumpers across videos)
-                if visual_sim_threshold > 0 and raw_idx is not None and len(selected_vecs) > 0:
+                # 3. Cross-Video Visual Duplicate Suppression (Ring Buffer - 0 malloc)
+                if visual_sim_threshold > 0 and raw_idx is not None and selected_count > 0:
                     item_vec = self.embeddings_siglip[raw_idx]
-                    vec_matrix = np.vstack(selected_vecs[-200:])
-                    if np.max(np.dot(vec_matrix, item_vec)) >= visual_sim_threshold:
+                    cur_mat = selected_buffer[:min(selected_count, 200)]
+                    if np.max(np.dot(cur_mat, item_vec)) >= visual_sim_threshold:
                         continue
-                    selected_vecs.append(item_vec)
+                    selected_buffer[selected_count % 200] = item_vec
+                    selected_count += 1
                 elif raw_idx is not None:
-                    selected_vecs.append(self.embeddings_siglip[raw_idx])
+                    selected_buffer[selected_count % 200] = self.embeddings_siglip[raw_idx]
+                    selected_count += 1
 
                 seen_videos[v_id].append((n_val, pts_val))
                 

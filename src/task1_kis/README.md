@@ -98,13 +98,14 @@ Mỗi khi chỉnh sửa logic của Task 1, Agent hãy chạy các test case sau
 
 ---
 
-## 5. 📂 Cấu Trúc Mã Nguồn Task 1
+## 5. 📂 Cấu Trúc Mã Nguồn & Tài Liệu Task 1
 
 ```text
 src/task1_kis/
-├── __init__.py           # Export TextualKISRetriever
-├── retriever.py          # Lõi tìm kiếm chính (SigLIP 2, Opponent Color, NMS, Temporal Expansion)
-├── metadata_bm25.py      # Bộ máy tìm kiếm BM25 trên 873 file YouTube metadata
-├── PLAN_TASK1_KIS.md     # Kế hoạch & Kiến trúc chi tiết
-└── README.md             # Hướng dẫn phát triển & kiểm thử (File này)
+├── __init__.py                # Export TextualKISRetriever
+├── retriever.py               # Lõi tìm kiếm chính (SigLIP 2, Opponent Color, NMS, Temporal Expansion)
+├── metadata_bm25.py           # Bộ máy tìm kiếm BM25 trên 873 file YouTube metadata
+├── PIPELINE_ARCHITECTURE.md  # 🏛️ Tài liệu đặc tả 10 giai đoạn & phương pháp kỹ thuật toàn diện
+├── PLAN_TASK1_KIS.md          # Kế hoạch phát triển & lộ trình giai đoạn
+└── README.md                  # Hướng dẫn phát triển & kiểm thử (File này)
 ```
