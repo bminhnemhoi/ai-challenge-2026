@@ -1,10 +1,3 @@
-"""Extract frames directly from video files for Task 2 (Visual Q&A).
-
-BTC / Task 1 only provide `video_id` + `frame_idx` (an index into the original
-video) -- there is no pre-extracted image on disk in general. These helpers
-seek directly into the `.mp4` file to fetch the exact frame(s) needed.
-"""
-
 from __future__ import annotations
 
 import os
