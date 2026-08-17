@@ -146,22 +146,18 @@ cd ai-challenge-2026
 pip install torch transformers pillow numpy pandas fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 3. Tải & Giải Nén Tự Động Tất Cả Dữ Liệu Local (`data/`)
-*(Duy nhất 1 câu lệnh dưới đây để tự động tải `objects`, `media-info`, `clip-features-32`, `map-keyframes` và tự động tạo chỉ mục vector `embeddings.npy` & `metadata.json` cho cả 3 bài thi)*:
+### 3. Tải & Giải Nén Tự Động Dữ Liệu Local (`data/`) *(Tùy chọn nếu muốn tải trước)*
+*(Chỉ cần 1 lệnh dưới đây để tải toàn bộ `embeddings_siglip2.npy`, `metadata.json`, `media-info`, `objects`, `map-keyframes` trực tiếp từ Hugging Face CDN về máy)*:
 ```bash
 python3 scripts/download_data.py
 ```
 
-### 4. Khởi chạy Web Server & Tạo Nhánh Làm Việc
+### 4. Khởi chạy Web Server (Tự động tải Index SigLIP 2 nếu chưa có)
 ```bash
-# 1. Chạy Web Server Local
-python3 -m uvicorn app:app --host 127.0.0.1 --port 8000
-
-# 2. Tạo nhánh Git riêng cho bài của mình để bắt đầu viết code
-git checkout -b feature/task2-vqa   # (Nếu làm Task 2 VQA)
-# hoặc
-git checkout -b feature/task3-trake # (Nếu làm Task 3 TRAKE)
+# Chạy Web Server Backend & Dashboard UI
+python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
 ```
+> 💡 *Lưu ý: Ngay lần đầu khởi động, nếu máy chưa có file `embeddings_siglip2.npy` hoặc `metadata.json`, server sẽ tự động stream tải trực tiếp từ Hugging Face CDN về máy hoàn toàn tự động trong ~15–30 giây.*
 
 Mở trình duyệt truy cập: **`http://localhost:8000`**
 

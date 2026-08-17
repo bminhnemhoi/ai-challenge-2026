@@ -66,14 +66,73 @@ class TextualKISRetriever:
         
         self._is_loaded = False
 
+    def _ensure_data_files(self):
+        """Automatically checks and downloads required metadata & vector files from Hugging Face if missing."""
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        HF_BASE_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main"
+        REQUIRED_FILES = [
+            ("metadata.json", f"{HF_BASE_URL}/metadata.json", False),
+            ("blank_frame_indices.json", f"{HF_BASE_URL}/blank_frame_indices.json", False),
+            ("embeddings_siglip2.npy", f"{HF_BASE_URL}/embeddings_siglip2.npy", False),
+            ("media-info.zip", f"{HF_BASE_URL}/media-info.zip", True)
+        ]
+        
+        import urllib.request
+        import zipfile
+        import time
+
+        for fname, url, is_zip in REQUIRED_FILES:
+            dest = os.path.join(self.data_dir, fname)
+            
+            # If media-info folder already exists with JSONs, skip zip
+            if fname == "media-info.zip":
+                media_info_dir = os.path.join(self.data_dir, "media-info")
+                if os.path.exists(media_info_dir) and len(os.listdir(media_info_dir)) > 10:
+                    continue
+
+            if not os.path.exists(dest):
+                print(f"📥 [Auto-Downloader] Missing '{fname}'. Downloading from Hugging Face CDN...", flush=True)
+                start_t = time.time()
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (AI-Challenge-2026)"})
+                    with urllib.request.urlopen(req) as resp, open(dest, "wb") as out:
+                        total_size = int(resp.headers.get("Content-Length", 0))
+                        downloaded = 0
+                        block_size = 1024 * 1024  # 1MB
+                        while True:
+                            buf = resp.read(block_size)
+                            if not buf:
+                                break
+                            downloaded += len(buf)
+                            out.write(buf)
+                            if total_size > 0:
+                                pct = (downloaded / total_size) * 100
+                                mb_dl = downloaded / (1024 * 1024)
+                                mb_tot = total_size / (1024 * 1024)
+                                print(f"\r📦 Downloading {fname}: {mb_dl:.1f}/{mb_tot:.1f} MB ({pct:.1f}%)", end="", flush=True)
+                    print(f"\n✅ Downloaded {fname} in {time.time() - start_t:.1f}s!", flush=True)
+                    
+                    if is_zip:
+                        print(f"📦 Extracting {fname} into data/...", flush=True)
+                        with zipfile.ZipFile(dest, "r") as zf:
+                            zf.extractall(self.data_dir)
+                        if os.path.exists(dest):
+                            os.remove(dest)
+                except Exception as e:
+                    print(f"\n⚠️ Failed to auto-download {fname}: {e}. Continuing...", flush=True)
+
     def load_index_and_model(self):
         """Loads metadata, vector embeddings, BM25 index, and initialized SigLIP 2 models."""
         if self._is_loaded:
             return
 
+        # Auto-download missing files if cloned freshly from GitHub
+        self._ensure_data_files()
+
         if not os.path.exists(self.metadata_path):
             raise FileNotFoundError(
-                f"Metadata file not found in '{self.data_dir}'. Please run `src/index_builder.py` first!"
+                f"Metadata file not found in '{self.data_dir}'. Please run `python3 scripts/download_data.py` first!"
             )
 
         print(f"Loading metadata from {self.metadata_path}...")
