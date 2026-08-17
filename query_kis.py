@@ -6,26 +6,22 @@ from src.task1_kis import TextualKISRetriever
 
 def main():
     parser = argparse.ArgumentParser(description="AIC 2026 - Task 1 Textual KIS CLI Search")
-    parser.add_argument("--query", "-q", type=str, help="Text query to search for")
+    parser.add_argument("query", nargs="?", type=str, help="Text query to search for")
+    parser.add_argument("--query", "-q", dest="named_query", type=str, help="Text query to search for")
     parser.add_argument("--top_k", "-k", type=int, default=10, help="Number of results to show (default: 10)")
     parser.add_argument("--nms", type=int, default=5, help="NMS frame gap (default: 5)")
     args = parser.parse_args()
 
+    query_str = args.named_query or args.query
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, "data")
     
-    if not os.path.exists(os.path.join(data_dir, "embeddings.npy")):
-        print("Data index not built yet! Building index now...")
-        from src.core.index_builder import KeyframeIndexBuilder
-        keyframes_dir = os.path.join(base_dir, "keyframes")
-        builder = KeyframeIndexBuilder(keyframes_dir, data_dir)
-        builder.build_index()
-
-    retriever = TextualKISRetriever(data_dir=data_dir)
+    retriever = TextualKISRetriever(data_dir=data_dir, use_siglip_only=True, use_siglip_version="siglip2")
     retriever.load_index_and_model()
 
-    if args.query:
-        run_search(retriever, args.query, args.top_k, args.nms)
+    if query_str:
+        run_search(retriever, query_str, args.top_k, args.nms)
     else:
         print("\n=== AIC 2026 Task 1: Textual KIS Search Interactive CLI ===")
         print("Type your query (or 'exit' / 'q' to quit):\n")

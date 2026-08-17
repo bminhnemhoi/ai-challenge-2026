@@ -109,3 +109,42 @@ src/task1_kis/
 ├── PLAN_TASK1_KIS.md          # Kế hoạch phát triển & lộ trình giai đoạn
 └── README.md                  # Hướng dẫn phát triển & kiểm thử (File này)
 ```
+
+---
+
+## 6. 🚀 Hướng Dẫn Chạy Task 1 Chi Tiết (3 Cách)
+
+### 🌟 Cách 1: Chạy qua Giao Diện Web Dashboard (Trực Quan & Đầy Đủ Nhất)
+1. **Khởi động server backend:**
+   ```bash
+   python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
+   ```
+   > 💡 *Ngay lần đầu khởi động, nếu máy chưa có `embeddings_siglip2.npy` hoặc `metadata.json`, server sẽ tự động tải trực tiếp từ Hugging Face CDN về máy trong ~15–30s.*
+2. **Mở trình duyệt:** Truy cập [`http://localhost:8000`](http://localhost:8000).
+3. **Sử dụng:** Nhập câu truy vấn vào ô tìm kiếm ở thẻ **Textual KIS** (ví dụ: *"đua xe đạp cúp truyền hình đà nẵng"* hoặc *"xe ô tô màu đỏ"*), bấm **Tìm Kiếm (KIS)** và bấm **Xuất File Nộp Bài (CSV)** để lấy file nộp bài cho BTC.
+
+---
+
+### 💻 Cách 2: Chạy Dòng Lệnh Trực Tiếp (CLI Tool)
+Dành cho kiểm tra nhanh không cần mở trình duyệt:
+```bash
+# 1. Truy vấn một câu cụ thể (Top 10):
+python3 query_kis.py "đua xe đạp cúp truyền hình đà nẵng" --top_k 10
+
+# 2. Truy vấn phân biệt màu sắc:
+python3 query_kis.py "xe ô tô màu đỏ" --top_k 5
+
+# 3. Chạy chế độ Interactive CLI (nhập liên tục nhiều câu):
+python3 query_kis.py
+```
+
+---
+
+### 🌐 Cách 3: Chạy qua REST API Endpoint (`curl` / HTTP POST)
+Dành cho tích hợp tự động hoặc kiểm thử tự động từ script khác:
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/search/kis \
+  -H "Content-Type: application/json" \
+  -d '{"query": "con mèo", "top_k": 5}' | python3 -m json.tool
+```
+
