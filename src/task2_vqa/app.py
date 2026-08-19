@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
 
 from .config import DEFAULT_DATA_DIR, MODEL_ID, RETRIEVER_TOP_K
-from .vqa_engine import VisualQAEngine
+from .vqa_engine_VLM import VisualQAEngine
 
 engine: Optional[VisualQAEngine] = None
 
