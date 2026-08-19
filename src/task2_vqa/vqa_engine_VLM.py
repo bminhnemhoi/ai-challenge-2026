@@ -72,9 +72,9 @@ class VisualQAEngine:
             print(f"VQA Retriever load note: {e}")
 
         if self.vlm_engine is None:
-            from .qwen_vlm_engine import QwenVLMEngine, load_qwen_model
-            model, processor = load_qwen_model()
-            self.vlm_engine = QwenVLMEngine(model, processor)
+            from .gemini_vlm_engine import GeminiVLMEngine, load_gemini_model
+            model, processor = load_gemini_model()
+            self.vlm_engine = GeminiVLMEngine(model, processor)
 
         self._is_loaded = True
 
