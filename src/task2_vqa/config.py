@@ -3,7 +3,7 @@
 import os
 
 # --- VLM (Member 2) ---
-MODEL_ID = os.environ.get("AIC_VLM_MODEL_ID", "Qwen/Qwen3-VL-8B-Instruct")
+MODEL_ID = os.environ.get("AIC_VLM_MODEL_ID", "gemini-2.0-flash")
 MAX_SIDE = int(os.environ.get("AIC_VLM_MAX_SIDE", "768")) 
 MAX_NEW_TOKENS = int(os.environ.get("AIC_VLM_MAX_NEW_TOKENS", "24"))
 
