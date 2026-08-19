@@ -79,7 +79,14 @@
 
                     <div class="search-options">
                         <div class="option-item">
-                            <label for="select-topk">Số lượng kết quả (Top-K):</label>
+                            <label for="select-mode">Chế độ tìm kiếm:</label>
+                            <select id="select-mode" class="select-control">
+                                <option value="fast" selected>⚡ Siêu Tốc &lt; 0.1s (Khuyên dùng)</option>
+                                <option value="rerank">🎯 Re-ranking Nâng Cao (SigLIP 2 Late)</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label for="select-topk">Số lượng kết quả:</label>
                             <select id="select-topk" class="select-control">
                                 <option value="10">Top 10</option>
                                 <option value="20">Top 20</option>
@@ -88,25 +95,17 @@
                             </select>
                         </div>
                         <div class="option-item">
-                            <label for="select-nms">Khử trùng khung hình (NMS Frathme Gap):</label>
+                            <label for="select-nms">Khử trùng (NMS Gap):</label>
                             <select id="select-nms" class="select-control">
-                                <option value="0">Tắt (Giữ tất cả frame)</option>
+                                <option value="0">Tắt</option>
                                 <option value="3">3 frames</option>
                                 <option value="5" selected>5 frames (Khuyên dùng)</option>
                                 <option value="10">10 frames</option>
                             </select>
                         </div>
-                        <div class="option-item option-checkbox">
-                            <label for="check-bm25">
-                                <input type="checkbox" id="check-bm25" checked>
-                                🏷️ Metadata BM25 Hybrid (Tiêu đề & Sự kiện)
-                            </label>
-                        </div>
-                        <div class="option-item option-checkbox">
-                            <label for="check-expansion">
-                                <input type="checkbox" id="check-expansion" checked>
-                                ⏱️ Temporal Expansion (Bao phủ khoảng [s,e])
-                            </label>
+                        <div class="engine-badge-pill">
+                            <span class="badge-dot"></span>
+                            <span class="badge-text"><strong>SigLIP 2 Neural + BM25</strong> (Tốc độ &lt; 0.1s • 93.3% Top 10)</span>
                         </div>
                     </div>
                 </div>
@@ -196,6 +195,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=stream_2"></script>
+    <script src="app.js?v=instant_ux_v6"></script>
 </body>
 </html>

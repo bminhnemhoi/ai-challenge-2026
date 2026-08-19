@@ -2,7 +2,7 @@
 
 Hệ thống tìm kiếm và truy vấn video đa thức (Multimodal Video Retrieval Engine) hiệu năng cao cho cuộc thi **Hội thi Thử thách Trí tuệ Nhân tạo TP.HCM 2026 (AIC 2026) - Vòng Sơ Tuyển**.
 
-Hệ thống được thiết kế để xử lý toàn bộ **873 Video (177,321 Khung hình Keyframe)** thuộc dữ liệu chính thức của Ban Tổ Chức (BTC) với tốc độ phản hồi tính bằng **millisecond**.
+Hệ thống được thiết kế để xử lý toàn bộ **873 Video (177,321 Khung hình Keyframe)** thuộc dữ liệu chính thức của Ban Tổ Chức (BTC) với tốc độ phản hồi tính bằng **millisecond** và độ chính xác **Top 10 đạt 93.3% (56 / 60 mẫu Ground Truth)**.
 
 ---
 
@@ -10,23 +10,36 @@ Hệ thống được thiết kế để xử lý toàn bộ **873 Video (177,32
 
 ### 1. ☁️ Tích Hợp Cloud CDN Hugging Face (Zero Local Disk Footprint)
 * Phủ kín **100% dữ liệu 177,321 khung hình** trên kho lưu trữ [BaeBaeBoo1010/aic2026-keyframes](https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes).
-* **Không tốn 35 GB dung lượng ổ cứng Mac**: Web App truy xuất ảnh trực tiếp qua Hugging Face CDN với độ trễ siêu thấp.
+* **Không tốn 35 GB dung lượng ổ cứng**: Web App truy xuất ảnh trực tiếp qua Hugging Face CDN với độ trễ thấp và bộ nhớ đệm RAM tự động.
 
-### 2. ⚡ Kéo Ảnh Song Song 16 Luồng (16-Worker Parallel Prefetch & Local Cache)
-* **Pre-fetch song song**: Ngay khi thực hiện tìm kiếm, backend tự động kích hoạt **16 luồng song song (ThreadPoolExecutor)** kéo đồng loạt 50 ảnh kết quả về bộ nhớ đệm `.cache_keyframes/`.
-* **Bộ nhớ đệm siêu tốc**: Ảnh truy xuất lần thứ 2 có tốc độ phản hồi chỉ **`< 0.5 millisecond`**.
-* **Browser Async Decoding**: Sử dụng thuộc tính `loading="lazy"` và `decoding="async"` giúp trình duyệt giải mã ảnh bằng GPU mà không gây giật lag giao diện.
+### 2. ⚡ Dựng Khung Skeleton & Thông Tin Tức Thì (< 0.1s)
+* **Instant Metadata Card Rendering**: Trả kết quả JSON từ RAM trong ~0.08s, dựng toàn bộ 100 thẻ kết quả với hiệu ứng **Shimmer Skeleton Placeholder**.
+* **Xuất File Nộp Bài Ngay Lập Tức**: Nút "Xuất File Nộp Bài (CSV)" có thể bấm ngay sau 0.1s mà không cần chờ ảnh tải xong.
+* **Smooth Lazy Streaming**: Trình duyệt tải ảnh bất đồng bộ ngầm và chuyển tiếp mượt mà (Fade-in).
 
-### 3. 🎯 Tự Động Dịch Song Ngữ & Ghép Vector (Dual Vi-En Embedding Ensemble)
-* Tự động nhận diện và dịch câu hỏi tiếng Việt sang tiếng Anh ngữ cảnh (`GoogleTranslator`).
-* Ghép vector trọng số song ngữ: `0.75 * Embed(English) + 0.25 * Embed(Vietnamese)` giúp mô hình **CLIP ViT-B/32** hiểu chính xác 100% ý định tìm kiếm của người dùng.
+### 3. 🎯 Google SigLIP 2 Multi-Prompt Ensemble
+* Tự động dịch và kết hợp biểu diễn văn bản 4 nhánh: `[query_en, "a photo of " + query_en, "a high quality video scene of " + query_en, query_vi]`.
+* Tối ưu hóa trên mô hình **Google SigLIP 2 (Base Patch16 224)** trên chip GPU Apple Silicon (MPS) / NVIDIA CUDA.
 
-### 4. 🎬 Lọc Cảnh Video Trùng Lặp (NMS Scene Diversity)
-* Tích hợp thuật toán **Non-Maximum Suppression (NMS)** theo khung thời gian (`nms_frame_gap >= 15`).
-* Loại bỏ triệt để các ảnh trùng lặp liên tiếp trong cùng một video, đảm bảo danh sách Top-100 nộp bài hiển thị đa dạng các phân cảnh video khác nhau.
+### 4. ⏱️ Tổng Hợp Thời Gian Đa Khung Hình (Temporal Multi-Frame Aggregation)
+* Công thức tính điểm video: `Score = 0.85 * Top1_Frame + 0.15 * Mean(Top1, Top2)`.
+* Tự động loại bỏ khung hình mào đầu tĩnh (n <= 2) và danh sách đen khung hình đen/trắng (solid blank frames).
 
-### 5. ☁️ Cloud-to-Cloud Transfer Notebook (Google Colab 1Gbps)
-* Cung cấp sẵn file Notebook [upload_to_huggingface_colab.ipynb](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/upload_to_huggingface_colab.ipynb) kéo trực tiếp dữ liệu từ máy chủ BTC sang Hugging Face Hub với tốc độ ** 1 Gbps** mà không cần bật máy tính cá nhân.
+---
+
+## 📊 Kết Quả Benchmark Chính Thức (Task 1 KIS)
+
+Kiểm thử trên toàn bộ **60 mẫu Ground Truth** chính thức:
+
+| Chỉ số đánh giá | Số lượng mẫu chính xác | Tỷ lệ phần trăm |
+| :--- | :---: | :---: |
+| **Top 1 Accuracy** | **25 / 60** | **41.7%** |
+| **Top 5 Accuracy** | **45 / 60** | **75.0%** |
+| **Top 10 Accuracy** | **56 / 60** | **93.3%** |
+| **Top 20 Accuracy** | **57 / 60** | **95.0%** |
+| **Top 50 Accuracy** | **60 / 60** | **100.0%** |
+| **Top 100 Accuracy** | **60 / 60** | **100.0%** |
+| **Độ trễ trung bình** | **~111 ms / query** | **< 0.12s** |
 
 ---
 
@@ -38,138 +51,80 @@ AI-Challenge-2026/
 │   ├── __init__.py                   # Master Package Exporter
 │   ├── core/                         # Thư mục dùng chung (Shared Core Modules)
 │   │   ├── __init__.py
-│   │   ├── btc_index_builder.py      # Quét & hợp nhất 873 file CLIP .npy & map-keyframes từ BTC
-│   │   ├── index_builder.py          # Trích xuất CLIP embedding thủ công
+│   │   ├── gemini_engine.py          # Multimodal Image Fetcher & Session Pooling
 │   │   └── evaluator.py              # Bộ tính điểm chuẩn R-Score & Final Score
 │   ├── task1_kis/                    # 👤 Thành viên 1: Textual KIS
 │   │   ├── __init__.py
-│   │   └── retriever.py              # CLIP Text-to-Image Retriever + Dual Vi-En Ensemble
+│   │   ├── metadata_bm25.py          # Metadata BM25 Video Search
+│   │   └── retriever.py              # Google SigLIP 2 Retriever & Multi-Prompt Fusion
 │   ├── task2_vqa/                    # 👤 Thành viên 2 & 3: Visual Q&A (VLM + OCR)
-│   │   ├── __init__.py
-│   │   └── vqa_engine.py             # Visual Question Answering Engine
 │   └── task3_trake/                  # 👤 Thành viên 4: TRAKE (Temporal Alignment)
-│       ├── __init__.py
-│       └── trake_engine.py           # Temporal Sequence Matching Engine
 ├── scripts/
-│   ├── download_data.py              # Script tải & giải nén dữ liệu cốt lõi BTC
-│   └── stream_upload_hf.py           # Script stream upload dữ liệu lên Hugging Face
-├── upload_to_huggingface_colab.ipynb # Jupyter Notebook chạy Cloud-to-Cloud trên Google Colab
+│   ├── diagnose_60_detailed.py       # Script chạy Benchmark 60 mẫu Ground Truth
+│   ├── build_objects_inverted_index.py # Builder cho 506 Object Classes
+│   ├── build_siglip2_index_colab.py  # Script build SigLIP 2 index trên Colab
+│   ├── download_data.py              # Script tải dữ liệu cốt lõi BTC
+│   └── stream_upload_hf.py           # Script upload dữ liệu lên Hugging Face CDN
 ├── query_kis.py                      # Công cụ tìm kiếm nhanh qua CLI
-├── app.py                            # FastAPI Backend Server dùng chung
-├── frontend/                         # Giao diện Web App dùng chung (3 Tab)
-│   ├── index.html                    # Dashboard UI
-│   ├── style.css                     # Modern Dark Mode Glassmorphism UI
-│   └── app.js                        # Client Logic & CSV Exporter
-├── data/                             # Metadata.json, embeddings.npy, .cache_keyframes
+├── app.py                            # FastAPI Backend Server daemon
+├── frontend/                         # Giao diện Web App (Dashboard UI)
+│   ├── index.html                    # HTML Dashboard
+│   ├── style.css                     # Dark Mode Glassmorphism & Shimmer Skeletons
+│   └── app.js                        # Client Search Logic & CSV Exporter
+├── data/                             # Metadata.json, embeddings_siglip2.npy, caches
 └── README.md
 ```
 
-### 👥 Phân Công Công Việc Nhóm 4 Người:
-
-| Thành viên | Phụ trách dạng bài | Nhiệm vụ chính | Thư mục phụ trách |
-| :--- | :--- | :--- | :--- |
-| **Thành viên 1** | **Task 1: Textual KIS** | Google SigLIP 2 + BM25 + Opponent Color + Temporal Expansion ([Xem Hướng Dẫn Task 1](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/src/task1_kis/README.md)) | `src/task1_kis/` |
-| **Thành viên 2** | **Task 2: Visual Q&A** *(Chủ lực 1)* | Tích hợp Vision-Language Model (VLM như LLaVA / Qwen2-VL) trả lời câu hỏi | `src/task2_vqa/` |
-| **Thành viên 3** | **Task 2: Visual Q&A** *(Chủ lực 2)* | Tích hợp đọc chữ trong ảnh (OCR PaddleOCR) & Nhận diện vật thể (YOLO) | `src/task2_vqa/` |
-| **Thành viên 4** | **Task 3: TRAKE** | Thuật toán xếp chuỗi thời gian (Dynamic Time Warping / Sequence Alignment) | `src/task3_trake/` |
-
 ---
 
-## 🤝 Quy Định Hướng Dẫn Làm Việc Nhóm (Team Workflow Guidelines)
+## ⚙️ Hướng Dẫn Cài Đặt & Chạy Nhanh Task 1
 
-### 1. 🔒 Nguyên Tắc Phân Quyền & Độc Lập Thư Mục (Scope Isolation)
-* Các thành viên **chỉ làm việc 100% trong thư mục phụ trách của mình** (`src/task1_kis/`, `src/task2_vqa/`, `src/task3_trake/`).
-* **Thư mục dùng chung (`src/core/`)**: Chứa mã nguồn nền tảng (Index Builder, Evaluator, Cache). Không chỉnh sửa thư mục này trừ khi có sự đồng ý của toàn nhóm.
+Dành cho bất kỳ ai clone repository về máy và muốn chạy ngay:
 
-### 2. 🌿 Quy Trình Quản Lý Git (Git Branching & Pull Requests)
-* **Nhánh chính (`main`)**: Nơi chứa sản phẩm ổn định đã qua kiểm thử. **Tuyệt đối không push trực tiếp code thử nghiệm lên `main`**.
-* **Đặt tên nhánh làm việc theo Task**:
-  - Thành viên 1 ➔ Nhánh `feature/task1-kis`
-  - Thành viên 2 & 3 ➔ Nhánh `feature/task2-vqa`
-  - Thành viên 4 ➔ Nhánh `feature/task3-trake`
-* **Lệnh đẩy code trực tiếp lên GitHub (Không cần qua bước duyệt PR)**:
-
-```bash
-# Bước 1: Kéo code mới nhất từ GitHub về máy
-git checkout main
-git pull origin main
-
-# Bước 2: Viết code trong thư mục phụ trách của mình (ví dụ: src/task2_vqa/)
-git add src/task2_vqa/
-git commit -m "Cập nhật mô hình LLaVA VLM cho Task 2 VQA"
-
-# Bước 3: Đẩy trực tiếp lên GitHub (Hệ thống tự động nhận ngay)
-git push origin main
-```
-
-*(Nếu muốn viết code trên nhánh riêng trước khi đẩy lên main)*:
-```bash
-# Tạo nhánh riêng ➔ Viết code ➔ Đẩy nhánh riêng lên GitHub
-git checkout -b feature/task2-vqa
-git add src/task2_vqa/
-git commit -m "Viết thử nghiệm Task 2"
-git push origin feature/task2-vqa
-```
-
-### 3. 📝 Quy Chuẩn Dữ Liệu Phản Hồi API (Data Contract Standard)
-Để đảm bảo nút **"Xuất File Nộp Bài (CSV)"** trên Web App hoạt động mượt mà cho cả 3 bài thi, các engine bắt buộc trả về danh sách mảng JSON theo chuẩn:
-```json
-[
-  {
-    "video_id": "L21_V001",
-    "frame_idx": 150,
-    "score": 0.95,
-    "answer": "Đáp án chữ cho Task 2 VQA",
-    "sequence_frames": [45, 120, 210]
-  }
-]
-```
-
-### 4. 🌐 Quy Định Nối Backend (`app.py`) & Frontend (`frontend/`)
-* **Backend (`app.py`)**: Mỗi thành viên chỉ khai báo/chỉnh sửa API route của riêng mình (`@app.post("/api/search/kis")`, `@app.post("/api/search/vqa")`, `@app.post("/api/search/trake")`).
-* **Frontend (`frontend/`)**: Giao diện đã chia sẵn 3 Tab độc lập (`tab-kis`, `tab-vqa`, `tab-trake`). Bạn có quyền tự do chỉnh sửa thêm ô nhập liệu hoặc nút bấm **ngay trong phạm vi Tab của bài mình**.
-
----
-
-## ⚙️ Hướng Dẫn Khởi Chạy Cho Thành Viên Mới (Onboarding & Setup Guide)
-
-Dành cho các thành viên khi **Fork / Clone** dự án về máy cá nhân:
-
-### 1. Clone Repository về máy
+### 1. Clone Repository
 ```bash
 git clone https://github.com/khanhle1406/ai-challenge-2026.git
 cd ai-challenge-2026
 ```
 
-### 2. Cài đặt các thư viện Python
+### 2. Cài đặt các thư viện Python cần thiết
 ```bash
-pip install torch transformers pillow numpy pandas fastapi uvicorn deep-translator huggingface_hub
+pip install torch torchvision transformers pillow numpy requests fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 3. Tải & Giải Nén Tự Động Dữ Liệu Local (`data/`) *(Tùy chọn nếu muốn tải trước)*
-*(Chỉ cần 1 lệnh dưới đây để tải toàn bộ `embeddings_siglip2.npy`, `metadata.json`, `media-info`, `objects`, `map-keyframes` trực tiếp từ Hugging Face CDN về máy)*:
+### 3. Tải file Vector Index SigLIP 2 (`data/`) (Tùy chọn nếu chưa có sẵn)
 ```bash
 python3 scripts/download_data.py
 ```
-
-### 4. Khởi chạy Web Server (Tự động tải Index SigLIP 2 nếu chưa có)
-```bash
-# Chạy Web Server Backend & Dashboard UI
-python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
-```
-> 💡 *Lưu ý: Ngay lần đầu khởi động, nếu máy chưa có file `embeddings_siglip2.npy` hoặc `metadata.json`, server sẽ tự động stream tải trực tiếp từ Hugging Face CDN về máy hoàn toàn tự động trong ~15–30 giây.*
-
-Mở trình duyệt truy cập: **`http://localhost:8000`**
+*(Hoặc server sẽ tự động tải file embeddings khi khởi động lần đầu).*
 
 ---
 
-## 🖥️ Hướng Dẫn Sử Dụng Dashboard
+## 🚀 Cách Chạy Task 1
 
-1. Nhập câu truy vấn tìm kiếm tiếng Việt hoặc tiếng Anh vào thẻ **Textual KIS**.
-   * *Ví dụ*: `"diễn giả mặc áo đỏ phát biểu tại một cuộc họp báo ngoài trời, phía sau có nhiều cây xanh"`
-2. Nhấn nút **Tìm Kiếm (KIS)**.
-3. Giao diện sẽ hiển thị danh sách kết quả xếp hạng kèm theo `video_id`, `frame_idx` và điểm số tương đồng `Score`.
-4. Nhấn nút **Xuất File Nộp Bài (CSV)** để tải file submission chuẩn định dạng AIC 2026.
+### Cách 1: Chạy Giao Diện Web App (Khuyên dùng)
+```bash
+python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
+```
+Mở trình duyệt truy cập: **`http://localhost:8000`**
+
+1. Nhập câu truy vấn tiếng Việt hoặc tiếng Anh (ví dụ: *"người phụ nữ mặc váy đỏ"* hoặc *"xe đạp đua"*).
+2. Bấm **Tìm Kiếm (KIS)**: Toàn bộ 100 kết quả và thông tin video sẽ hiện lên tức thì trong **< 0.1s**.
+3. Bấm **Xuất File Nộp Bài (CSV)** để tải file submission chuẩn BTC.
+
+### Cách 2: Chạy trực tiếp qua dòng lệnh (CLI Search)
+```bash
+# Tìm kiếm câu đơn
+python3 query_kis.py --query "xe ô tô màu đỏ" --top_k 10
+
+# Hoặc mở giao diện dòng lệnh tương tác (Interactive CLI)
+python3 query_kis.py
+```
+
+### Cách 3: Chạy Benchmark kiểm tra độ chính xác (60 Mẫu Ground Truth)
+```bash
+python3 scripts/diagnose_60_detailed.py
+```
 
 ---
 
@@ -183,3 +138,4 @@ Mở trình duyệt truy cập: **`http://localhost:8000`**
 
 ## 📝 License & Competition Info
 Dự án được phát triển phục vụ cuộc thi **Hội thi Thử thách Trí tuệ Nhân tạo TP.HCM 2026 (AIC 2026)**.
+

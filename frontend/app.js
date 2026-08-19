@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const inputKisQuery = document.getElementById('input-kis-query');
     const btnSearchKis = document.getElementById('btn-search-kis');
+    const selectMode = document.getElementById('select-mode');
     const selectTopK = document.getElementById('select-topk');
     const selectNms = document.getElementById('select-nms');
 
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // KIS Search Execution with Instant Streaming Chunk Rendering
+    // KIS Search Execution with Instant Skeleton & Metadata Rendering (< 0.1s)
     async function performKisSearch() {
         const query = inputKisQuery.value.trim();
         if (!query) {
@@ -50,12 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
         currentQuery = query;
         const topK = parseInt(selectTopK.value, 10);
         const nmsGap = parseInt(selectNms.value, 10);
-        const useMetadataBm25 = document.getElementById('check-bm25')?.checked ?? true;
-        const useTemporalExpansion = document.getElementById('check-expansion')?.checked ?? true;
+        const isRerank = selectMode ? selectMode.value === 'rerank' : false;
 
         showLoading(true);
 
         try {
+            const startTime = performance.now();
             const response = await fetch('/api/search/kis_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -63,9 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     query, 
                     top_k: topK, 
                     nms_gap: nmsGap, 
-                    use_reranker: false,
-                    use_metadata_bm25: useMetadataBm25,
-                    use_temporal_expansion: useTemporalExpansion
+                    use_reranker: isRerank,
+                    reranker_mode: isRerank ? 'siglip_late' : 'off',
+                    use_metadata_bm25: true,
+                    use_temporal_expansion: false
                 })
             });
 
@@ -78,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
             let isFirstBatch = true;
+            currentResults = [];
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -85,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
-                buffer = lines.pop(); // keep last incomplete line in buffer
+                buffer = lines.pop();
 
                 for (const line of lines) {
                     if (!line.trim()) continue;
@@ -97,13 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 keyframeGrid.innerHTML = '';
                                 isFirstBatch = false;
                             }
-                            appendBatchCards(chunk.results, chunk.total_count, '⚡ Đang nạp ảnh tức thì...');
-                        } else if (chunk.type === 'rerank_batch') {
-                            if (chunk.batch_idx === 0) {
-                                currentResults = [];
-                            }
                             currentResults = currentResults.concat(chunk.results || []);
-                            renderResults(currentResults, '🔥 Đã tái xếp hạng VLM Level 3');
+                            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                            appendBatchCards(chunk.results, chunk.total_count, `⚡ Hoàn tất (${elapsed}s)`);
                         }
                     } catch (e) {
                         console.error('Error parsing stream chunk:', e);
@@ -125,76 +124,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const HF_CDN_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main";
 
-    // Append Mini-Batch Cards Incrementally (Left to Right popIn Animation)
+    // Append Cards with Instant Metadata & Shimmer Skeleton Loading
     function appendBatchCards(batchResults, totalCount, statusBadge = '') {
         const badgeHtml = statusBadge ? `<span style="margin-left: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">${statusBadge}</span>` : '';
         resultsCount.innerHTML = `${keyframeGrid.children.length + batchResults.length} / ${totalCount} kết quả ${badgeHtml}`;
         btnExportSub.disabled = false;
 
         batchResults.forEach((item, index) => {
+            const globalRank = currentResults.length - batchResults.length + index + 1;
             const card = document.createElement('div');
             card.className = 'keyframe-card pop-in';
-            card.style.animationDelay = `${index * 50}ms`;
+            card.style.animationDelay = `${index * 20}ms`;
 
             const imgSrc = `${HF_CDN_URL}/${item.video_id}/${item.frame_filename}`;
 
             card.innerHTML = `
-                <div class="card-img-wrapper">
-                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy" decoding="async">
-                    <div class="card-badge">Score: ${item.score.toFixed(4)}</div>
+                <div class="card-img-wrapper shimmer">
+                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy" decoding="async"
+                        onload="this.classList.add('loaded'); this.parentElement.classList.remove('shimmer');"
+                        onerror="this.parentElement.classList.remove('shimmer');">
+                    <div class="card-badge">#${globalRank} • ${(item.score).toFixed(3)}</div>
                 </div>
                 <div class="card-content">
                     <div class="card-title">${item.video_id}</div>
-                    <div class="card-sub">Frame: ${item.frame_filename} (${item.frame_idx})</div>
+                    <div class="card-sub">Frame ${item.frame_filename} (${item.pts_time ? item.pts_time.toFixed(1) + 's' : item.frame_idx})</div>
                 </div>
             `;
 
             card.addEventListener('click', () => {
-                showImageModal(item, imgSrc);
+                openModal(item, imgSrc, globalRank);
             });
 
-            keyframeGrid.appendChild(card);
-        });
-    }
-
-    // Render Search Results Grid
-    function renderResults(results, statusBadge = '') {
-        keyframeGrid.innerHTML = '';
-        const badgeHtml = statusBadge ? `<span style="margin-left: 10px; font-size: 0.85rem; color: #10b981; font-weight: 600;">${statusBadge}</span>` : '';
-        resultsCount.innerHTML = `${results.length} kết quả ${badgeHtml}`;
-
-        if (!results || results.length === 0) {
-            keyframeGrid.innerHTML = `
-                <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                    <p>Không tìm thấy kết quả nào phù hợp.</p>
-                </div>
-            `;
-            btnExportSub.disabled = true;
-            return;
-        }
-
-        btnExportSub.disabled = false;
-
-        results.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'keyframe-card';
-            
-            const imgSrc = `${HF_CDN_URL}/${item.video_id}/${item.frame_filename}`;
-
-            card.innerHTML = `
-                <div class="card-img-wrapper">
-                    <img src="${imgSrc}" alt="${item.video_id} - frame ${item.frame_idx}" loading="lazy" decoding="async">
-                    <span class="card-rank">#${index + 1}</span>
-                    <span class="card-score">${(item.score).toFixed(4)}</span>
-                </div>
-                <div class="card-body">
-                    <div class="card-video-title">${item.video_id}</div>
-                    <div class="card-frame-info">Frame Index: <strong>${item.frame_idx}</strong></div>
-                </div>
-            `;
-
-            card.addEventListener('click', () => openModal(item, imgSrc, index + 1));
             keyframeGrid.appendChild(card);
         });
     }
@@ -202,14 +162,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Lightbox Preview
     function openModal(item, imgSrc, rank) {
         modalImg.src = imgSrc;
-        modalVideoTitle.textContent = `[#${rank}] ${item.video_id}`;
-        modalFrameInfo.textContent = `Khung hình (Frame Index): ${item.frame_idx}`;
-        modalScoreInfo.textContent = `Điểm Tương Quan (Cosine Score): ${item.score.toFixed(4)}`;
+        modalVideoTitle.textContent = `[#${rank || 1}] Video: ${item.video_id}`;
+        modalFrameInfo.textContent = `Khung hình: ${item.frame_filename} (Frame Index: ${item.frame_idx}${item.pts_time ? ' • ' + item.pts_time.toFixed(1) + 's' : ''})`;
+        modalScoreInfo.textContent = `Độ tương quan (Cosine Similarity): ${(item.score).toFixed(4)}`;
         modal.classList.remove('hidden');
     }
 
-    btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
-    modal.querySelector('.modal-overlay').addEventListener('click', () => modal.classList.add('hidden'));
+    function closeModal() {
+        modal.classList.add('hidden');
+        modalImg.src = '';
+    }
+
+    btnCloseModal.addEventListener('click', closeModal);
+    modal.querySelector('.modal-overlay').addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    });
 
     // Submission Export CSV
     btnExportSub.addEventListener('click', async () => {
@@ -249,5 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingSpinner.classList.add('hidden');
             btnSearchKis.disabled = false;
         }
+    }
+
+    const checkPureSiglip = document.getElementById('check-pure-siglip');
+    if (checkPureSiglip) {
+        checkPureSiglip.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                inputKisQuery.placeholder = "Enter standard English prompt for raw Google SigLIP 2 (e.g. 'a red sports car on the road', 'a cute cat on a sofa')...";
+            } else {
+                inputKisQuery.placeholder = "Ví dụ: Tìm video về một diễn giả mặc áo đỏ phát biểu tại cuộc họp báo...";
+            }
+        });
     }
 });

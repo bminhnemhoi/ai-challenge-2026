@@ -10,27 +10,54 @@ import json
 import math
 from typing import Dict, List, Set, Tuple
 
+import unicodedata
+
+# Event / Venue / Competition / Show / Landmark entities ONLY for YouTube Metadata BM25
+EVENT_METADATA_ENTITIES = [
+    "đua xe đạp", "cúp truyền hình", "truyền hình tp hcm", "chợ bến thành", "cầu rồng", "vịnh hạ long",
+    "ngoại hạng anh", "bản tin thời sự", "thời sự", "vòng chung kết", "thành phố hồ chí minh",
+    "hà nội", "đà nẵng", "sầm sơn", "tam kỳ", "huế", "đà lạt", "quảng trường thống nhất",
+    "lan tỏa năng lượng tích cực", "món ngon mỗi ngày", "thế giới động vật", "phim hoạt hình",
+    "múa lân", "lễ hội", "ca nhạc", "trao giải", "hội nghị"
+]
+
+# Stopwords specifically for YouTube Video Metadata Search (excludes visual adjectives/colors/generic objects)
+METADATA_STOPWORDS = {
+    "và", "của", "các", "những", "cho", "với", "trong", "tại", "được", "là", "có", "đã", "sẽ",
+    "một", "này", "đó", "khi", "như", "ra", "vào", "lại", "về", "đến", "từ", "tìm", "thấy", "cảnh", "video",
+    "màu", "đỏ", "vàng", "xanh", "trắng", "đen", "hồng", "cam", "tím", "nâu", "xám",
+    "xe", "người", "con", "cái", "chiếc", "ảnh", "hình", "đang", "nhiều", "hai", "ba", "bốn",
+    "red", "yellow", "blue", "green", "white", "black", "pink", "orange", "purple", "brown", "gray",
+    "car", "cat", "dog", "person", "woman", "man", "and", "the", "with", "from", "for", "photo", "image", "clip", "full", "tap", "tập", "hd"
+}
+
 def tokenize_text(text: str) -> List[str]:
     """
-    Tokenizes text into lowercase unigrams and bigrams, stripping special characters.
+    Enhanced Vietnamese Tokenizer for Video Metadata:
+    1. Unicode NFC normalization.
+    2. Event & landmark entity extraction (e.g., 'đua_xe_đạp', 'cúp_truyền_hình').
+    3. Excludes generic visual stopwords (colors, objects, counters).
     """
     if not text:
         return []
-    text = text.lower()
+    
+    # Normalize unicode to NFC
+    text = unicodedata.normalize("NFC", text).lower()
+    
+    # Extract known event/landmark phrases first
+    extracted_compounds = []
+    text_for_tokens = text
+    for phrase in EVENT_METADATA_ENTITIES:
+        if phrase in text_for_tokens:
+            compound_token = phrase.replace(" ", "_")
+            extracted_compounds.append(compound_token)
+    
     # Replace non-alphanumeric with spaces (retaining Vietnamese diacritics)
-    clean = re.sub(r"[^\w\s\d]", " ", text)
-    words = [w for w in clean.split() if len(w) >= 2]
+    clean = re.sub(r"[^a-z0-9à-ỹ\s]", " ", text)
+    words = [w for w in clean.split() if len(w) >= 3 and w not in METADATA_STOPWORDS]
     
-    # Filter common generic stopwords
-    stopwords = {
-        "và", "của", "các", "những", "cho", "với", "trong", "tại", "được", "là", "có", "đã", "sẽ",
-        "and", "the", "with", "from", "for", "photo", "image", "video", "clip", "full", "tap", "tập"
-    }
-    filtered_words = [w for w in words if w not in stopwords]
-    
-    # Add adjacent bigrams for strong entity/phrase matching (e.g., "đua_xe", "bến_thành")
-    bigrams = [f"{filtered_words[i]}_{filtered_words[i+1]}" for i in range(len(filtered_words) - 1)]
-    return filtered_words + bigrams
+    all_tokens = words + extracted_compounds
+    return list(dict.fromkeys(all_tokens))
 
 class MetadataBM25Searcher:
     def __init__(self, data_dir: str = "./data", k1: float = 1.5, b: float = 0.75):
@@ -109,6 +136,7 @@ class MetadataBM25Searcher:
     def search(self, query: str) -> Dict[str, float]:
         """
         Calculates normalized BM25 relevance scores for all matching videos.
+        Filters out generic single words to only boost specific entities/events.
         Returns: {video_id: normalized_score in [0.0, 1.0]}
         """
         if not self.is_ready or not query:
@@ -118,7 +146,9 @@ class MetadataBM25Searcher:
         if not query_tokens:
             return {}
 
+        has_compound = any("_" in t for t in query_tokens)
         scores: Dict[str, float] = {}
+        matched_tokens_per_doc: Dict[str, int] = {}
         
         for token in query_tokens:
             if token not in self.inverted_index:
@@ -126,7 +156,7 @@ class MetadataBM25Searcher:
                 
             n_qi = self.doc_freq[token]
             idf = math.log((self.total_docs - n_qi + 0.5) / (n_qi + 0.5) + 1.0)
-            if idf <= 0:
+            if idf <= 1.0:  # Skip generic terms that appear in too many videos
                 continue
                 
             posting_list = self.inverted_index[token]
@@ -135,12 +165,19 @@ class MetadataBM25Searcher:
                 denom = tf + self.k1 * (1.0 - self.b + self.b * (doc_l / max(self.avg_doc_len, 1.0)))
                 term_score = idf * ((tf * (self.k1 + 1.0)) / max(denom, 1e-6))
                 scores[video_id] = scores.get(video_id, 0.0) + term_score
+                matched_tokens_per_doc[video_id] = matched_tokens_per_doc.get(video_id, 0) + 1
 
-        if not scores:
+        # High-Precision Filter: Must match a compound phrase or at least 2 distinct specific terms
+        filtered_scores: Dict[str, float] = {}
+        for video_id, score_val in scores.items():
+            if has_compound or matched_tokens_per_doc.get(video_id, 0) >= 2:
+                filtered_scores[video_id] = score_val
+
+        if not filtered_scores:
             return {}
 
         # Min-Max Normalization to [0.0, 1.0]
-        max_s = max(scores.values())
+        max_s = max(filtered_scores.values())
         if max_s > 0:
-            return {vid: s / max_s for vid, s in scores.items()}
-        return scores
+            return {vid: s / max_s for vid, s in filtered_scores.items()}
+        return filtered_scores

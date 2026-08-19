@@ -200,6 +200,33 @@ body {
     cursor: pointer;
 }
 
+.engine-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    color: #6ee7b7;
+    margin-left: auto;
+}
+
+.engine-badge-pill .badge-dot {
+    width: 7px;
+    height: 7px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10b981;
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -308,11 +335,27 @@ body {
     overflow: hidden;
 }
 
+.card-img-wrapper.shimmer {
+    background: linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 .card-img-wrapper img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    opacity: 0;
+    transition: opacity 0.35s ease-in-out, transform 0.3s ease;
+}
+
+.card-img-wrapper img.loaded {
+    opacity: 1;
 }
 
 .keyframe-card:hover .card-img-wrapper img {

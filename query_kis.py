@@ -10,6 +10,7 @@ def main():
     parser.add_argument("--query", "-q", dest="named_query", type=str, help="Text query to search for")
     parser.add_argument("--top_k", "-k", type=int, default=10, help="Number of results to show (default: 10)")
     parser.add_argument("--nms", type=int, default=5, help="NMS frame gap (default: 5)")
+    parser.add_argument("--raw", "--pure", action="store_true", help="Pure Raw SigLIP 2 mode (Direct English input, bypass all heuristics/boosts)")
     args = parser.parse_args()
 
     query_str = args.named_query or args.query
@@ -21,7 +22,7 @@ def main():
     retriever.load_index_and_model()
 
     if query_str:
-        run_search(retriever, query_str, args.top_k, args.nms)
+        run_search(retriever, query_str, args.top_k, args.nms, args.raw)
     else:
         print("\n=== AIC 2026 Task 1: Textual KIS Search Interactive CLI ===")
         print("Type your query (or 'exit' / 'q' to quit):\n")
@@ -30,13 +31,14 @@ def main():
                 user_input = input("Query > ").strip()
                 if not user_input or user_input.lower() in ["exit", "q", "quit"]:
                     break
-                run_search(retriever, user_input, args.top_k, args.nms)
+                run_search(retriever, user_input, args.top_k, args.nms, args.raw)
             except (KeyboardInterrupt, EOFError):
                 break
 
-def run_search(retriever, query, top_k, nms_gap):
-    print(f"\nSearching for: '{query}'...")
-    results = retriever.search(query, top_k=top_k, nms_frame_gap=nms_gap)
+def run_search(retriever, query, top_k, nms_gap, pure_raw=False):
+    mode_str = "Pure Raw SigLIP 2 (English Direct)" if pure_raw else "Hybrid Multimodal (En-Vi Ensemble + BM25 + Objects)"
+    print(f"\nSearching for: '{query}' [Mode: {mode_str}]...")
+    results = retriever.search(query, top_k=top_k, nms_frame_gap=nms_gap, pure_siglip_raw=pure_raw)
     
     print(f"\nTop {len(results)} Results:")
     print("-" * 65)

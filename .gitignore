@@ -1,6 +1,9 @@
 # Data & Large Files
 keyframes/
-data/
+data/*
+!data/cached_40_translations.json
+!data/ground_truth.json
+!data/blank_frame_indices.json
 downloads/
 cache/
 data/cache/
@@ -15,6 +18,9 @@ data/cache/
 *.png
 
 # Python & Environment
+.env
+.env.*
+.env.local
 __pycache__/
 *.py[cod]
 *$py.class

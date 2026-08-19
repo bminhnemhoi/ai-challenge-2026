@@ -38,10 +38,12 @@ class KISQueryRequest(BaseModel):
     top_k: int = 100
     nms_gap: int = 5
     max_per_video: int = 2
-    use_reranker: bool = False
+    use_reranker: bool = True
+    reranker_mode: str = "siglip_late" # "siglip_late" | "gemini_vlm" | "off"
     use_spatial_grid: bool = True
     use_metadata_bm25: bool = True
     use_temporal_expansion: bool = True
+    pure_siglip_raw: bool = False
 
 class SubmissionExportRequest(BaseModel):
     query_id: str = "query_1"
@@ -67,9 +69,11 @@ def search_kis(req: KISQueryRequest):
             nms_frame_gap=req.nms_gap,
             max_per_video=req.max_per_video,
             use_reranker=req.use_reranker,
+            reranker_mode=req.reranker_mode,
             use_spatial_grid=req.use_spatial_grid,
             use_metadata_bm25=req.use_metadata_bm25,
-            use_temporal_expansion=req.use_temporal_expansion
+            use_temporal_expansion=req.use_temporal_expansion,
+            pure_siglip_raw=req.pure_siglip_raw
         )
         return {
             "query": req.query,
@@ -94,26 +98,28 @@ async def search_kis_stream(req: KISQueryRequest):
         try:
             loop = asyncio.get_event_loop()
 
-            # 1. Fast Stage 1 Vector Search (<15ms)
-            stage1_results = await loop.run_in_executor(
+            # Single-pass high-speed, high-accuracy multi-modal search (<150ms)
+            results = await loop.run_in_executor(
                 None,
                 lambda: retriever.search(
                     req.query,
                     top_k=req.top_k,
                     nms_frame_gap=req.nms_gap,
                     max_per_video=req.max_per_video,
-                    use_reranker=False,
+                    use_reranker=req.use_reranker,
+                    reranker_mode=req.reranker_mode,
                     use_spatial_grid=req.use_spatial_grid,
                     use_metadata_bm25=req.use_metadata_bm25,
-                    use_temporal_expansion=req.use_temporal_expansion
+                    use_temporal_expansion=req.use_temporal_expansion,
+                    pure_siglip_raw=req.pure_siglip_raw
                 )
             )
 
-            # Progressive 4-Image Mini-Batch Streaming (Instant left-to-right rendering!)
-            batch_size = 4
-            total_items = len(stage1_results)
+            # Progressive 8-Image Mini-Batch Streaming for instantaneous visual rendering
+            batch_size = 8
+            total_items = len(results)
             for i in range(0, total_items, batch_size):
-                sub_batch = stage1_results[i : i + batch_size]
+                sub_batch = results[i : i + batch_size]
                 chunk = {
                     "type": "stage1_batch",
                     "batch_idx": i // batch_size,
@@ -121,35 +127,7 @@ async def search_kis_stream(req: KISQueryRequest):
                     "results": sub_batch
                 }
                 yield json.dumps(chunk) + "\n"
-                await asyncio.sleep(0.005)  # Immediate TCP Socket Flush for progressive cards!
-
-            # 2. Stage 2 VLM Re-Ranking
-            if req.use_reranker:
-                final_results = await loop.run_in_executor(
-                    None,
-                    lambda: retriever.search(
-                        req.query,
-                        top_k=req.top_k,
-                        nms_frame_gap=req.nms_gap,
-                        max_per_video=req.max_per_video,
-                        use_reranker=True,
-                        use_spatial_grid=req.use_spatial_grid,
-                        use_metadata_bm25=req.use_metadata_bm25,
-                        use_temporal_expansion=req.use_temporal_expansion
-                    )
-                )
-
-                # Stream Re-Ranked chunks in 4-image mini-batches
-                for i in range(0, len(final_results), batch_size):
-                    sub_batch = final_results[i : i + batch_size]
-                    chunk2 = {
-                        "type": "rerank_batch",
-                        "batch_idx": i // batch_size,
-                        "total_count": len(final_results),
-                        "results": sub_batch
-                    }
-                    yield json.dumps(chunk2) + "\n"
-                    await asyncio.sleep(0.005)
+                await asyncio.sleep(0.002)
 
         except Exception as e:
             err_chunk = {"type": "error", "message": str(e)}

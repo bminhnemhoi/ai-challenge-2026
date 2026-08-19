@@ -13,10 +13,10 @@
   ```
   *(Lưu ý: `frame_idx` là số nguyên frame thực tế của video trích từ `map-keyframes`, KHÔNG PHẢI tên file ảnh `001.jpg` hay số thứ tự `n`).*
 * **Công thức tính điểm (R-Score & Final Score):**
-  * BTC quy định một khoảng đáp án đúng $[s, e]$ của video $V^*$.
-  * **Top 1 (Rank 1):** Ăn trọn 100% điểm $R@1$.
-  * **Top 2 - 5:** Ăn điểm cao $R@5$.
-  * Nộp bài càng nhanh ($T_{\text{submit}}$) thì hệ số thời gian càng cao $\rightarrow$ **Tối ưu độ trễ (Latency < 50ms) là ưu tiên số 1.**
+  * BTC quy định một khoảng đáp án đúng [s, e] của video V*.
+  * **Top 1 (Rank 1):** Ăn trọn 100% điểm R@1.
+  * **Top 2 - 5:** Ăn điểm cao R@5.
+  * Nộp bài càng nhanh (T_submit) thì hệ số thời gian càng cao $\rightarrow$ **Tối ưu độ trễ (Latency < 50ms) là ưu tiên số 1.**
 
 ---
 
@@ -80,7 +80,7 @@ flowchart TD
 * Không bao giờ giảm `candidate_k` xuống dưới 1,500. `candidate_k` hiện được đặt là `min(max(top_k * 20, 2000), len(self.embeddings_siglip))` để đảm bảo sau khi lọc NMS, hệ thống luôn trả về đủ **100/100 kết quả**, không làm mất điểm của thí sinh.
 
 ### ⛔ Quy tắc 4: MỞ RỘNG KHUNG HÌNH PHẢI CÓ KIỂM DUYỆT LIÊN TỤC THỊ GIÁC (VISUAL CONTINUITY)
-* Tuyệt đối không lấy mù $n \pm 1$. Bắt buộc phải kiểm tra độ tương đồng góc quay `visual_continuity = np.dot(seed_vec, neighbor_vec) >= 0.55` để tránh nhảy sang phân cảnh chuyển shot hoặc quảng cáo.
+* Tuyệt đối không lấy mù n ± 1. Bắt buộc phải kiểm tra độ tương đồng góc quay `visual_continuity = np.dot(seed_vec, neighbor_vec) >= 0.55` để tránh nhảy sang phân cảnh chuyển shot hoặc quảng cáo.
 
 ---
 
