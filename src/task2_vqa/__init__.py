@@ -3,7 +3,7 @@ Task 2: Visual Question Answering (VQA) Module.
 Assigned Members: Member 2 & Member 3
 """
 
-from .vqa_engine import VisualQAEngine
+from .vqa_engine_VLM import VisualQAEngine
 from .ocr_engine import PaddleOCREngine
 from .object_detector import ObjectDetector
 from .visual_context import VisualContextEngine
