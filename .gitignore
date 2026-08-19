@@ -44,6 +44,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Temporary logs & exports
+# Temporary logs & exports & dev scripts
 *.log
 submission_*.csv
+scripts/test_*.py
+scripts/diagnose_*.py
+scripts/inspect_*.py
