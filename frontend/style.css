@@ -497,3 +497,103 @@ body {
 .modal-info {
     padding: 1.25rem;
 }
+
+/* VQA Specific Card Styles */
+.keyframe-card.vqa-card {
+    border: 1px solid rgba(236, 72, 153, 0.25);
+    background: rgba(22, 30, 46, 0.85);
+    display: flex;
+    flex-direction: column;
+}
+
+.keyframe-card.vqa-card:hover {
+    border-color: rgba(236, 72, 153, 0.6);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 25px rgba(236, 72, 153, 0.2);
+}
+
+.vqa-answer-container {
+    padding: 0.75rem 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.vqa-answer-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-pink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vqa-input-wrapper {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.vqa-answer-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(236, 72, 153, 0.4);
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.65rem;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    outline: none;
+    transition: var(--transition-fast);
+}
+
+.vqa-answer-input:focus {
+    border-color: var(--accent-pink);
+    box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
+}
+
+.btn-vqa-ask {
+    background: rgba(236, 72, 153, 0.15);
+    border: 1px solid rgba(236, 72, 153, 0.4);
+    color: #f472b6;
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+
+.btn-vqa-ask:hover:not(:disabled) {
+    background: rgba(236, 72, 153, 0.3);
+    color: #fff;
+}
+
+.vqa-select-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.vqa-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.vqa-checkbox {
+    accent-color: var(--accent-pink);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.card-badge.vqa-badge {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+}
+

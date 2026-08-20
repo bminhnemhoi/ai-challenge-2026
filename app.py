@@ -49,6 +49,21 @@ class SubmissionExportRequest(BaseModel):
     query_id: str = "query_1"
     predictions: List[dict] # list of {"video_id": ..., "frame_idx": ..., "answer": ...}
 
+class VQAQueryRequest(BaseModel):
+    context: str = ""
+    question: str = ""
+    top_k: int = 20
+    auto_ai_suggest: bool = True
+
+class SingleFrameVQARequest(BaseModel):
+    video_id: str
+    frame_filename: str
+    question: str
+    context: Optional[str] = None
+
+from src.core.gemini_engine import GeminiAIOptimizer, fetch_single_image
+gemini_ai = GeminiAIOptimizer()
+
 @app.on_event("startup")
 def startup_event():
     print("🚀 Initializing Search Engine Backend (Pre-loading SigLIP 2 & Index into Memory)...")
@@ -82,6 +97,80 @@ def search_kis(req: KISQueryRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/search/vqa")
+def search_vqa(req: VQAQueryRequest):
+    """
+    Task 2 (Visual Q&A) Interactive Retrieval:
+    - Uses Task 1 high-speed SigLIP 2 SO400M Engine to locate the exact event frames.
+    - Optionally generates AI suggested answers using Gemini VLM for Top-5 frames.
+    - Returns structured candidates with suggested answers so human can verify / edit / submit.
+    """
+    search_query = f"{req.context} {req.question}".strip()
+    if not search_query:
+        raise HTTPException(status_code=400, detail="Văn bản bối cảnh hoặc câu hỏi không được để trống.")
+
+    try:
+        # 1. Use Task 1 Engine to retrieve candidate keyframes (< 0.3s)
+        candidates = retriever.search(
+            query=search_query,
+            top_k=req.top_k,
+            nms_frame_gap=3,
+            max_per_video=2,
+            use_metadata_bm25=True,
+            use_temporal_expansion=False
+        )
+
+        # 2. AI VLM Suggestion for Top 5 candidates if enabled
+        if req.auto_ai_suggest and gemini_ai.is_ready and req.question:
+            top_pool = candidates[:5]
+            for item in top_pool:
+                try:
+                    img = fetch_single_image(item, max_dim=320)
+                    if img is not None:
+                        ans = gemini_ai.answer_single_frame(img, req.question, req.context)
+                        item["suggested_answer"] = ans
+                    else:
+                        item["suggested_answer"] = ""
+                except Exception:
+                    item["suggested_answer"] = ""
+
+        return {
+            "context": req.context,
+            "question": req.question,
+            "count": len(candidates),
+            "results": candidates
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vqa/ask_frame")
+def ask_single_frame(req: SingleFrameVQARequest):
+    """
+    Answers a question for a specific chosen frame using Gemini VLM.
+    """
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="Câu hỏi không được để trống.")
+
+    item = {"video_id": req.video_id, "frame_filename": req.frame_filename}
+    img = fetch_single_image(item, max_dim=400)
+    if img is None:
+        raise HTTPException(status_code=404, detail="Không thể tải ảnh keyframe.")
+
+    if not gemini_ai.is_ready:
+        return {"answer": "", "message": "Gemini API chưa sẵn sàng. Vui lòng nhập đáp án thủ công."}
+
+    try:
+        answer = gemini_ai.answer_single_frame(img, req.question, req.context)
+        return {
+            "video_id": req.video_id,
+            "frame_filename": req.frame_filename,
+            "question": req.question,
+            "answer": answer
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 import asyncio
 

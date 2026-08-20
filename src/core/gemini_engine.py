@@ -244,3 +244,30 @@ class GeminiAIOptimizer:
             }
         except Exception as e:
             return {"best_image_index": 0, "answer": f"Lỗi xử lý VQA: {e}"}
+
+    def answer_single_frame(self, image: Image.Image, question: str, context: Optional[str] = None) -> str:
+        """
+        Answers a question for a single image with Gemini.
+        Returns a concise answer (e.g. 'Màu xanh', '5', 'Áo đỏ').
+        """
+        if not self.is_ready or not self._client or image is None:
+            return ""
+
+        config = types.GenerateContentConfig(
+            system_instruction="You are an AI assistant for a video question answering competition. Answer the question about the provided image concisely (under 10 words). Output ONLY the direct short answer in the same language as the question. No explanations, no filler words.",
+            max_output_tokens=25,
+            temperature=0.0
+        )
+        try:
+            prompt = f"Context: {context}\nQuestion: {question}" if context else f"Question: {question}"
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=[image, prompt],
+                config=config
+            )
+            raw = response.text.strip().strip('"').strip("'").rstrip(".")
+            cleaned = re.sub(r'^(Trả lời|Answer|Câu trả lời)\s*[:\-]\s*', '', raw, flags=re.IGNORECASE)
+            return cleaned.strip()
+        except Exception as e:
+            return ""
+
