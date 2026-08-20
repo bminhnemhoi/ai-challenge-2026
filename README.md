@@ -98,22 +98,17 @@ cd ai-challenge-2026
 pip install torch torchvision transformers pillow numpy requests fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 3. Tải Dữ Liệu & Chỉ Mục Vector (Vector Index & Metadata)
-Hệ thống hỗ trợ 2 chế độ linh hoạt:
-
-* **⚡ Chế độ 1: Tải Nhanh Tự Động (Khuyên dùng - Hoạt động ngay trong 15s)**:
-  Chỉ cần chạy lệnh sau để tải toàn bộ metadata và file vector index SigLIP 2 từ Hugging Face CDN:
-  ```bash
-  python3 scripts/download_data.py
-  ```
-  *(Hoặc khi bạn khởi động server lần đầu, backend sẽ **tự động tải ngầm** nếu máy chưa có dữ liệu).*
-
-* **🎯 Chế độ 2: Trích xuất / Nâng cấp bản SOTA SigLIP 2 SO400M-384 (`embeddings_siglip2_384.npy`)**:
-  Mở notebook [`notebooks/index-siglip2.ipynb`](notebooks/index-siglip2.ipynb) trên **Google Colab (1x GPU T4 miễn phí)** và bấm *Run All*. Toàn bộ 177,321 keyframe sẽ được trích xuất vector 1152 chiều trong ~25 phút và tự động lưu về Google Drive để bạn tải về đặt vào thư mục `data/`.
+### 3. Tải Dữ Liệu & Chỉ Mục Vector SigLIP 2 SO400M-384
+Chỉ cần chạy lệnh sau để tải toàn bộ metadata và file vector index SOTA **`embeddings_siglip2_384.npy`** (1152 chiều, trích xuất từ 177,321 khung hình) từ Hugging Face CDN:
+```bash
+python3 scripts/download_data.py
+```
+*(Hoặc khi bạn khởi động server lần đầu qua `uvicorn app:app`, backend sẽ **tự động tải ngầm** toàn bộ dữ liệu cần thiết về thư mục `data/`).*
 
 ---
 
 ## 🚀 Cách Chạy Task 1
+
 
 
 ### Cách 1: Chạy Giao Diện Web App (Khuyên dùng)

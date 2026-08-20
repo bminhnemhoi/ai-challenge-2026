@@ -130,9 +130,10 @@ class TextualKISRetriever:
         REQUIRED_FILES = [
             ("metadata.json", f"{HF_BASE_URL}/metadata.json", False),
             ("blank_frame_indices.json", f"{HF_BASE_URL}/blank_frame_indices.json", False),
-            ("embeddings_siglip2.npy", f"{HF_BASE_URL}/embeddings_siglip2.npy", False),
+            ("embeddings_siglip2_384.npy", f"{HF_BASE_URL}/embeddings_siglip2_384.npy", False),
             ("media-info.zip", f"{HF_BASE_URL}/media-info.zip", True)
         ]
+
         
         import urllib.request
         import zipfile

@@ -23,8 +23,9 @@ HF_CDN = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolv
 HF_DIRECT_FILES = [
     ("metadata.json", f"{HF_CDN}/metadata.json"),
     ("blank_frame_indices.json", f"{HF_CDN}/blank_frame_indices.json"),
-    ("embeddings_siglip2.npy", f"{HF_CDN}/embeddings_siglip2.npy"),
+    ("embeddings_siglip2_384.npy", f"{HF_CDN}/embeddings_siglip2_384.npy"),
 ]
+
 
 # Zipped packages from BTC / HF
 ZIP_PACKAGES = [
