@@ -252,7 +252,26 @@ body {
     box-shadow: 0 6px 20px var(--primary-glow);
 }
 
+.btn-stop {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
+    animation: pulseStop 1.5s infinite;
+}
+
+.btn-stop:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important;
+}
+
+@keyframes pulseStop {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
 .btn-secondary {
+
     background: rgba(255, 255, 255, 0.06);
     color: var(--text-main);
     border: 1px solid var(--border-color);

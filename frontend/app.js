@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentQuery = "";
     let activeTab = "kis";
 
+    // Abort Controllers for stopping queries mid-flight
+    let kisAbortController = null;
+    let isKisSearching = false;
+    let vqaAbortController = null;
+    let isVqaSearching = false;
+
     const HF_CDN_URL = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main";
 
     // Tab Switching Logic
@@ -52,9 +58,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 1. KIS SEARCH LOGIC
+    // 1. KIS SEARCH LOGIC (WITH STOP FUNCTION)
     // ==========================================
     async function performKisSearch() {
+        // If query is currently running, clicking the button stops/cancels it
+        if (isKisSearching) {
+            if (kisAbortController) {
+                kisAbortController.abort();
+            }
+            isKisSearching = false;
+            btnSearchKis.innerHTML = '⚡ Tìm Kiếm (KIS)';
+            btnSearchKis.classList.remove('btn-stop');
+            showLoading(false);
+            resultsCount.innerHTML += ` <span style="margin-left: 10px; font-size: 0.85rem; color: #ef4444; font-weight: 600;">🛑 Đã dừng tìm kiếm</span>`;
+            return;
+        }
+
         const query = inputKisQuery.value.trim();
         if (!query) {
             alert('Vui lòng nhập mô tả sự kiện (Text Query)!');
@@ -66,6 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const nmsGap = parseInt(selectNms.value, 10);
         const isRerank = selectMode ? selectMode.value === 'rerank' : false;
 
+        isKisSearching = true;
+        kisAbortController = new AbortController();
+        btnSearchKis.innerHTML = '🛑 Dừng Tìm Kiếm';
+        btnSearchKis.classList.add('btn-stop');
         showLoading(true, 'Đang tìm kiếm KIS...');
 
         try {
@@ -73,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/search/kis_stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: kisAbortController.signal,
                 body: JSON.stringify({ 
                     query, 
                     top_k: topK, 
@@ -123,9 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (err) {
-            alert(`Lỗi khi tìm kiếm: ${err.message}`);
-            console.error(err);
+            if (err.name === 'AbortError') {
+                console.log('KIS search aborted by user');
+            } else {
+                alert(`Lỗi khi tìm kiếm: ${err.message}`);
+                console.error(err);
+            }
         } finally {
+            isKisSearching = false;
+            kisAbortController = null;
+            btnSearchKis.innerHTML = '⚡ Tìm Kiếm (KIS)';
+            btnSearchKis.classList.remove('btn-stop');
             showLoading(false);
         }
     }
@@ -170,9 +202,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 2. VQA INTERACTIVE SEARCH & QA LOGIC
+    // 2. VQA INTERACTIVE SEARCH & QA LOGIC (WITH STOP FUNCTION)
     // ==========================================
     async function performVqaSearch() {
+        // If VQA is currently running, clicking the button stops/cancels it
+        if (isVqaSearching) {
+            if (vqaAbortController) {
+                vqaAbortController.abort();
+            }
+            isVqaSearching = false;
+            if (btnSearchVqa) {
+                btnSearchVqa.innerHTML = '✨ Tìm Khung Hình & Trả Lời (VQA)';
+                btnSearchVqa.classList.remove('btn-stop');
+            }
+            showLoading(false);
+            resultsCount.innerHTML += ` <span style="margin-left: 10px; font-size: 0.85rem; color: #ef4444; font-weight: 600;">🛑 Đã dừng VQA</span>`;
+            return;
+        }
+
         const context = inputVqaContext.value.trim();
         const question = inputVqaQuestion.value.trim();
 
@@ -184,6 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const topK = selectVqaTopK ? parseInt(selectVqaTopK.value, 10) : 20;
         const autoAiSuggest = checkVqaAiSuggest ? checkVqaAiSuggest.checked : true;
 
+        isVqaSearching = true;
+        vqaAbortController = new AbortController();
+        if (btnSearchVqa) {
+            btnSearchVqa.innerHTML = '🛑 Dừng VQA';
+            btnSearchVqa.classList.add('btn-stop');
+        }
         showLoading(true, 'Đang quét phân cảnh & phân tích VQA...');
 
         try {
@@ -191,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/search/vqa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: vqaAbortController.signal,
                 body: JSON.stringify({
                     context,
                     question,
@@ -210,12 +264,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderVqaResults(currentResults, data.count, question, context, elapsed);
         } catch (err) {
-            alert(`Lỗi VQA: ${err.message}`);
-            console.error(err);
+            if (err.name === 'AbortError') {
+                console.log('VQA search aborted by user');
+            } else {
+                alert(`Lỗi VQA: ${err.message}`);
+                console.error(err);
+            }
         } finally {
+            isVqaSearching = false;
+            vqaAbortController = null;
+            if (btnSearchVqa) {
+                btnSearchVqa.innerHTML = '✨ Tìm Khung Hình & Trả Lời (VQA)';
+                btnSearchVqa.classList.remove('btn-stop');
+            }
             showLoading(false);
         }
     }
+
 
     if (btnSearchVqa) {
         btnSearchVqa.addEventListener('click', performVqaSearch);
@@ -411,12 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLoading) {
             loadingSpinner.innerHTML = `<div class="spinner"></div> ${msg}`;
             loadingSpinner.classList.remove('hidden');
-            if (btnSearchKis) btnSearchKis.disabled = true;
-            if (btnSearchVqa) btnSearchVqa.disabled = true;
         } else {
             loadingSpinner.classList.add('hidden');
-            if (btnSearchKis) btnSearchKis.disabled = false;
-            if (btnSearchVqa) btnSearchVqa.disabled = false;
         }
     }
 });
