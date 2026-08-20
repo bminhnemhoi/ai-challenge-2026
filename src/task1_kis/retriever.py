@@ -1,12 +1,15 @@
 import os
 import re
 import json
+import math
+import unicodedata
 import numpy as np
 import torch
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set, Tuple
 
 from .metadata_bm25 import MetadataBM25Searcher
 
@@ -73,10 +76,14 @@ class TextualKISRetriever:
         self.metadata_path = os.path.join(data_dir, "metadata.json")
         self.embeddings_path = os.path.join(data_dir, "embeddings.npy")
         
-        sig1_path = os.path.join(data_dir, "embeddings_siglip.npy")
+        sig384_path = os.path.join(data_dir, "embeddings_siglip2_384.npy")
         sig2_path = os.path.join(data_dir, "embeddings_siglip2.npy")
+        sig1_path = os.path.join(data_dir, "embeddings_siglip.npy")
         
-        if use_siglip_version == "siglip1" and os.path.exists(sig1_path):
+        if os.path.exists(sig384_path):
+            self.siglip_embeddings_path = sig384_path
+            self.siglip_model_name = "google/siglip2-so400m-patch14-384"
+        elif use_siglip_version == "siglip1" and os.path.exists(sig1_path):
             self.siglip_embeddings_path = sig1_path
             self.siglip_model_name = "google/siglip-base-patch16-224"
         elif use_siglip_version == "siglip2" and os.path.exists(sig2_path):
@@ -171,6 +178,11 @@ class TextualKISRetriever:
                 except Exception as e:
                     print(f"\n⚠️ Failed to auto-download {fname}: {e}. Continuing...", flush=True)
 
+    def _remove_accents(self, s: str) -> str:
+        if not s: return ""
+        nfkd = unicodedata.normalize('NFKD', s)
+        return "".join([c for c in nfkd if not unicodedata.combining(c)]).replace('đ', 'd').replace('Đ', 'D')
+
     def load_index_and_model(self):
         """Loads metadata, vector embeddings, BM25 index, and initialized SigLIP 2 models."""
         if self._is_loaded:
@@ -214,7 +226,8 @@ class TextualKISRetriever:
             siglip_name = getattr(self, "siglip_model_name", "google/siglip-base-patch16-224")
             print(f"Loading official Google {ver_name} model '{siglip_name}' on '{self.device}'...")
             from transformers import AutoProcessor, AutoModel
-            self.siglip_model = AutoModel.from_pretrained(siglip_name).to(self.device)
+            model_dtype = torch.float16 if self.device == "mps" else torch.float32
+            self.siglip_model = AutoModel.from_pretrained(siglip_name, dtype=model_dtype).to(self.device)
             self.siglip_processor = AutoProcessor.from_pretrained(siglip_name)
             self.siglip_model.eval()
 
@@ -329,17 +342,65 @@ class TextualKISRetriever:
             except Exception as e:
                 print(f"Notice loading translation cache: {e}")
 
-        # Initialize Google Gemini AI Optimizer (LLM Enrichment + VLM Re-Ranking)
+        # Pre-index normalized video titles, tags, descriptions, and IDF dictionary for generalized intra-series disambiguation
+        self.video_titles: Dict[str, str] = {}
+        self.video_tags: Dict[str, str] = {}
+        self.video_descs: Dict[str, str] = {}
+        self.video_titles_noacc: Dict[str, str] = {}
+        self.video_tags_noacc: Dict[str, str] = {}
+        self.video_descs_noacc: Dict[str, str] = {}
+        self.meta_idf_map: Dict[str, float] = {}
+
+        STOPWORDS_INIT = set([
+            "và", "của", "các", "những", "cho", "với", "trong", "tại", "được", "là", "có", "đã", "sẽ",
+            "một", "này", "đó", "khi", "như", "ra", "vào", "lại", "về", "đến", "từ", "tìm", "thấy", "cảnh", "video",
+            "màu", "đang", "nhiều", "hai", "ba", "bốn", "gì", "ở", "bên", "trên", "dưới", "giữa", "theo", "sau", "trước",
+            "a", "an", "the", "in", "on", "at", "to", "for", "with", "from", "of", "and"
+        ])
+
+        if hasattr(self, "bm25_searcher") and self.bm25_searcher and self.bm25_searcher.video_metadata:
+            doc_freq = defaultdict(int)
+            total_docs = 0
+            for vid, d in self.bm25_searcher.video_metadata.items():
+                total_docs += 1
+                t_raw = d.get("title", "")
+                t_norm = re.sub(r"[^a-z0-9à-ỹ\s]", " ", unicodedata.normalize("NFC", t_raw).lower())
+                desc_raw = d.get("description", "")[:800]
+                desc_norm = re.sub(r"[^a-z0-9à-ỹ\s]", " ", unicodedata.normalize("NFC", desc_raw).lower())
+                tags = d.get("keywords", [])
+                if isinstance(tags, list):
+                    raw_tags = " ".join(str(x) for x in tags)
+                else:
+                    raw_tags = str(tags or "")
+                tag_norm = re.sub(r"[^a-z0-9à-ỹ\s]", " ", unicodedata.normalize("NFC", raw_tags).lower())
+
+                self.video_titles[vid] = " ".join(t_norm.split())
+                self.video_tags[vid] = " ".join(tag_norm.split())
+                self.video_descs[vid] = " ".join(desc_norm.split())
+
+                self.video_titles_noacc[vid] = self._remove_accents(self.video_titles[vid])
+                self.video_tags_noacc[vid] = self._remove_accents(self.video_tags[vid])
+                self.video_descs_noacc[vid] = self._remove_accents(self.video_descs[vid])
+
+                all_t = f"{self.video_titles[vid]} {self.video_tags[vid]} {self.video_descs[vid]}"
+                t_tokens = all_t.split()
+                for w in set(w for w in t_tokens if w not in STOPWORDS_INIT and len(w) >= 2):
+                    doc_freq[w] += 1
+                for bg in set(" ".join(t_tokens[i:i+2]) for i in range(len(t_tokens)-1)):
+                    doc_freq[bg] += 1
+                for tg in set(" ".join(t_tokens[i:i+3]) for i in range(len(t_tokens)-2)):
+                    doc_freq[tg] += 1
+
+            self.meta_idf_map = {term: math.log((total_docs - df + 0.5) / (df + 0.5) + 1.0) for term, df in doc_freq.items()}
+            print(f"⚡ Loaded {len(self.video_titles)} normalized video titles, tags, descriptions & {len(self.meta_idf_map)} IDF weights in RAM.")
+
         self._is_loaded = True
         print(f"Retriever initialized with {len(self.metadata)} indexed keyframes.")
 
-        # Fast PyTorch MPS JIT kernel warm-up (Text + Vision + Late-Interaction MaxSim)
+        # Fast PyTorch MPS JIT kernel warm-up
         try:
             _ = self.search(query="red car", top_k=2, pure_siglip_raw=True, use_reranker=False)
-            # Warm up vision encoder & einsum MaxSim kernel with dummy image
             dummy_img = Image.new("RGB", (224, 224), "blue")
-            dummy_cand = [{"video_id": "L21_V001", "frame_filename": "005.jpg", "score": 0.1, "path": None}]
-            # Pre-compile MPS vision kernels
             v_in = self.siglip_processor(images=[dummy_img], return_tensors="pt").to(self.device)
             with torch.inference_mode():
                 _ = self.siglip_model.vision_model(**v_in)
@@ -447,7 +508,7 @@ class TextualKISRetriever:
         nms_frame_gap: int = 5,
         max_per_video: int = 2,
         visual_sim_threshold: float = 0.90,
-        use_reranker: bool = True,
+        use_reranker: bool = False,
         reranker_mode: str = "siglip_late",
         use_spatial_grid: bool = True,
         use_metadata_bm25: bool = True,
@@ -553,7 +614,7 @@ class TextualKISRetriever:
 
         # 2. Pure SigLIP 2 Multi-Prompt Ensemble & Video-Level Multi-Frame Fusion (Stage 1)
         if self.use_siglip_only and self.embeddings_siglip is not None:
-            target_prompts = [clean_en, f"a photo of {clean_en}", f"a high quality video scene of {clean_en}", clean_query]
+            target_prompts = [clean_en, clean_query, f"a high quality video keyframe of {clean_en}", f"a photo of {clean_en}"]
             inputs = self.siglip_processor(
                 text=target_prompts,
                 return_tensors="pt",
@@ -566,87 +627,81 @@ class TextualKISRetriever:
                 outputs = self.siglip_model.get_text_features(**inputs)
                 tf = getattr(outputs, 'pooler_output', getattr(outputs, 'text_embeds', outputs[0] if isinstance(outputs, (tuple, list)) else outputs))
                 tf = tf / tf.norm(dim=-1, keepdim=True)
-                avg_tf = tf.mean(dim=0, keepdim=True)
-                avg_tf = avg_tf / avg_tf.norm(dim=-1, keepdim=True)
-                siglip_vec = avg_tf.cpu().numpy().flatten().astype(np.float32)
+                weights = torch.tensor([0.45, 0.35, 0.10, 0.10], device=self.device).unsqueeze(1)
+                weighted_tf = (tf * weights).sum(dim=0, keepdim=True)
+                weighted_tf = weighted_tf / weighted_tf.norm(dim=-1, keepdim=True)
+                siglip_vec = weighted_tf.cpu().numpy().flatten().astype(np.float32)
 
             # High-Precision SigLIP 2 Cosine Similarity Matrix Multiplication
             sims = np.dot(self.embeddings_siglip, siglip_vec).astype(np.float32)
 
-            # 3. YouTube Metadata / Topic Domain Fusion
-            video_domain_boosts: Dict[str, float] = {}
-            if hasattr(self, "bm25_searcher") and self.bm25_searcher and self.bm25_searcher.is_ready:
-                low_q = low_clean
-                for vid, meta in self.bm25_searcher.video_metadata.items():
-                    t_low = meta.get("title", "").lower()
-                    boost = 0.0
-                    if vid.startswith("L25"):
-                        if "lịch sử" in low_q and "lịch sử" in t_low:
-                            boost += 0.015
-                        if "sinh học" in low_q and "sinh học" in t_low:
-                            boost += 0.015
-                        if "toán" in low_q and "toán" in t_low:
-                            boost += 0.015
-                        if "vật lý" in low_q and "vật lý" in t_low:
-                            boost += 0.015
-                        if "địa lý" in low_q and "địa lý" in t_low:
-                            boost += 0.015
-                        if "hóa học" in low_q and "hóa học" in t_low:
-                            boost += 0.015
-                    if vid.startswith("L26"):
-                        if "hấp" in low_q and "hấp" in t_low:
-                            boost += 0.012
-                        if ("aji-quick" in low_q or "bột chiên giòn" in low_q) and ("chiên" in t_low or "l26_v001" in vid.lower()):
-                            boost += 0.010
-                        if "xào" in low_q and "xào" in t_low:
-                            boost += 0.008
-                        if "kho" in low_q and "kho" in t_low:
-                            boost += 0.008
-                        if "lẩu" in low_q and "lẩu" in t_low:
-                            boost += 0.008
-                    if vid.startswith("L23"):
-                        if "cúp truyền hình" in low_q:
-                            if "chặng 2" in t_low or vid == "L23_V002":
-                                boost += 0.008
-                            if "chia ba khung hình" in low_q and vid == "L23_V012":
-                                boost += 0.015
-                    if vid == "L29_V015" and "cá cơm" in low_q:
-                        boost += 0.010
-                    if vid == "L29_V012" and "xuồng nhỏ" in low_q:
-                        boost += 0.008
-                    if vid == "L27_V001" and "giờ phải làm sao ta" in low_q:
-                        boost += 0.010
-                    if vid == "L24_V015" and "múa lân" in low_q and "nam hoa" in t_low:
-                        boost += 0.010
-                    if vid == "L28_V018" and ("đời người" in low_q or "chèo thuyền" in low_q and "tập 18" in t_low):
-                        boost += 0.012
-                    if vid == "L29_V005" and "rừng tràm" in low_q and "tập 5" in t_low:
-                        boost += 0.010
-
-                    if boost > 0.0:
-                        video_domain_boosts[vid] = boost
+            # 3. 100% Generalized Dynamic Semantic Topic & N-gram Matcher (Zero Hardcode)
+            STOPWORDS_META = {"và", "là", "có", "trong", "đang", "của", "cho", "với", "những", "các", "trên", "tại", "một", "ở", "ra", "vào", "được", "bị", "khi", "để", "màu", "cảnh", "video"}
+            q_clean = clean_query.lower().replace(",", " ").replace(".", " ").replace(";", " ")
+            q_words = [w for w in q_clean.split() if len(w) >= 2 and w not in STOPWORDS_META]
+            q_bigrams = [" ".join(q_words[i:i+2]) for i in range(len(q_words)-1)]
+            q_trigrams = [" ".join(q_words[i:i+3]) for i in range(len(q_words)-2)]
 
             # 5. Video-Level Multi-Frame Temporal Ranking over all 873 videos
             video_rankings = []
+            idf_lookup = getattr(self, "meta_idf_map", {})
+            v_titles_map = getattr(self, "video_titles", {})
+            v_tags_map = getattr(self, "video_tags", {})
+            v_descs_map = getattr(self, "video_descs", {})
+
             for v_id in self.unique_videos:
                 f_indices = self.video_to_indices[v_id]
                 v_sims = sorted([float(sims[fi]) for fi in f_indices if fi not in self.blank_frame_indices and self.metadata[fi].get("n", 1) > 2], reverse=True)
                 if len(v_sims) == 0:
                     siglip_agg = 0.0
+                    cluster_boost = 0.0
                 elif len(v_sims) == 1:
                     siglip_agg = v_sims[0]
+                    cluster_boost = 0.0
+                elif len(v_sims) == 2:
+                    siglip_agg = 0.75 * v_sims[0] + 0.25 * v_sims[1]
+                    sustained_cnt = sum(1 for s in v_sims if s >= 0.91 * v_sims[0])
+                    cluster_boost = np.log2(1.0 + min(sustained_cnt, 8)) * (0.015 / 3.0)
                 else:
-                    siglip_agg = 0.85 * v_sims[0] + 0.15 * v_sims[1]
+                    siglip_agg = 0.75 * v_sims[0] + 0.20 * v_sims[1] + 0.05 * v_sims[2]
+                    sustained_cnt = sum(1 for s in v_sims if s >= 0.91 * v_sims[0])
+                    cluster_boost = np.log2(1.0 + min(sustained_cnt, 8)) * (0.015 / 3.0)
 
-                hybrid_video_s = siglip_agg + video_domain_boosts.get(v_id, 0.0)
+                v_t = v_titles_map.get(v_id, "")
+                v_kw = v_tags_map.get(v_id, "")
+                v_d = v_descs_map.get(v_id, "")[:800]
+
+                t_kw_s = 0.0
+                d_s = 0.0
+
+                for tg in q_trigrams:
+                    idf = idf_lookup.get(tg, 1.0)
+                    if tg in v_t: t_kw_s += 4.0 * idf
+                    elif tg in v_kw: t_kw_s += 2.5 * idf
+                    elif tg in v_d: d_s += 1.0 * idf
+
+                for bg in q_bigrams:
+                    idf = idf_lookup.get(bg, 1.0)
+                    if bg in v_t: t_kw_s += 2.0 * idf
+                    elif bg in v_kw: t_kw_s += 1.2 * idf
+                    elif bg in v_d: d_s += 0.5 * idf
+
+                for w in q_words:
+                    idf = idf_lookup.get(w, 1.0)
+                    if f" {w} " in f" {v_t} ": t_kw_s += 0.5 * idf
+                    elif f" {w} " in f" {v_kw} ": t_kw_s += 0.25 * idf
+                    elif f" {w} " in f" {v_d} ": d_s += 0.15 * idf
+
+                raw_meta = t_kw_s + d_s * 3.0
+                boost = np.tanh(raw_meta * 0.02) * 0.035
+                hybrid_video_s = siglip_agg + cluster_boost + boost
                 video_rankings.append((v_id, hybrid_video_s, 0.0))
 
             video_rankings.sort(key=lambda x: x[1], reverse=True)
 
             # 6. Extract top distinct diverse frames per video from Top Videos
             diverse_candidates = []
-            max_vids = max(top_k * 2, 300)
-            for v_id, hybrid_v_s, bm_s in video_rankings[:max_vids]:
+            for v_id, hybrid_v_s, bm_s in video_rankings:
                 f_indices = self.video_to_indices[v_id]
                 sorted_f_indices = sorted(f_indices, key=lambda i: sims[i], reverse=True)
                 selected_in_video = []
@@ -666,7 +721,7 @@ class TextualKISRetriever:
                     diverse_candidates.append(item)
                     if len(selected_in_video) >= max_per_video:
                         break
-                if len(diverse_candidates) >= max(top_k * 2, 200):
+                if len(diverse_candidates) >= max(top_k * 4, 300):
                     break
 
             # 4. Reranking on Top Diverse Candidates (SigLIP Late-Interaction / Gemini VLM / Off)
@@ -733,8 +788,7 @@ class TextualKISRetriever:
                             
                             if n_raw_idx is not None and n_raw_idx < len(sims):
                                 n_sim = float(sims[n_raw_idx])
-                                # Inherit BM25 video relevance boost if present
-                                n_score = n_sim + (0.20 * bm25_scores[v_id] if (bm25_scores and v_id in bm25_scores) else 0.0)
+                                n_score = n_sim
                                 
                                 # 1. Semantic Check: Must be positively related to the search query
                                 if n_score >= 0.14:

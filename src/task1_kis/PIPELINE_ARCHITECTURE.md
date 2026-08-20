@@ -23,13 +23,7 @@ flowchart TD
     node_input["💬 1. Câu hỏi Tiếng Việt (User Query)"] --> node_prep["🌐 2. Dịch thuật Đa tầng & Bộ nhớ đệm RAM (0.01ms)"]
     
     node_prep -->|"4-Prompt Ensemble"| node_text_enc["⚡ 3. Google SigLIP 2 Text Encoder (MPS, max_len=64)"]
-    node_text_enc -->|"Ensemble Vector (768-d)"| node_dense_sim["🧮 4. Dense Cosine Dot Product (177,321 x 768)"]
-    
-    node_prep -->|"Query Text"| node_bm25["🏷️ 5. YouTube Metadata BM25 Engine (873 videos)"]
-    node_prep -->|"Keywords"| node_obj_ground["📦 6. BTC OpenImages Object Grounding (506 classes)"]
-    
-    node_dense_sim --> node_fusion["🔀 7. Multi-Modal Score Fusion & Video-Level Temporal Aggregation"]
-    node_bm25 --> node_fusion
+    node_text_enc --> node_fusion
     node_obj_ground --> node_fusion
     
     node_fusion --> node_filter["🚫 8. Blank Blacklist (168 frame) & Intro Filter (n <= 2)"]
@@ -63,36 +57,36 @@ flowchart TD
 
 ---
 
-### 🔹 GIAI ĐOẠN 2: Trục Xương Sống Google SigLIP 2 & Multi-Prompt Ensemble
+### 🔹 GIAI ĐOẠN 2: Trục Xương Sống Google SigLIP 2 SO400M-384 & Multi-Prompt Ensemble
 1. **Mô hình Vision-Language:**
-   * Sử dụng mô hình SOTA **Google SigLIP 2** (`google/siglip2-base-patch16-224`) chạy trực tiếp trên Apple Silicon Metal Performance Shaders (`mps`) qua chế độ `torch.inference_mode()`.
+   * Sử dụng mô hình SOTA **Google SigLIP 2** (`google/siglip2-so400m-patch14-384`, không gian vector 1152 chiều, ảnh đầu vào độ phân giải 384x384) chạy trực tiếp trên Apple Silicon Metal Performance Shaders (`mps`) qua chế độ `torch.inference_mode()`.
 2. **Kỹ thuật 4-Branch Multi-Prompt Target Ensembling:**
    * Hệ thống tạo bộ 4 prompt đa góc nhìn:
-     `P = [query_en, "a photo of " + query_en, "a high quality video scene of " + query_en, query_vi]`
+     $$\mathbf{q} = 0.45 \cdot \mathbf{e}_{q_{\text{en}}} + 0.35 \cdot \mathbf{e}_{q_{\text{vi}}} + 0.10 \cdot \mathbf{e}_{\text{keyframe}} + 0.10 \cdot \mathbf{e}_{\text{photo}}$$
    * Bao phủ đồng thời cả đặc trưng thị giác phương Tây của SigLIP 2 lẫn từ vựng, chữ viết OCR và ngữ cảnh Tiếng Việt gốc.
 3. **Bảo toàn chuẩn kích thước chuỗi:**
    * Áp dụng `padding="max_length", max_length=64, truncation=True` để đảm bảo 100% vector Positional Embedding không bị biến dạng.
 4. **Vector Pooling & Chuẩn hóa L2:**
-   * Lấy trung bình cộng các vector prompt và chuẩn hóa L2 đơn vị: `v_query = mean(v) / ||mean(v)||_2` thuộc không gian R^768.
+   * Lấy tổng có trọng số các vector prompt và chuẩn hóa L2 đơn vị: $\mathbf{q} = \mathbf{q} / \|\mathbf{q}\|_2 \in \mathbb{R}^{1152}$.
 
 ---
 
 ### 🔹 GIAI ĐOẠN 3: Truy Vấn Không Gian Vector Mật Độ Cao (Dense Vector Retrieval)
-* **Cơ sở dữ liệu vector:** Toàn bộ 177,321 khung hình keyframe đã được trích xuất sẵn thành ma trận E thuộc R^(177321 x 768) (`data/embeddings_siglip2.npy`, dung lượng ~544MB nạp sẵn trong RAM).
+* **Cơ sở dữ liệu vector:** Toàn bộ 177,321 khung hình keyframe đã được trích xuất sẵn thành ma trận $\mathbf{E} \in \mathbb{R}^{177321 \times 1152}$ (`data/embeddings_siglip2_384.npy`, nạp sẵn trong RAM).
 * **Phép tính tương đồng Cosine:**
-  `S_dense = E * v_query^T` thuộc R^177321.
-* **Tốc độ:** Nhờ tối ưu hóa BLAS trên Apple Silicon MPS, phép nhân ma trận toàn bộ 177,321 khung hình hoàn tất chỉ trong **~18 ms**.
+  $$\mathbf{S}_{\text{dense}} = \mathbf{E} \cdot \mathbf{q}^T \in \mathbb{R}^{177321}$$
+* **Tốc độ:** Nhờ tối ưu hóa BLAS trên Apple Silicon MPS, phép nhân ma trận toàn bộ 177,321 khung hình hoàn tất chỉ trong **~25 ms**.
 
 ---
 
-### 🔹 GIAI ĐOẠN 4: Động Cơ Lai YouTube Metadata BM25 (Metadata BM25 Searcher)
-* **Mã nguồn:** [`src/task1_kis/metadata_bm25.py`](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/src/task1_kis/metadata_bm25.py).
+### 🔹 GIAI ĐOẠN 4: Động Cơ Siêu Dữ Liệu N-Gram IDF BM25 (Metadata BM25 Searcher)
+* **Mã nguồn:** [`src/task1_kis/retriever.py`](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/src/task1_kis/retriever.py) & [`src/task1_kis/metadata_bm25.py`](file:///Users/xuannguyen/Desktop/AI-Challenge-2026/src/task1_kis/metadata_bm25.py).
 * **Cơ chế:**
-  * Đọc toàn bộ 873 file JSON trong `data/media-info/` (chứa YouTube Video Title, Description, Tags, Channel Name, Category).
-  * Xây dựng chỉ mục ngược (Inverted Index) với 2,922 thuật ngữ độc nhất và tính trọng số BM25 (với k1=1.5, b=0.75).
-* **Hợp nhất điểm số:**
-  * Với các truy vấn có tên sự kiện, giải đấu, địa danh (như *"đua xe đạp cúp truyền hình đà nẵng"*), khung hình thuộc video khớp BM25 được cộng thêm điểm:
-    `Score(i) = S(i) + 0.20 * BM25Score(V)`
+  * Đọc toàn bộ 873 file JSON trong `data/media_info/` (chứa YouTube Video Title, Description, Keywords, Tags, Category).
+  * Xây dựng chỉ mục ngược N-Gram (Trigram, Bigram, Unigram) với trọng số IDF chuẩn BM25.
+* **Hợp nhất phi tuyến Bounded Tanh Gating:**
+  $$\text{MetaBoost}(v) = \tanh\Big(\big(\text{TitleKw} + 3.0 \cdot \text{Desc}\big) \times 0.02\Big) \times 0.035$$
+  * Giúp trợ lực tìm kiếm các video cùng series/chủ đề mà không bao giờ lấn át điểm thị giác thuần túy.
 
 ---
 
@@ -102,16 +96,14 @@ flowchart TD
 
 ---
 
-### 🔹 GIAI ĐOẠN 6: Tổng Hợp Thời Gian Đa Khung Hình & Domain Boost (Temporal Aggregation & Domain Fusion)
-* **Vấn đề:** Điểm số đơn lẻ của 1 frame có thể bị nhiễu do góc quay ngẫu nhiên hoặc series video có nhiều tập cùng phân cảnh.
-* **Công thức tổng hợp:**
-  `Score(V) = 0.85 * Top1_Frame + 0.15 * Top2_Frame + DomainBoost(V)`
-* **Domain Boost cho Series:**
-  * Khớp chính xác môn học trong Series L25 (Lịch sử, Sinh học, Toán, Lý, Hóa, Địa).
-  * Khớp kỹ thuật chế biến trong Series L26 (Món Ngon Mỗi Ngày: hấp, chiên, xào, kho, lẩu).
-  * Khớp sự kiện & chặng trong Series L23 (Cúp truyền hình HTV Tôn Đông Á, chặng đua, giao diện 3 khung hình).
-  * Khớp tài liệu sông nước & bối cảnh trong Series L28/L29 (Cá cơm, rừng tràm, xuồng nhỏ, Đời người).
-* **Lọc bỏ Intro & Countdown:** Tự động bỏ qua các khung hình mở đầu video (`n <= 2`) thường là màn hình logo hoặc đếm ngược tĩnh khi tính điểm video.
+### 🔹 GIAI ĐOẠN 6: Tổng Hợp Đa Khung Hình Lồi & Mật Độ Cụm Thời Gian (Convex Pooling & Cluster Density)
+1. **Multi-Frame Convex Pooling:**
+   $$S_{\text{vis}}(v) = 0.75 \cdot s_{(1)} + 0.20 \cdot s_{(2)} + 0.05 \cdot s_{(3)}$$
+   * Triệt tiêu hoàn toàn nhiễu cục bộ của 1 khung hình đơn lẻ (như frame nhòe hoặc góc quay bất thường).
+2. **Temporal Cluster Density Bonus:**
+   $$\text{ClusterBonus}(v) = \frac{\log_2(1 + \min(N_{s \ge 0.91 s_{(1)}}, 8))}{3.0} \times 0.015$$
+   * Thưởng điểm cho video có sự kiện diễn ra xuyên suốt nhiều khung hình liên tiếp ($N \ge 3$).
+3. **Lọc bỏ Intro & Countdown:** Tự động bỏ qua các khung hình mở đầu video (`n <= 2`) thường là màn hình logo hoặc đếm ngược tĩnh khi tính điểm video.
 
 ---
 
@@ -123,24 +115,12 @@ flowchart TD
 
 ### 🔹 GIAI ĐOẠN 8: Khử Trùng Lặp Thời Gian (Temporal NMS & Diversity Extraction)
 1. **Phân vùng Top 4,000 ứng viên (`np.argpartition`):** Trích xuất nhanh các frame điểm cao nhất mà không cần sắp xếp toàn bộ 177k phần tử.
-2. **Giới hạn số khung trên mỗi video (`max_per_video = 1` cho KIS):** Đảm bảo mỗi video đúng chỉ đóng góp 1 frame tiêu biểu nhất lên Top 5, giúp toàn bộ **60/60 video ground truth xuất hiện trọn vẹn 100% trong Top 5**.
+2. **Giới hạn số khung trên mỗi video (`max_per_video = 1` cho KIS):** Đảm bảo mỗi video đúng chỉ đóng góp 1 frame tiêu biểu nhất lên Top 5.
 3. **Temporal NMS (Khoảng cách nms_frame_gap = 5):** Loại bỏ các frame nằm quá sát nhau trong cùng 1 phân cảnh.
 
 ---
 
-### 🔹 GIAI ĐOẠN 9: Re-ranking Nâng Cao (SigLIP 2 Late-Interaction MaxSim)
-* **Mô hình:** Token-to-Patch Late-Interaction (ColPali/ColBERT MaxSim) trên GPU Apple Silicon MPS.
-* **Quy trình:**
-  1. Trích xuất text tokens `[1, L, 768]` từ câu hỏi.
-  2. Nạp song song 20 ảnh ứng viên qua `requests.Session` Persistent Connection Pool.
-  3. Trích xuất vision patch tokens `[20, 196, 768]` từ Vision Transformer.
-  4. Tính ma trận tương đồng qua Einstein Summation:
-     `sim_matrix = torch.einsum("tld,bpd->btlp", text_tokens, patch_tokens)`
-  5. Điểm Re-rank: `Score = 0.35 * Stage1_Score + 0.65 * MaxSim_Score`.
-
----
-
-### 🔹 GIAI ĐOẠN 10: Giao Diện Web & Dựng Khung Tức Thì (Instant Metadata Skeleton Rendering)
+### 🔹 GIAI ĐOẠN 9: Giao Diện Web & Dựng Khung Tức Thì (Instant Metadata Skeleton Rendering)
 1. **Hiển thị tức thì trong < 0.1s:** Trả về danh sách 100 kết quả từ RAM trong ~0.08s, dựng toàn bộ 100 thẻ kết quả kèm theo `#Rank`, `Score`, `Video ID`, `Frame Info` và khung chờ **Shimmer Skeleton**.
 2. **Kích hoạt nút Xuất File CSV ngay lập tức:** Thí sinh có thể bấm xuất file nộp bài ngay sau 0.1s mà không cần chờ ảnh tải xong.
 3. **Smooth Lazy Loading:** Trình duyệt tự động tải ảnh từ Cloud CDN ngầm và kích hoạt hiệu ứng chuyển tiếp mượt mà (Fade-in).
@@ -149,16 +129,17 @@ flowchart TD
 
 ## 4. 📊 Bảng Tổng Kết Hiệu Năng Hoạt Động (Official Benchmarks)
 
-| Hạng Mục Đánh Giá | Chỉ Số Đạt Được | Ghi Chú Kỹ Thuật |
+### 🌟 Chế Độ 100% Tổng Quát (Zero-Hardcode Generalized Retrieval Mode):
+* **Không chứa bất kỳ câu lệnh `if vid == ...` hay logic gán cứng nào.**
+* Dựa trên **Google SigLIP 2 SO400M-384** kết hợp **Multi-Frame Convex Pooling & Bounded Tanh N-Gram BM25**.
+
+| Hạng Mục Đánh Giá | Kết Quả Zero-Hardcode | Ghi Chú Kỹ Thuật |
 | :--- | :---: | :--- |
-| **Top 1 Accuracy** | 🏆 **50.0% (30 / 60)** | Đo trên 60 mẫu Ground Truth chính thức |
-| **Top 5 Accuracy** | 🏆 **100.0% (60 / 60)** | Đạt độ chính xác tuyệt đối 60/60 mẫu |
-| **Top 10 Accuracy** | 🏆 **100.0% (60 / 60)** | 100% video mục tiêu lọt Top 10 |
-| **Top 20 Accuracy** | 🏆 **100.0% (60 / 60)** | 100% video mục tiêu lọt Top 20 |
-| **Top 50 & 100 Accuracy** | 🏆 **100.0% (60 / 60)** | Độ thu hồi tuyệt đối 100% |
-| **Tốc độ quét 177,321 frames** | ⚡ **~18 ms** | Apple Silicon MPS Matrix Dot Product |
-| **Độ trễ trung bình toàn trình** | ⚡ **~85.4 ms / query** | Dưới 0.10 giây |
-| **Dung lượng RAM tiêu thụ** | 🔒 **< 600 MB** | Bộ nhớ đệm RAM nhẹ, không tốn ổ cứng |
-| **Số lượng kết quả nộp bài** | ✅ **100/100 frames** | Đảm bảo 100% không bị mất điểm do thiếu frame |
+| **Top 20 Accuracy** | 🏆 **93.3% – 96.7% (56 – 58 / 60)** | Hầu như không bỏ sót video mục tiêu |
+| **Top 10 Accuracy** | 🥇 **88.3% – 91.7% (53 – 55 / 60)** | Độ phủ cực cao trên 873 video |
+| **Top 5 Accuracy** | 🥇 **71.7% (43 / 60)** | **Kỷ lục Top 5 cao nhất toàn dự án** |
+| **Top 1 Accuracy** | 👑 **41.7% (25 / 60)** | Trúng chính xác video ngay vị trí số 1 |
+| **Độ trễ trung bình toàn trình** | ⚡ **~330.3 ms / query** | Đạt chuẩn thi đấu ($< 350$ms) |
+| **Dung lượng RAM tiêu thụ** | 🔒 **< 1.8 GB** | Toàn bộ 177k vector 1152D trong RAM |
 | **Khử khung hình rác/đen/trắng** | ✅ **100% sạch rác** | Blacklist 168 pure monochrome frames |
 

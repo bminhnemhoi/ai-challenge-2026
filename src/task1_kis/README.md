@@ -26,30 +26,30 @@
 flowchart TD
     node_query["💬 Câu hỏi Tiếng Việt"] --> node_trans["🌐 1. Persistent Translator & Instant Dict"]
     
-    node_trans --> node_sig["⚡ 2. Google SigLIP 2 Vector Engine (177k x 768)"]
-    node_trans --> node_color["🎨 3. Opponent Color Penalty & Multi-Prompt Ensembling"]
-    node_trans --> node_neg["🛡️ 4. Negative Calibration (Khử Bumper/Logo/Credits)"]
-    node_trans --> node_bm25["🏷️ 5. YouTube Metadata BM25 Engine (873 videos)"]
-    node_trans --> node_obj["📦 6. BTC OpenImages Object Grounding (In-Memory Cached)"]
+    node_trans -->|"4-Prompt Ensemble"| node_sig["⚡ 2. Google SigLIP 2 SO400M-384 (177k x 1152)"]
+    node_trans --> node_bm25["🏷️ 3. Dynamic N-Gram IDF BM25 (873 videos)"]
+    node_trans --> node_obj["📦 4. BTC OpenImages Object Grounding (In-Memory)"]
     
-    node_sig --> node_fusion["🔀 7. Multi-Modal Score Fusion (candidate_k = 2000)"]
-    node_color --> node_fusion
-    node_neg --> node_fusion
-    node_bm25 --> node_fusion
+    node_sig --> node_convex["⏱️ 5. Multi-Frame Convex Pooling: 0.75 Top1 + 0.20 Top2 + 0.05 Top3"]
+    node_sig --> node_clus["📊 6. Temporal Cluster Density: gamma=0.91, lam=0.015"]
+    node_bm25 --> node_gate["🛡️ 7. Bounded Tanh Metadata Gating: tanh(score * 0.02) * 0.035"]
+    
+    node_convex --> node_fusion["🔀 8. Unified Multimodal Fusion"]
+    node_clus --> node_fusion
+    node_gate --> node_fusion
     node_obj --> node_fusion
     
-    node_fusion --> node_blank["🚫 8. Solid Blank Frame Blacklist Filter (168 frame đen/trắng)"]
-    node_blank --> node_nms["✂️ 9. Temporal NMS (gap=5) & Video Diversity (max=2)"]
-    node_nms --> node_exp["⏱️ 10. Smart Semantic & Visual Continuity Expansion (n±4, sim≥0.55)"]
-    node_exp --> node_out["🏆 Top 100 Submission Results"]
+    node_fusion --> node_blank["🚫 9. Solid Blank Frame Blacklist Filter (168 frame)"]
+    node_blank --> node_nms["✂️ 10. Temporal NMS (gap=5) & Video Diversity Ranking"]
+    node_nms --> node_out["🏆 Top 100 Submission Results"]
 
     classDef primary fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#fff;
     classDef highlight fill:#0369a1,stroke:#38bdf8,stroke-width:2px,color:#fff;
     classDef success fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#fff;
     
     class node_sig,node_fusion primary;
-    class node_trans,node_color,node_neg,node_bm25,node_obj highlight;
-    class node_blank,node_nms,node_exp,node_out success;
+    class node_trans,node_convex,node_clus,node_bm25,node_gate,node_obj highlight;
+    class node_blank,node_nms,node_out success;
 ```
 
 ---
@@ -68,7 +68,7 @@ flowchart TD
     ```bash
     python3 -m uvicorn app:app --host 0.0.0.0 --port 8000
     ```
-* **KHÔNG** viết script python độc lập gọi `retriever.load_index_and_model()` từ đầu vì sẽ phải nạp lại 520MB vector gây tốn thời gian.
+* **KHÔNG** viết script python độc lập gọi `retriever.load_index_and_model()` từ đầu vì sẽ phải nạp lại vector gây tốn thời gian.
 * **LUÔN LUÔN** kiểm thử các câu truy vấn bằng lệnh HTTP request nhanh trực tiếp vào server đang chạy:
   ```bash
   curl -s -X POST http://127.0.0.1:8000/api/search/kis \
@@ -79,22 +79,23 @@ flowchart TD
 ### ⛔ Quy tắc 3: LUÔN BẢO ĐẢM TRẢ VỀ ĐỦ 100 KẾT QUẢ
 * Không bao giờ giảm `candidate_k` xuống dưới 1,500. `candidate_k` hiện được đặt là `min(max(top_k * 20, 2000), len(self.embeddings_siglip))` để đảm bảo sau khi lọc NMS, hệ thống luôn trả về đủ **100/100 kết quả**, không làm mất điểm của thí sinh.
 
-### ⛔ Quy tắc 4: MỞ RỘNG KHUNG HÌNH PHẢI CÓ KIỂM DUYỆT LIÊN TỤC THỊ GIÁC (VISUAL CONTINUITY)
-* Tuyệt đối không lấy mù n ± 1. Bắt buộc phải kiểm tra độ tương đồng góc quay `visual_continuity = np.dot(seed_vec, neighbor_vec) >= 0.55` để tránh nhảy sang phân cảnh chuyển shot hoặc quảng cáo.
-
 ---
 
 ## 4. 🧪 BỘ TEST CHUẨN ĐỂ KIỂM ĐỊNH TÍNH ĐÚNG ĐẮN (BENCHMARK SUITE)
 
-Mỗi khi chỉnh sửa logic của Task 1, Agent hãy chạy các test case sau qua `curl` để nghiệm thu:
+Để kiểm thử độ chính xác trên 60 câu truy vấn Ground Truth chính thức:
+```bash
+python3 scripts/evaluate_official_pipeline.py
+```
+
+Các test case chức năng cốt lõi:
 
 | Tên Test Case | Câu truy vấn mẫu | Tiêu chuẩn ĐẠT |
 | :--- | :--- | :--- |
 | **1. Khớp thực thể / Sự kiện (BM25)** | `"đua xe đạp cúp truyền hình đà nẵng"` | Video `L23_V012` phải đứng **Top 1 tuyệt đối** (Score > 0.38). |
-| **2. Phân biệt màu sắc đối lập** | `"xe ô tô màu đỏ"` vs `"xe ô tô màu vàng"` | Kết quả của 2 query phải trả về các frame xe **hoàn toàn khác nhau**, không bị nhầm xe vàng thành xe đỏ. |
-| **3. Nhận diện vật thể & Mở rộng shot** | `"con mèo"` | Video `L30_V040` đứng Top 1; các frame mở rộng $n=6, 8$ (`is_neighbor_expansion=true`) cùng phân cảnh con mèo xuất hiện ngay sau Top 1. |
-| **4. Lọc ảnh đen / trắng đơn sắc** | `"màn hình màu đen tối"` | Không được xuất hiện bất kỳ frame nào có `raw_index` nằm trong blacklist `blank_frame_indices.json`. |
-| **5. Đủ số lượng 100 frame** | `"bác sĩ"` với `top_k = 100` | Trường `"count"` trong JSON trả về phải đạt chính xác **100**. |
+| **2. Phân biệt màu sắc đối lập** | `"xe ô tô màu đỏ"` vs `"xe ô tô màu vàng"` | Kết quả của 2 query phải trả về các frame xe **hoàn toàn khác nhau**, không bị nhầm lẫn. |
+| **3. Lọc ảnh đen / trắng đơn sắc** | `"màn hình màu đen tối"` | Không được xuất hiện bất kỳ frame nào có `raw_index` nằm trong blacklist `blank_frame_indices.json`. |
+| **4. Đủ số lượng 100 frame** | `"bác sĩ"` với `top_k = 100` | Trường `"count"` trong JSON trả về phải đạt chính xác **100**. |
 
 ---
 
@@ -103,11 +104,12 @@ Mỗi khi chỉnh sửa logic của Task 1, Agent hãy chạy các test case sau
 ```text
 src/task1_kis/
 ├── __init__.py                # Export TextualKISRetriever
-├── retriever.py               # Lõi tìm kiếm chính (SigLIP 2, Opponent Color, NMS, Temporal Expansion)
+├── retriever.py               # Lõi tìm kiếm chính (SigLIP 2 SO400M-384, Convex Pooling, Cluster Density, N-Gram BM25)
 ├── metadata_bm25.py           # Bộ máy tìm kiếm BM25 trên 873 file YouTube metadata
 ├── PIPELINE_ARCHITECTURE.md  # 🏛️ Tài liệu đặc tả 10 giai đoạn & phương pháp kỹ thuật toàn diện
 ├── PLAN_TASK1_KIS.md          # Kế hoạch phát triển & lộ trình giai đoạn
 └── README.md                  # Hướng dẫn phát triển & kiểm thử (File này)
+```
 ```
 
 ---

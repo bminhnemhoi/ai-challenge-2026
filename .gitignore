@@ -8,6 +8,7 @@ downloads/
 cache/
 data/cache/
 .cache_keyframes/
+models/
 *.npy
 *.npz
 *.bin
@@ -16,6 +17,7 @@ data/cache/
 *.jpg
 *.jpeg
 *.png
+*.safetensors
 
 # Python & Environment
 .env
@@ -44,9 +46,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Temporary logs & exports & dev scripts
+# Temporary logs & exports & scratch folders
 *.log
 submission_*.csv
-scripts/test_*.py
-scripts/diagnose_*.py
-scripts/inspect_*.py
+tmp/
+tmp_check/
+
