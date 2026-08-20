@@ -8,7 +8,8 @@ Cài thư viện:
     pip install google-generativeai pillow
 
 Cần set biến môi trường:
-    export GOOGLE_API_KEY="your_api_key_here"
+    export GOOGLE_API_KEY="your_api_key_here" (Linux/macOS)
+    $env:GOOGLE_API_KEY="your_api_key_here" (Window)
 """
 
 from __future__ import annotations
