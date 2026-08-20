@@ -85,7 +85,7 @@ AI-Challenge-2026/
 
 ## ⚙️ Hướng Dẫn Cài Đặt & Chạy Nhanh Task 1
 
-Dành cho bất kỳ ai clone repository về máy và muốn chạy ngay:
+Dành cho bất kỳ ai clone repository về máy và muốn chạy ngay lập tức:
 
 ### 1. Clone Repository
 ```bash
@@ -98,15 +98,23 @@ cd ai-challenge-2026
 pip install torch torchvision transformers pillow numpy requests fastapi uvicorn deep-translator huggingface_hub
 ```
 
-### 3. Tải file Vector Index SigLIP 2 (`data/`) (Tùy chọn nếu chưa có sẵn)
-```bash
-python3 scripts/download_data.py
-```
-*(Hoặc server sẽ tự động tải file embeddings khi khởi động lần đầu).*
+### 3. Tải Dữ Liệu & Chỉ Mục Vector (Vector Index & Metadata)
+Hệ thống hỗ trợ 2 chế độ linh hoạt:
+
+* **⚡ Chế độ 1: Tải Nhanh Tự Động (Khuyên dùng - Hoạt động ngay trong 15s)**:
+  Chỉ cần chạy lệnh sau để tải toàn bộ metadata và file vector index SigLIP 2 từ Hugging Face CDN:
+  ```bash
+  python3 scripts/download_data.py
+  ```
+  *(Hoặc khi bạn khởi động server lần đầu, backend sẽ **tự động tải ngầm** nếu máy chưa có dữ liệu).*
+
+* **🎯 Chế độ 2: Trích xuất / Nâng cấp bản SOTA SigLIP 2 SO400M-384 (`embeddings_siglip2_384.npy`)**:
+  Mở notebook [`notebooks/index-siglip2.ipynb`](notebooks/index-siglip2.ipynb) trên **Google Colab (1x GPU T4 miễn phí)** và bấm *Run All*. Toàn bộ 177,321 keyframe sẽ được trích xuất vector 1152 chiều trong ~25 phút và tự động lưu về Google Drive để bạn tải về đặt vào thư mục `data/`.
 
 ---
 
 ## 🚀 Cách Chạy Task 1
+
 
 ### Cách 1: Chạy Giao Diện Web App (Khuyên dùng)
 ```bash

@@ -191,6 +191,20 @@ class TextualKISRetriever:
         # Auto-download missing files if cloned freshly from GitHub
         self._ensure_data_files()
 
+        sig384_path = os.path.join(self.data_dir, "embeddings_siglip2_384.npy")
+        sig2_path = os.path.join(self.data_dir, "embeddings_siglip2.npy")
+        sig1_path = os.path.join(self.data_dir, "embeddings_siglip.npy")
+
+        if os.path.exists(sig384_path):
+            self.siglip_embeddings_path = sig384_path
+            self.siglip_model_name = "google/siglip2-so400m-patch14-384"
+        elif os.path.exists(sig2_path):
+            self.siglip_embeddings_path = sig2_path
+            self.siglip_model_name = "google/siglip2-base-patch16-224"
+        elif os.path.exists(sig1_path):
+            self.siglip_embeddings_path = sig1_path
+            self.siglip_model_name = "google/siglip-base-patch16-224"
+
         if not os.path.exists(self.metadata_path):
             raise FileNotFoundError(
                 f"Metadata file not found in '{self.data_dir}'. Please run `python3 scripts/download_data.py` first!"
@@ -211,6 +225,7 @@ class TextualKISRetriever:
             self.video_to_keyframes[vid][n] = item
 
         has_siglip = os.path.exists(self.siglip_embeddings_path)
+
 
         if self.use_siglip_only and has_siglip:
             is_sig2 = "siglip2" in self.siglip_embeddings_path
