@@ -67,7 +67,7 @@ flowchart TD
 * Server backend (`uvicorn app:app`) chạy thường trú tại `http://127.0.0.1:8000`.
 * **Kiểm tra & khởi động server nếu chưa chạy:**
   ```bash
-  uvicorn app:app --host 0.0.0.0 --port 8000
+  uvicorn task2_vqa.app:app --host 0.0.0.0 --port 8000 --reload
   ```
 * **LUÔN LUÔN** kiểm thử câu hỏi bằng HTTP request trực tiếp vào server đang chạy:
   ```bash
