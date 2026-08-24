@@ -1,0 +1,241 @@
+# Hệ thống đang làm gì, và chỗ nào còn cải thiện được
+
+Viết ở mốc **8,6/24 điểm** (5,8 → 7,2 → 7,8 → 8,6).
+
+---
+
+## 1. Đường đi của một câu hỏi
+
+```
+đề bài tiếng Việt
+   │
+   ├─ dịch sang tiếng Anh (3 lớp dự phòng + cache) ─┐
+   │                                                 │
+   │  bản dịch tay .en.txt (nếu có) ─────────────────┤
+   │                                                 ▼
+   │                                    bộ 4 prompt → 1 vector 1152 chiều
+   │                                                 │
+   ▼                                                 ▼
+SigLIP-2 SO400M-384  ×  177.321 keyframe  →  400 ứng viên  (một phép nhân ma trận)
+                                                   │
+                          ┌────────────────────────┤
+                          ▼                        ▼
+             điểm cộng nhận dạng đối tượng   xếp hạng lại bằng VLM
+                (tầng VIDEO, w=0.01)          (tầng VIDEO, w=0.02)
+                    ĐO ĐƯỢC +3,3%                ĐO ĐƯỢC +3,3%
+                          └────────────┬───────────┘
+                                       ▼
+                          phân bổ 100 dòng  (n_flat=30, ±10/±20)
+                                       │
+                    KIS/Q&A ───────────┼─────────── TRAKE
+                    thang frame        │      quy hoạch động CHRONOS
+                                       │      + lưới bù trừ 4 chiều
+                                       ▼
+                              submission.zip  →  bộ kiểm tra định dạng
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    ▼                                     ▼
+            review.html (mắt người)              apply_picks.py
+       kéo thả · trình phát YouTube ·          chốt tay đè lên máy
+       chốt frame bằng phím C · OCR ·
+       màu · lời thoại · xuất zip
+```
+
+**Nguyên tắc xuyên suốt:** mọi tín hiệu chỉ được vào đường chấm điểm sau khi
+**đo trên 60 câu ground truth bằng công thức chính thức, với đáp án rút thăm
+không snap keyframe**. Không đo thì đi tới mắt người, không đi tới bảng xếp hạng.
+
+---
+
+## 2. Bảng tổng kết mọi thứ đã đo
+
+| tín hiệu | tầng | kết quả | có dùng? |
+|---|---|---|---|
+| thang frame ±10/±20 thay vì chỉ keyframe | frame | **+26% TB, +120% cửa sổ hẹp** | ✅ |
+| dịch tay vào cùng một vector (không gộp 2 danh sách) | truy vấn | **+10,5%** | ✅ |
+| nhận dạng đối tượng | **video** | **+3,3%** | ✅ |
+| nhận dạng đối tượng | frame | +0,4% (nhiễu) | ❌ |
+| khớp **số lượng** đối tượng | frame | **±0,0%** (trơ hoàn toàn) | ❌ |
+| VLM Gemini | **video**, w=0.02 | **+3,3%** | ✅ |
+| VLM Gemini | video, w=0.20 | **−5,7%** (vR@1 tăng 25→30!) | ❌ |
+| lời thoại | video | −0,4% | ❌ |
+| lời thoại có cổng chặn | video | +0,5% (nhiễu) | ❌ |
+| lời thoại theo mốc thời gian | **frame** | −1,5% | ❌ |
+| metadata video (tiêu đề, mô tả) | video | −7,6% | ❌ |
+| làm mượt theo thời gian | frame | −0,023 | ❌ |
+| chuẩn hoá theo video | frame | −0,129 | ❌ |
+| viết lại câu hỏi | truy vấn | 1 tốt / 3 xấu | ❌ |
+
+Ba dòng in đậm ở nhóm "❌" là bài học đắt nhất của dự án: **video R@1 tăng trong
+khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau.
+
+| **ưu tiên đỉnh cục bộ** (keyframe nổi hơn hai bên) | **frame** | **+2,2%** | ✅ |
+| VLM xếp lại frame *bên trong* video | frame | −4,6% | ❌ |
+| ép các frame cách nhau ≥30/60/120 | frame | −1,3% | ❌ |
+| **đặt nhiều đáp án Q&A trên các dòng khác nhau** | dòng | **±0,0%** | ❌ |
+| chia lại ngân sách theo (video, keyframe, độ sâu) | dòng | −15% đến −30% | ❌ |
+
+---
+
+## 2b. Điểm đang mất ở ĐÂU — phép đo quan trọng nhất
+
+Trước khi tối ưu bất cứ thứ gì, phải biết mất ở đâu. Đo trên 60 câu ground truth:
+
+| nếu sửa hoàn hảo | điểm | tăng |
+|---|---|---|
+| hiện tại | 0,345 | — |
+| xếp hạng video hoàn hảo | 0,487 | +41% |
+| **vị trí frame hoàn hảo** | **0,740** | **+115%** |
+| cả hai | 1,000 | — |
+
+**60% phần điểm lấy lại được nằm ở VỊ TRÍ FRAME, chỉ 22% ở xếp hạng video.**
+
+Điều đó lật ngược trực giác: OCR, VLM, lời thoại đều cải thiện *chọn video* — tức
+phần 22%. Nhiều câu có video đúng ở **hạng 1** mà vẫn **0 điểm** vì không frame
+nào rơi vào cửa sổ.
+
+Mổ xẻ 22 câu trượt:
+
+| nguyên nhân | số câu |
+|---|---|
+| keyframe đúng **có** trong ứng viên, **thang không vươn tới** | **14** |
+| video không có trong 100 dòng | 5 |
+| keyframe đúng không có trong 400 ứng viên | 3 |
+
+Cơ chế: bộ phân bổ chi `cost(i, d) = i + 0,5·d`, nên ứng viên hạng 1 được thang
+vươn tới ±120 frame, còn hạng 25 chỉ được **một dòng phẳng không thang**.
+
+Và: keyframe *gần sự thật nhất* đứng hạng 1 trong video đúng chỉ **48%** số lần,
+nhưng nằm trong top-5 tới **76%**. Rải thang quanh keyframe hạng 1 phủ **55%**
+số câu; nếu chọn đúng keyframe thì phủ **98%**.
+
+Đó là lý do "ưu tiên đỉnh cục bộ" ăn tiền: nó đẩy keyframe đúng lên vài bậc, tới
+chỗ đã sẵn có thang sâu.
+
+**Ba cách chia lại ngân sách đều đã thử và đều tệ hơn.** Cách chia hiện tại
+(30 dòng phẳng rồi quét theo chi phí) là tối ưu — đo bằng ba phép quét độc lập.
+
+---
+
+## 3. Ba giới hạn cứng, đã định lượng
+
+**(a) Keyframe thưa hơn cửa sổ đáp án 5–9 lần.** Cửa sổ dưới 10 frame; keyframe
+cách nhau trung vị 55 frame (video múa lân: 92). Một keyframe đơn lẻ trúng cửa
+sổ **13,3%** số lần. Thang ±10/±20 nâng lên trần **54,9%** mỗi sự kiện.
+
+**(b) Với TRAKE 4 sự kiện, 100 dòng không phủ nổi lưới bù trừ.** Cần 625 tổ hợp,
+có 100 → phủ 16%. Kể cả mô hình **hoàn hảo** cũng chỉ đạt 0,45 trên video múa lân.
+
+**(c) 8/12 sự kiện TRAKE nằm dưới ngưỡng nhiễu.** Đỉnh điểm của SigLIP không nổi
+hơn một đỉnh ngẫu nhiên — nó là mô hình **ảnh tĩnh**, không biểu diễn được
+"bắt đầu xoay vòng", "4 chân chạm đất", "khoảnh khắc đầu tiên".
+
+---
+
+## 4. Chỗ còn cải thiện được, xếp theo giá trị trên công sức
+
+### 4.1 Mở rộng tầm nhìn của VLM — **giá trị cao nhất, chưa làm**
+
+VLM chỉ nhìn **top-24 của SigLIP**. Nếu video đúng không nằm trong đó thì nó bó
+tay. Đúng chuyện đã xảy ra: `p1-19` và `p1-22` đều ở **ngoài** top-24, và chỉ
+kênh lời thoại mới tìm ra.
+
+Cách làm: gộp ứng viên từ **ba nguồn** rồi mới đưa VLM chấm — top-24 hình ảnh +
+top-5 lời thoại (BM25) + top-5 OCR. Chi phí thêm ~$0,03/vòng. Đây là lỗ hổng
+kiến trúc rõ nhất còn lại.
+
+### 4.2 OCR toàn kho, chạy trước ngày thi — **cần thời gian, không cần tiền**
+
+Hiện chỉ OCR **ứng viên của vòng** (564 khung, 25 phút). 48% khung hình có chữ,
+mà chữ đó là dòng tiêu đề tin tức — thứ trả lời trực tiếp nhiều câu.
+
+177.321 khung × 4 giây = 8 ngày trên 1 lõi CPU. Nhưng:
+- chia 8 tiến trình → **1 ngày**
+- hoặc Gemini Flash-Lite: 177k ảnh ≈ **$9**, vài giờ
+- hoặc chỉ OCR nhóm tin tức (L21–L23, ~85 video) → vài giờ
+
+Có OCR toàn kho thì `search_ocr.py` thành công cụ tìm kiếm thật, không phải chỉ
+tra lại những gì đã chọn.
+
+### 4.3 Chỉ mục lời thoại thành nguồn ứng viên, không chỉ là công cụ tra
+
+Đã đo: gộp vào điểm thì **âm**. Nhưng đó là đo trên ground truth toàn mô tả cảnh
+nhìn thấy. Cách đúng không phải cộng điểm, mà là **thêm ứng viên**: BM25 lấy
+top-5 video, đưa keyframe của chúng vào danh sách cho VLM chấm. R@k là max trên
+tiền tố nên thêm ứng viên không bao giờ hại — chỉ tốn chỗ xếp hạng.
+
+### 4.4 TRAKE: lấy mẫu dày khi cho VLM chấm
+
+Bài học từ `p1-4`: **8 khung rải đều cho âm tính giả cả ba video**; 16 khung nửa
+sau cho kết quả đúng (100 điểm cho video đúng, 20 cho video sai). Bộ chấm TRAKE
+hiện chỉ đưa **đúng 4 frame của chuỗi** cho VLM — quá thưa. Nên đưa thêm ±3
+keyframe quanh mỗi sự kiện.
+
+### 4.5 Frame chính xác — chỉ người làm được
+
+Với các sự kiện dưới ngưỡng nhiễu, không mô hình nào trong tay ta chốt được
+frame. `review.html` đã có trình phát YouTube, đi từng frame bằng `←`/`→`, lấy
+thời điểm bằng phím `C`. **Đây vẫn là nguồn điểm lớn nhất trong 3 tiếng thi**, và
+nó không tốn gì ngoài thời gian người.
+
+### 4.6 Đã thử hôm nay và KHÔNG dùng (đo được, ghi lại để khỏi làm lại)
+
+**Đặt nhiều đáp án Q&A trên các dòng khác nhau.** Luật mục 2.1.2 cho phép:
+`R-Score(rᵢ) = I(vᵢ=GT_v ∧ idᵢ∈[s,e] ∧ **aᵢ**=GT_a)` — đáp án có chỉ số dòng.
+Về lý thuyết có thể đặt đáp án 1 ở dòng 1–4, đáp án 2 ở dòng 5, và R@1 không đổi
+nên không thể lỗ.
+
+Đo trên 60 câu ground truth (đều có đáp án chuẩn), cho model xem **đúng khung
+hình**:
+
+* đáp án thứ nhất đúng: **81%**
+* đáp án thứ hai cứu thêm: **0%**
+
+Khi model sai, nó sai theo *cùng một kiểu*. Chuẩn "Cá cơm" → model trả
+"Cá nhỏ / Tôm nhỏ / Mực nhỏ"; chuẩn "Tượng chằn Khmer" → model mô tả dài dòng mà
+không gọi được tên. Đó là lỗi **độ cụ thể**, không phải **mơ hồ** — thêm phương
+án không cứu được.
+
+Con số 81% cũng nói một điều quan trọng: **Q&A coi như đã xong nếu có đúng
+frame.** Bộ trả lời không phải chỗ nghẽn.
+
+**VLM xếp lại frame bên trong video: −4,6%.** VLM chọn được đúng *video* (+3,3%)
+nhưng chọn *frame* thì tệ hơn embedding — vì frame nó thích nhất không phải
+frame gần khoảnh khắc đáp án nhất. Đúng cái bẫy cũ, lần thứ ba.
+
+**Ép các frame ứng viên cách nhau tối thiểu 30/60/120 frame: −1,3%.**
+
+---
+
+### 4.7 Những thứ ĐỪNG làm
+
+- **Đừng** đổi encoder (PE-Core, InternVideo…): nhúng lại 177k khung trên CPU mất
+  hàng ngày, lợi ích chưa đo được trên độ đo này.
+- **Đừng** mua mô hình temporal grounding chuyên dụng: CoMET-Bench cho thấy chúng
+  thua trên bài toán nhiều sự kiện có điều kiện, và benchmark loại này giải được
+  ~92% chỉ bằng tiên nghiệm (Otani et al., BMVC 2020).
+- **Đừng** tăng trọng số VLM: đo được là **âm** từ 0,05 trở lên.
+- **Đừng** đảo cả top-50 bằng reranker: INQUIRE (NeurIPS 2024) cho thấy phần lớn
+  reranker làm *tệ hơn* baseline SigLIP SO400M.
+
+---
+
+## 5. Chi phí thực tế
+
+| việc | thời gian | tiền |
+|---|---|---|
+| dựng bài nộp nền | 90 giây | 0 |
+| VLM xếp hạng lại 24 câu | 10 phút | $0,08 |
+| OCR ứng viên của vòng | 25 phút (nền) | 0 |
+| trả lời 3 câu Q&A | 1 phút | $0,004 |
+| **tổng một vòng thi** | **~40 phút máy** | **~$0,09** |
+
+**Hạn mức miễn phí: 500 request/ngày cho mỗi model.** Một vòng dùng ~135 request,
+tức khoảng 3 vòng/ngày trên một model. Quota tính riêng từng model, nên khi hết
+`gemini-3.5-flash-lite` thì chuyển sang `gemini-3.1-flash-lite` là chạy tiếp
+được — điều này đã xảy ra hôm nay và cần biết trước ngày thi.
+
+Toàn bộ nghiên cứu hôm nay: **$0,22**.
+
+Model: `gemini-3.5-flash-lite`. Các tầng pro không chính xác hơn trên bài toán
+cụ thể này, chỉ chậm hơn và hay lỗi 503.
