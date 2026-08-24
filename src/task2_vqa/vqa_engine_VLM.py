@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional
 
 if __package__:
@@ -31,8 +32,18 @@ class VisualQAEngine:
     ):
         self.data_dir = data_dir
         if retriever is None:
-            from src.task1_kis import TextualKISRetriever
-            retriever = TextualKISRetriever(data_dir=data_dir)
+            if os.environ.get("AIC_USE_MOCK_RETRIEVER", "0") == "1":
+                try:
+                    from .mock_retriever import MockRetriever
+                except ImportError:
+                    from mock_retriever import MockRetriever
+                retriever = MockRetriever()
+            else:
+                try:
+                    from task1_kis import TextualKISRetriever
+                except ImportError:
+                    from src.task1_kis import TextualKISRetriever
+                retriever = TextualKISRetriever(data_dir=data_dir)
         self.retriever = retriever
 
         if visual_context_engine is None:
@@ -74,7 +85,10 @@ class VisualQAEngine:
             print(f"VQA Retriever load note: {e}")
 
         if self.vlm_engine is None:
-            from .gemini_vlm_engine import GeminiVLMEngine, load_gemini_model
+            try:
+                from .gemini_vlm_engine import GeminiVLMEngine, load_gemini_model
+            except ImportError:
+                from gemini_vlm_engine import GeminiVLMEngine, load_gemini_model
             model, processor = load_gemini_model()
             self.vlm_engine = GeminiVLMEngine(model, processor)
 
@@ -128,8 +142,18 @@ class VisualQAEngine:
                 video_path = resolve_video_path(self.video_dir, vid)
                 frames = extract_frame_window(video_path, fidx)
             except (FileNotFoundError, IndexError) as e:
-                print(f"[skipping candidate] {vid} frame {fidx}: {e}")
-                continue
+                # Fallback: Kiểm tra ảnh keyframe hoặc tạo ảnh mẫu để test khi chưa tải video
+                keyframe_path = os.path.join(self.data_dir, "keyframes", vid, cand.get("frame_filename", f"{fidx:03d}.jpg"))
+                if os.path.exists(keyframe_path):
+                    from PIL import Image
+                    frames = [Image.open(keyframe_path).convert("RGB")]
+                else:
+                    from PIL import Image, ImageDraw
+                    img = Image.new("RGB", (640, 360), color=(40, 60, 80))
+                    d = ImageDraw.Draw(img)
+                    d.text((20, 30), f"Video: {vid} | Frame: {fidx}", fill=(255, 255, 255))
+                    frames = [img]
+                    print(f"[{vid} frame {fidx}] Chưa có file video gốc ({e}) -> Dùng frame test.")
 
             context = self.get_visual_context(frames[len(frames) // 2], video_id=vid, frame_idx=fidx)
             if context.get("warnings"):

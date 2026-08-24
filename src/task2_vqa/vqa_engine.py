@@ -23,7 +23,7 @@ class VisualQAEngine:
         if retriever is None:
             # Keep the heavy CLIP/Torch dependency outside Member 3's modules and
             # import it only when the shared VQA engine actually needs it.
-            from src.task1_kis import TextualKISRetriever
+            from task1_kis import TextualKISRetriever
             retriever = TextualKISRetriever(data_dir=data_dir)
         self.retriever = retriever
 
