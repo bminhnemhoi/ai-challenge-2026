@@ -1,0 +1,1 @@
+Trong một video nấu ăn, xác định thời điểm đầu tiên mỗi nguyên liệu sau chạm vào chảo: E1: dầu ăn; E2: thịt bò; E3: hành lá
