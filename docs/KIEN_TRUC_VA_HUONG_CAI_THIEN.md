@@ -71,11 +71,35 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 
 | **ưu tiên đỉnh cục bộ** (keyframe nổi hơn hai bên) | **frame** | **+2,2%** | ✅ |
 | VLM xếp lại frame *bên trong* video | frame | −4,6% | ❌ |
+| ↳ đo lại bằng **câu hỏi phân biệt** (24 câu, 24 lần bốc) | frame | **−34,7%** | ❌ |
+| ↳ cùng thế nhưng xếp lại toàn cục | frame | −3,4% | ❌ |
 | ép các frame cách nhau ≥30/60/120 | frame | −1,3% | ❌ |
 | **đặt nhiều đáp án Q&A trên các dòng khác nhau** | dòng | **±0,0%** | ❌ |
 | chia lại ngân sách theo (video, keyframe, độ sâu) | dòng | −15% đến −30% | ❌ |
 
 ---
+
+
+> **Vì sao chấm lại bằng VLM không cứu được nhóm 14 câu** — đo ngày 24/08/2026 bằng
+> `scripts/experiment_sharp_rerank.py`. Giả thuyết là: kết quả −4,6% cũ được đo bằng
+> cách đưa **nguyên văn đề** cho VLM, mà vòng sơ tuyển 1 cho thấy đó là cách hỏi tạo
+> ra "cao nguyên điểm". Đo lại với câu hỏi phân biệt tự sinh:
+>
+> * độ sắc **đúng là cải thiện thật** — tỷ lệ khung được chấm ≥0,60 giảm từ ~45% xuống
+>   **20,1%**, đúng như dự đoán;
+> * nhưng điểm thi **giảm ở mọi biến thể**, và xếp lại *bên trong video* — tức đúng
+>   cái mà giả thuyết nhắm tới — lại là biến thể **tệ nhất, −34,7%**.
+>
+> Bài học không phải "prompt chưa đủ tốt" mà là **sai mục tiêu**: VLM trả lời câu hỏi
+> *"khung này có khớp mô tả không"*, trong khi thứ quyết định điểm là *"khung này có
+> gần khoảnh khắc đúng nhất không"*. Trong một video, hàng chục khung cùng khớp mô tả;
+> chỉ một khung là gần nhất. Làm cho phép phân loại sắc hơn không hề giúp định vị
+> thời gian — và khi ta để nó đảo thứ tự keyframe, nó cướp mất thang phân bổ sâu từ
+> keyframe mà SigLIP-2 đã chọn đúng 48% số lần.
+>
+> Hệ quả cho hướng đi: nhóm 14 câu này cần một mô hình **định vị thời gian**
+> (video moment retrieval), không phải một bộ phân loại khung hình tốt hơn.
+
 
 ## 2b. Điểm đang mất ở ĐÂU — phép đo quan trọng nhất
 
