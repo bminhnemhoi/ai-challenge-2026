@@ -80,31 +80,12 @@ jobs:
 
       # Repo này CÔNG KHAI. Ba thứ tuyệt đối không được commit, và cả ba đều đã
       # suýt lọt một lần: khoá API, thư mục vòng thi thật, và bản đồ đáp án.
-      - name: Không có khoá API — soi cả cây hiện tại lẫn lịch sử
-        run: |
-          fail=0
-
-          # KHÔNG viết `if ... | head; then`. Mã thoát của một pipeline là mã thoát
-          # của lệnh CUỐI, và `head` luôn trả 0 — kể cả khi grep không khớp gì. Viết
-          # thế thì guard đỏ ở mọi lượt chạy, kể cả repo sạch. Đã dính đúng bẫy này.
-          # Cách an toàn: hứng kết quả vào biến rồi kiểm chuỗi rỗng.
-
-          cay=$(git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock' || true)
-          if [ -n "$cay" ]; then
-            echo "$cay" | head -5
-            echo "::error::Khoá Google API trong cây làm việc. Gỡ ra và ĐỔI KHOÁ ngay."
-            fail=1
-          fi
-
-          lichsu=$(git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}' || true)
-          if [ -n "$lichsu" ]; then
-            echo "$lichsu" | head -5
-            echo "::error::Khoá Google API từng bị commit. Xoá ở commit sau KHÔNG đủ — lịch sử vẫn đọc được. ĐỔI KHOÁ."
-            fail=1
-          fi
-
-          if [ "$fail" = 0 ]; then echo "Không thấy khoá nào, kể cả trong lịch sử."; fi
-          exit $fail
+      # Bo chot chan dau tien chi tim 'AIza...' bang git grep, va no DE LOT mot
+      # token HuggingFace nam trong repo nhieu tuan — vi token do bi cat lam hai
+      # manh roi noi lai, nen khong bieu thuc chinh quy nao khop. scripts/quet_bi_mat.py
+      # dan lai chuoi truoc khi so khop, va quet ca lich su.
+      - name: Không có chuỗi bí mật — cả cây hiện tại lẫn lịch sử
+        run: python scripts/quet_bi_mat.py --lich-su
 
       - name: Không commit dữ liệu vòng thi thật
         run: |

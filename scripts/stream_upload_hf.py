@@ -5,8 +5,19 @@ import zipfile
 import time
 from huggingface_hub import HfApi
 
-TOKEN_PARTS = ["hf_", "wTSqUcteULBbYmyjpzmIkJdJDLLDmkTzEy"]
-HF_TOKEN = os.environ.get("HF_TOKEN") or "".join(TOKEN_PARTS)
+# Token PHẢI đến từ biến môi trường. Trước đây nó nằm ngay đây, tách làm hai mảnh
+# rồi nối lại — cách viết đó qua mặt mọi máy quét chuỗi bí mật, kể cả bộ chốt chặn
+# trong .github/workflows/ci.yml, nên nó nằm công khai trên GitHub một thời gian dài
+# mà không ai biết. Token đó đã bị thu hồi. Đừng dán token mới vào đây, kể cả khi
+# "chỉ tạm một lát".
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    raise SystemExit(
+        "Thiếu HF_TOKEN. Đặt biến môi trường rồi chạy lại:\n"
+        "  Windows :  set HF_TOKEN=hf_...\n"
+        "  Linux   :  export HF_TOKEN=hf_...\n"
+        "Lấy token ở https://huggingface.co/settings/tokens (quyền write)."
+    )
 REPO_ID = "BaeBaeBoo1010/aic2026-keyframes"
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMP_DIR = os.path.join(BASE_DIR, "temp_hf_upload")
