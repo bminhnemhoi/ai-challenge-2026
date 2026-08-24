@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-try:
+if __package__:
     from .config import DEFAULT_VIDEO_DIR, VLM_TOP_K
     from .frame_utils import extract_frame_window, resolve_video_path
     from .postprocessor import build_submission_record, clean_answer
-except ImportError: 
+else:  # running this file directly from inside src/task2_vqa/
+    # NOT try/except ImportError: that turned a missing cv2 into the misleading
+    # "No module named 'config'", which hid the real cause for a long time
     from config import DEFAULT_VIDEO_DIR, VLM_TOP_K
     from frame_utils import extract_frame_window, resolve_video_path
     from postprocessor import build_submission_record, clean_answer

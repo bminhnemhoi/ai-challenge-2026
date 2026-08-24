@@ -2,6 +2,7 @@ import os
 import io
 import csv
 import json
+import re
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
@@ -10,9 +11,17 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from src.task1_kis import TextualKISRetriever
-from src.task2_vqa import VisualQAEngine
 from src.task3_trake import TRAKEEngine
 from src.core import AIC2026Evaluator
+
+# The heavier VQA engines need optional extras (opencv, paddleocr) and local
+# .mp4 files. The live Q&A path does not use them — it goes through
+# GeminiAIOptimizer below — so a missing extra must not stop the server.
+try:
+    from src.task2_vqa import VisualQAEngine
+except Exception as _exc:  # noqa: BLE001
+    VisualQAEngine = None
+    print(f"note: VisualQAEngine unavailable ({_exc}); the Gemini Q&A path is unaffected")
 
 app = FastAPI(title="AIC 2026 Unified Search Engine", version="2.0")
 
@@ -30,8 +39,23 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 KEYFRAMES_DIR = os.path.join(BASE_DIR, "keyframes")
 
 retriever = TextualKISRetriever(data_dir=DATA_DIR, use_siglip_only=True, use_clip_only=False, use_siglip_version="siglip2")
-vqa_engine = VisualQAEngine(data_dir=DATA_DIR)
-trake_engine = TRAKEEngine(data_dir=DATA_DIR)
+vqa_engine = VisualQAEngine(data_dir=DATA_DIR) if VisualQAEngine is not None else None
+
+# TRAKE shares the KIS engine's index rather than loading a second copy —
+# the SigLIP-2 matrix is ~820 MB and a duplicate would risk an OOM on a laptop.
+_kis_engine = None
+trake_engine = None
+
+
+def get_trake_engine():
+    """Build the TRAKE engine on first use, over a shared index."""
+    global _kis_engine, trake_engine
+    if trake_engine is None:
+        from src.core.kis_engine import KISEngine
+
+        _kis_engine = KISEngine(DATA_DIR).load()
+        trake_engine = TRAKEEngine(data_dir=DATA_DIR, engine=_kis_engine).load_index()
+    return trake_engine
 
 class KISQueryRequest(BaseModel):
     query: str
@@ -226,29 +250,65 @@ async def search_kis_stream(req: KISQueryRequest):
 
 @app.post("/api/export_submission")
 def export_submission(req: SubmissionExportRequest):
-    """
-    Exports predictions in official AIC 2026 submission CSV format.
-    Format: video_id, frame_idx (or answer for Q&A)
-    """
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Header format depends on Task
-    for p in req.predictions:
-        v_id = p.get("video_id", "")
-        f_idx = p.get("frame_idx", "")
-        ans = p.get("answer", None)
-        
-        if ans is not None:
-            writer.writerow([v_id, f_idx, ans])
-        else:
-            writer.writerow([v_id, f_idx])
+    """Export one query's answers in the official AIC 2026 CSV format.
 
-    output.seek(0)
+    Three things happen here that did not before, each worth real points:
+
+    * **A frame ladder is added.** `frame_id` is an arbitrary integer, not
+      necessarily a keyframe index, and the answer window [s, e] is narrow
+      (the rulebook's example is 11 frames) while keyframes sit ~55 frames
+      apart. Submitting only keyframe indices caps the score at ~18% on a
+      narrow window no matter how good retrieval is.
+    * **The list is padded to 100 rows.** R@k is a MAX over the first k rows,
+      so extra rows can never lower the score, and rows 51-100 are otherwise
+      free 0.2s left on the table.
+    * **One answer is stamped on every Q&A row.** Leaving later rows blank
+      forfeits R@20/R@50/R@100 — three of the five terms in the Final Score.
+
+    The file is named after the query so it can be dropped straight into the
+    `submission/` folder; use `scripts/make_submission.py` to build the whole
+    zip, which also verifies the format before you upload it.
+    """
+    from src.core.submission import (
+        MAX_ROWS,
+        AllocationPlan,
+        Candidate,
+        allocate_hybrid_rows,
+        csv_name_for_query,
+    )
+
+    preds = req.predictions or []
+    # the answer to stamp on every row: the first non-empty one supplied
+    answer = next(
+        (str(p["answer"]).strip() for p in preds if str(p.get("answer") or "").strip()), None
+    )
+
+    last_frame = getattr(retriever, "video_last_frame", None) or {}
+    cands = [
+        Candidate(
+            video_id=str(p.get("video_id", "")),
+            frame_idx=int(p.get("frame_idx", 0) or 0),
+            score=float(p.get("score", 0.0) or 0.0),
+            video_last_frame=last_frame.get(str(p.get("video_id", ""))),
+        )
+        for p in preds
+        if p.get("video_id")
+    ]
+    rows = allocate_hybrid_rows(cands, n_flat=30, plan=AllocationPlan(depth_cost=0.5))[:MAX_ROWS]
+
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    for v_id, f_idx in rows:
+        if answer is None:
+            writer.writerow([v_id, f_idx])
+        else:
+            writer.writerow([v_id, f_idx, re.sub(r"[,\r\n]+", " ", answer).strip()])
+
+    fname = csv_name_for_query(req.query_id if req.query_id.endswith(".txt") else f"{req.query_id}.txt")
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode('utf-8')),
+        io.BytesIO(output.getvalue().encode("utf-8")),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=submission_{req.query_id}.csv"}
+        headers={"Content-Disposition": f"attachment; filename={fname}"},
     )
 
 from fastapi.responses import RedirectResponse

@@ -21,10 +21,10 @@ from typing import List, Optional, Tuple, Union
 
 from PIL import Image
 
-try:
+if __package__:
     from .config import MAX_NEW_TOKENS, MODEL_ID
     from .frame_utils import resize_cap
-except ImportError:  # cho phép chạy file trực tiếp để test local
+else:  # cho phép chạy file trực tiếp để test local
     from config import MAX_NEW_TOKENS, MODEL_ID
     from frame_utils import resize_cap
 

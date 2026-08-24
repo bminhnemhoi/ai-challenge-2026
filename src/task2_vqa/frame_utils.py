@@ -7,9 +7,9 @@ from typing import List
 import cv2
 from PIL import Image
 
-try:
+if __package__:
     from .config import MAX_SIDE
-except ImportError:  # allows running this file directly for local testing
+else:  # allows running this file directly for local testing
     from config import MAX_SIDE
 
 
