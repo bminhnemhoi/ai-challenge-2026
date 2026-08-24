@@ -149,7 +149,7 @@ body:
     attributes:
       label: Bộ test nói gì (nếu có chạy)
       description: >-
-        Chạy đúng lệnh mà CI chạy — `python -m pytest tests src/task3_trake/tests -q` — rồi dán
+        Chạy đúng lệnh mà CI chạy — `python -m pytest tests src/task3_trake/tests src/task2_vqa -q` — rồi dán
         vài dòng cuối. Bộ test không cần chỉ mục 780 MB nên chạy được cả trên máy chưa tải dữ liệu.
         Thấy chữ `skipped` thì đừng bỏ qua: trên máy là bỏ qua vì thiếu công cụ, nhưng CI có hẳn
         một bước cho đỏ khi thấy chữ đó.

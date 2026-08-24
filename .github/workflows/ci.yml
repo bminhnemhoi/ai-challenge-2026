@@ -83,15 +83,27 @@ jobs:
       - name: Không có khoá API — soi cả cây hiện tại lẫn lịch sử
         run: |
           fail=0
-          if git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'; then
+
+          # KHÔNG viết `if ... | head; then`. Mã thoát của một pipeline là mã thoát
+          # của lệnh CUỐI, và `head` luôn trả 0 — kể cả khi grep không khớp gì. Viết
+          # thế thì guard đỏ ở mọi lượt chạy, kể cả repo sạch. Đã dính đúng bẫy này.
+          # Cách an toàn: hứng kết quả vào biến rồi kiểm chuỗi rỗng.
+
+          cay=$(git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock' || true)
+          if [ -n "$cay" ]; then
+            echo "$cay" | head -5
             echo "::error::Khoá Google API trong cây làm việc. Gỡ ra và ĐỔI KHOÁ ngay."
             fail=1
           fi
-          if git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}' | head -5; then
+
+          lichsu=$(git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}' || true)
+          if [ -n "$lichsu" ]; then
+            echo "$lichsu" | head -5
             echo "::error::Khoá Google API từng bị commit. Xoá ở commit sau KHÔNG đủ — lịch sử vẫn đọc được. ĐỔI KHOÁ."
             fail=1
           fi
-          [ "$fail" = 0 ] && echo "Không thấy khoá nào, kể cả trong lịch sử."
+
+          if [ "$fail" = 0 ]; then echo "Không thấy khoá nào, kể cả trong lịch sử."; fi
           exit $fail
 
       - name: Không commit dữ liệu vòng thi thật

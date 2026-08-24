@@ -48,7 +48,7 @@ trong buổi diễn tập rồi sửa lại con số này.
 Không có bước nào ở mục này được phép làm lần đầu trong lúc thi.
 
 ```bash
-python -m pytest tests src/task3_trake/tests -q
+python -m pytest tests src/task3_trake/tests src/task2_vqa -q
 ```
 **Xong khi:** không có `F`, không có `E`. Có một cái đỏ nào là dừng, sửa xong mới thi.
 

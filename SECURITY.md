@@ -40,10 +40,12 @@ Lý do thứ tự này: gỡ khoá khỏi file *không* làm khoá an toàn tr�
 trong lịch sử git, trong các bản fork đã clone, và trong giao diện PR của GitHub. Một
 khoá đã lộ thì chỉ có đổi khoá mới cắt được thiệt hại; xoá dòng chỉ làm nó khó thấy hơn.
 
-Đặc biệt lưu ý: job `guard` trong CI quét bằng `git grep`, tức **chỉ soi cây làm việc
-hiện tại chứ không soi lịch sử commit** (`.github/workflows/ci.yml:76-82`, dù tên bước ghi
-là "lịch sử làm việc"). Một khoá từng commit rồi xoá ở commit sau vẫn qua được CI. CI xanh
-không có nghĩa là khoá chưa từng lộ.
+Bước *"Không có khoá API — soi cả cây hiện tại lẫn lịch sử"* trong CI soi **cả hai**:
+`git grep` trên cây làm việc, và `git log --all -p` trên toàn bộ lịch sử (job checkout
+với `fetch-depth: 0`). Nên một khoá từng commit rồi xoá ở commit sau **vẫn bị bắt**.
+
+Nhưng CI chỉ **phát hiện**, không cứu được gì: khoá đã lên GitHub dù chỉ một phút thì
+coi như đã lộ. Việc đầu tiên luôn là **đổi khoá**.
 
 **Chỗ đúng của khoá** là file `.env` ở gốc repo, một dòng `GEMINI_API_KEY=...`.
 `.gitignore:28-30` chặn `.env`, `.env.*`, `.env.local` — đừng thêm ngoại lệ, đừng
@@ -54,9 +56,14 @@ không có nghĩa là khoá chưa từng lộ.
 Tự kiểm trước khi commit, chạy đúng cái mà CI chạy:
 
 ```bash
-git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'   # không ra gì là tốt
-git ls-files --error-unmatch .env                        # phải báo không khớp
+git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'          # không ra gì là tốt
+git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}'   # cả lịch sử
+git ls-files --error-unmatch .env                               # phải báo không khớp
 ```
+
+Đừng viết `if ... | head; then` khi kiểm mấy lệnh này. Mã thoát của pipeline là của
+lệnh **cuối**, mà `head` luôn trả 0 — viết thế thì phép kiểm luôn báo "có", kể cả khi
+sạch. CI từng dính đúng bẫy đó.
 
 ---
 
@@ -106,7 +113,7 @@ Ba giới hạn phải biết, đừng coi `guard` là tấm khiên:
 
 * Nó chạy **sau khi bạn đã đẩy lên GitHub**. Lúc CI đỏ thì dữ liệu đã nằm trên máy chủ công
   khai rồi. Hàng rào thật là mắt bạn nhìn `git status` trước khi commit.
-* CI chỉ chạy khi push vào `main` hoặc khi **mở pull request** (`ci.yml:8-12`). Đẩy một nhánh
+* CI chỉ chạy khi push vào `main` hoặc khi **mở pull request** (`ci.yml`). Đẩy một nhánh
   lên fork mà chưa mở PR thì chưa có ai canh cả.
 * Repo **không** có pre-commit hook, không có linter. Không có gì chặn ở phía máy bạn.
 
@@ -117,7 +124,9 @@ Danh sách kiểm trước khi commit nằm ở [`docs/PHAT_TRIEN.md`](docs/PHAT
 ## 5. Một lưu ý về web app
 
 `app.py` là công cụ dò tay chạy **cục bộ**: không có xác thực, `allow_origins=["*"]`
-(`app.py:28-35`), và có route trả về file keyframe theo đường dẫn
-(`app.py:318`). Lệnh trong README dùng `--host 0.0.0.0`, nghĩa là mọi máy trong cùng mạng
+(`app.py:28-35`). Route ảnh (`app.py:318-325`) chỉ trả về **chuyển hướng 302** sang CDN
+của Hugging Face, không đọc file cục bộ nào; chỗ phục vụ file thật là
+`StaticFiles(directory=frontend_dir)` ở cuối `app.py`, và nó chỉ mở thư mục `frontend/`.
+Rủi ro ở đây không phải lộ file mà là **ai cũng gọi được API tìm kiếm**. Lệnh trong README dùng `--host 0.0.0.0`, nghĩa là mọi máy trong cùng mạng
 đều gọi được. Đừng chạy nó trên mạng chung hay mạng công cộng; ở nhà thì dùng
 `--host 127.0.0.1`.

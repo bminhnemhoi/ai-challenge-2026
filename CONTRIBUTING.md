@@ -37,12 +37,12 @@ source .venv/bin/activate         # macOS / Linux
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest tests src/task3_trake/tests -q
+python -m pytest tests src/task3_trake/tests src/task2_vqa -q
 ```
 
-Trông đợi: `400 passed`. `requirements-dev.txt` chỉ có **5 gói** — pytest, numpy,
+Trông đợi: `415 passed`. `requirements-dev.txt` chỉ có **5 gói** — pytest, numpy,
 scipy, pyyaml, pillow — và đầu file ghi rõ con số đó đo trên một venv sạch
-(`400 passed in 18,5 s`, đo 24/08/2026), không phải phỏng đoán. Thiếu `pillow` thì
+(`415 passed in 18,7 s`, đo 24/08/2026), không phải phỏng đoán. Thiếu `pillow` thì
 13 test đỏ.
 
 Ba điều dễ vấp:
@@ -64,7 +64,7 @@ Ba điều dễ vấp:
 ```bash
 git switch -c feat/ten-viec-ngan          # 1) nhánh mới, không sửa thẳng trên main
 # ... sửa mã, thêm test ...
-python -m pytest tests src/task3_trake/tests -q   # 2) đúng lệnh CI chạy
+python -m pytest tests src/task3_trake/tests src/task2_vqa -q   # 2) đúng lệnh CI chạy
 git status                                 # 3) nhìn bằng mắt: không .env, không round*/
 git add -p && git commit                   # 4) commit theo mục 3
 git push -u origin feat/ten-viec-ngan      # (người ngoài đội: push lên fork của mình)
@@ -75,15 +75,15 @@ git push -u origin feat/ten-viec-ngan      # (người ngoài đội: push lên 
    — điền hết, và **dán nguyên văn output của lệnh test**, đừng gõ lại từ trí nhớ.
 
 6) Đợi CI xanh. **Cả hai job** (`test` trên ubuntu + windows, và `guard`) phải xanh
-   thì PR mới được xem xét. CI chỉ chạy khi push vào `main` hoặc khi **mở PR**
-   (`.github/workflows/ci.yml:8-12`) — đẩy một nhánh lên fork mà chưa mở PR thì
-   chưa có ai canh cả.
+   thì PR mới được xem xét. CI chạy khi push vào `main`, ở **mỗi lần push vào một PR
+   đang mở** (không riêng lúc mở), và khi bấm tay từ tab Actions (`workflow_dispatch`).
+   Nhưng đẩy một nhánh lên fork mà **chưa** mở PR thì chưa có ai canh cả.
 
 Vài điểm về remote, nói thẳng để khỏi nhầm:
 
 - `origin` là repo chính `https://github.com/khanhle1406/ai-challenge-2026.git`,
-  nhánh đích là **`main`**. Còn một nhánh `master` cũ nằm lại bên cạnh — nó đã lạc
-  hậu, đừng nhắm vào đó.
+  nhánh đích là **`main`**. (Trên một số máy còn sót nhánh `master` **cục bộ** từ bản
+  clone cũ — nó không có trên GitHub, đừng nhắm vào đó.)
 - Người ngoài đội: fork rồi mở PR từ fork sang `origin/main`. Đó là cách PR đầu
   tiên của repo này đang đi.
 - **Đừng upload file qua giao diện web GitHub.** Lịch sử `origin/main` còn nguyên
@@ -111,8 +111,9 @@ Chữ thường, tiếng Việt không dấu hoặc tiếng Anh, nối bằng `-
 
 ### Thông điệp commit
 
-Đây thì **không phải đề xuất** — 16 commit gần nhất đã theo đúng một khuôn, cứ
-`git log` mà xem. Tiêu đề:
+Đây thì **không phải đề xuất** — trong 17 commit gần nhất thì 16 cái theo đúng một
+khuôn (cái còn lại là commit merge do git tự sinh, không tính). Cứ `git log` mà xem.
+Tiêu đề:
 
 ```
 <type>(<scope>): <câu tiếng Việt KHÔNG DẤU, chữ thường, không chấm cuối>
@@ -128,7 +129,8 @@ chore: khong dua ban do dap an vong luyen tap len repo cong khai
 docs: bo tai lieu tieng Viet day du cho ca doi
 ```
 
-- `type` đã dùng: `feat`, `fix`, `docs`, `test`, `chore`, và một lần ghép `perf+ci`.
+- `type` đã dùng: `feat`, `fix`, `docs`, `test`, `chore`, và hai lần ghép hai loại
+  (`perf+ci`, `docs+ci`) khi một commit thật sự làm cả hai việc.
 - `scope` không bắt buộc; khi có thì là tên module hoặc một cụm không dấu —
   đã dùng: `core`, `vlm`, `trake`, `review`, `kenh-phu`, `do-luong`, `vi-du`,
   `task2_vqa`.
@@ -223,31 +225,32 @@ toàn trở lại. Đầy đủ ở [`SECURITY.md`](SECURITY.md).
 
 CI có hai job và bạn chạy lại được cả hai trong khoảng nửa phút.
 
-**Job `test`** — đúng một lệnh, chép nguyên văn từ `.github/workflows/ci.yml:56`:
+**Job `test`** — đúng một lệnh, chép nguyên văn từ `.github/workflows/ci.yml`:
 
 ```bash
-python -m pytest tests src/task3_trake/tests -q
+python -m pytest tests src/task3_trake/tests src/task2_vqa -q
 ```
 
 Rồi bước thứ hai, bước mà người ta hay quên: CI **chạy lại bộ test lần nữa chỉ để
-bắt chữ `skipped`** và cho đỏ nếu thấy (`ci.yml:58-66`, thông điệp: *"Bỏ qua âm thầm
+bắt chữ `skipped`** và cho đỏ nếu thấy (`ci.yml`, thông điệp: *"Bỏ qua âm thầm
 nghĩa là không ai kiểm nữa"*). Tự kiểm:
 
 ```bash
-python -m pytest tests src/task3_trake/tests -q 2>&1 | tail -3 | grep -i skipped
+python -m pytest tests src/task3_trake/tests src/task2_vqa -q 2>&1 | tail -3 | grep -i skipped
 ```
 
 Không ra gì là tốt. Ra một dòng nghĩa là CI sẽ đỏ — thường vì máy chưa cài Node 20.
 
-**Job `guard`** — ba lệnh, chép từ `ci.yml:76-100`:
+**Job `guard`** — bốn phép quét, chép từ `ci.yml`:
 
 ```bash
 git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'
+git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}'   # cả lịch sử
 git ls-files | grep -E '^(round[0-9]|vongthi)|picks_verified\.txt|sharp_questions\.json'
 git ls-files --error-unmatch .env
 ```
 
-Cả ba **không ra kết quả** mới là sạch. Lệnh cuối phải báo lỗi "did not match any
+Cả bốn **không ra kết quả** mới là sạch. Lệnh cuối phải báo lỗi "did not match any
 file" — nếu nó in ra `.env` thì file khoá đang bị git theo dõi.
 
 Ba điều CI **không** làm, đừng coi nó là tấm khiên:
@@ -303,9 +306,9 @@ nửa vời. Khuôn mẫu đầy đủ ở `docs/PHAT_TRIEN.md` mục 2.5.
 
 ## 8. Trước khi bấm "Create pull request"
 
-- [ ] `python -m pytest tests src/task3_trake/tests -q` xanh, **không dòng nào
+- [ ] `python -m pytest tests src/task3_trake/tests src/task2_vqa -q` xanh, **không dòng nào
       `skipped`**.
-- [ ] Ba lệnh của job `guard` (mục 6) không ra kết quả nào.
+- [ ] Bốn phép quét của job `guard` (mục 6) không ra kết quả nào.
 - [ ] Thay đổi hành vi đã có test, tên test là một câu khẳng định.
 - [ ] Có đụng thứ hạng: vẫn xếp qua `ranked_hits`.
 - [ ] Có đụng bộ phân bổ: đã sửa **cả hai** bản Python và JS.

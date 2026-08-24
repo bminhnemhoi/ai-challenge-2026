@@ -212,7 +212,7 @@ body:
         - label: Issue này không chứa khoá API, không chứa đáp án vòng thi, không chứa nội dung `picks_verified.txt` hay `sharp_questions.json`
           required: true
         - label: Nếu ý tưởng đụng vào truy hồi, script mới sẽ gọi `ranked_hits` chứ không gọi `engine.search`, và tôi sẽ thêm tên script vào danh sách `must_agree` (`tests/test_review_workflow.py:109-117`)
-        - label: Trước khi mở PR tôi sẽ chạy `python -m pytest tests src/task3_trake/tests -q` — đúng lệnh CI chạy, 400 test
+        - label: Trước khi mở PR tôi sẽ chạy `python -m pytest tests src/task3_trake/tests src/task2_vqa -q` — đúng lệnh CI chạy, 415 test
 
   - type: markdown
     attributes:

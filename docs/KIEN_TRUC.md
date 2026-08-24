@@ -1133,7 +1133,7 @@ thể rơi vào *giữa* lúc ghi CSV và đóng gói zip, để lại một bà
 
 ### Test
 
-Đếm được hôm nay: **400 test** (`src/task3_trake/tests/`: 214 · `tests/`: 186).
+Đếm được hôm nay: **415 test** (`src/task3_trake/tests/`: 214 · `tests/`: 186).
 
 | File test | Canh cái gì |
 |---|---|
@@ -1146,7 +1146,7 @@ thể rơi vào *giữa* lúc ghi CSV và đóng gói zip, để lại một bà
 | `test_manual_frame_placement.py` (9) | Cái sửa đáng 24% ở `pin_plan` |
 | `test_transcripts.py` (9) | `best_segment` phải trả mốc của **câu**, không phải của cửa sổ |
 
-Chạy toàn bộ: `python -m pytest tests src/task3_trake/tests -q`
+Chạy toàn bộ: `python -m pytest tests src/task3_trake/tests src/task2_vqa -q`
 
 ---
 
