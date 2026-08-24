@@ -1,16 +1,70 @@
 #!/usr/bin/env python3
 """
 Build Inverted Index for BTC OpenImages Objects (177k keyframes).
-Scans all 873 video folders in data/objects/ and compiles a single inverted index
-mapping entity name -> list of [raw_frame_idx, confidence].
+Compiles a single inverted index mapping entity name -> list of
+[raw_frame_idx, confidence].
+
+Reads either the unpacked data/objects/ tree or, if that is absent,
+data/objects-aic25-b1.zip directly -- download_data.py leaves the archive
+zipped, so requiring the unpacked tree meant this script only ever ran for
+whoever had extracted the 610 MB by hand.
 """
 
 import os
 import json
 import time
+import zipfile
 from pathlib import Path
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Dict, List, Tuple, Any
+
+
+def _accumulate(local_index, raw_idx, data, min_conf):
+    """Keep the best confidence per entity for one frame."""
+    seen: Dict[str, float] = {}
+    for ent, score in zip(
+        data.get("detection_class_entities", []), data.get("detection_scores", [])
+    ):
+        try:
+            s = float(score)
+        except (ValueError, TypeError):
+            continue
+        if s < min_conf:
+            continue
+        ent_clean = str(ent).strip().lower()
+        if len(ent_clean) < 2:
+            continue
+        if ent_clean not in seen or s > seen[ent_clean]:
+            seen[ent_clean] = s
+    for ent_clean, s in seen.items():
+        local_index.setdefault(ent_clean, []).append((raw_idx, round(s, 2)))
+
+
+def process_zip_chunk(args):
+    """One worker opens the archive once and handles a slice of its members."""
+    zip_path, members, key_to_idx, min_conf = args
+    local_index: Dict[str, List[Tuple[int, float]]] = {}
+    with zipfile.ZipFile(zip_path) as zf:
+        for name in members:
+            parts = Path(name).parts
+            if len(parts) < 2:
+                continue
+            video_id, stem = parts[-2], Path(name).stem
+            raw_idx = key_to_idx.get(f"{video_id}_{stem}")
+            if raw_idx is None:
+                try:
+                    raw_idx = key_to_idx.get(f"{video_id}_{int(stem):03d}")
+                except ValueError:
+                    raw_idx = None
+            if raw_idx is None:
+                continue
+            try:
+                data = json.loads(zf.read(name))
+            except Exception:
+                continue
+            _accumulate(local_index, raw_idx, data, min_conf)
+    return local_index
 
 def process_video_folder(args: Tuple[str, str, Dict[str, int], float]) -> Dict[str, List[Tuple[int, float]]]:
     """
@@ -105,33 +159,59 @@ def build_inverted_index(data_dir: str = "data", min_confidence: float = 0.35, o
 
     print(f"✅ Indexed {len(key_to_idx)} frame lookup keys for {len(metadata)} total keyframes.")
 
-    # 2. Find all video folders in data/objects/
+    # 2. Prefer the unpacked tree; fall back to the archive download_data leaves behind
     objects_dir = os.path.join(data_dir, "objects")
-    if not os.path.exists(objects_dir):
-        raise FileNotFoundError(f"Missing {objects_dir}")
+    zip_path = os.path.join(data_dir, "objects-aic25-b1.zip")
+    num_workers = min(os.cpu_count() or 4, 16)
 
-    video_folders = [d for d in os.listdir(objects_dir) if os.path.isdir(os.path.join(objects_dir, d))]
-    print(f"Found {len(video_folders)} video folders to process in parallel...")
-
-    tasks = [
-        (v_id, os.path.join(objects_dir, v_id), key_to_idx, min_confidence)
-        for v_id in video_folders
-    ]
+    if os.path.isdir(objects_dir):
+        video_folders = [
+            d for d in os.listdir(objects_dir) if os.path.isdir(os.path.join(objects_dir, d))
+        ]
+        print(f"Found {len(video_folders)} video folders to process in parallel...")
+        worker, tasks = process_video_folder, [
+            (v_id, os.path.join(objects_dir, v_id), key_to_idx, min_confidence)
+            for v_id in video_folders
+        ]
+        unit = "videos"
+    elif os.path.isfile(zip_path):
+        print(f"No {objects_dir}/ — reading {os.path.basename(zip_path)} directly ...")
+        with zipfile.ZipFile(zip_path) as zf:
+            members = [n for n in zf.namelist() if n.endswith(".json")]
+        by_video = defaultdict(list)
+        for n in members:
+            parts = Path(n).parts
+            if len(parts) >= 2:
+                by_video[parts[-2]].append(n)
+        # whole videos stay together, so one worker opens the archive once per chunk
+        vids = sorted(by_video)
+        chunks = [vids[i::num_workers] for i in range(num_workers)]
+        worker, tasks = process_zip_chunk, [
+            (zip_path, [m for v in chunk for m in by_video[v]], key_to_idx, min_confidence)
+            for chunk in chunks
+            if chunk
+        ]
+        print(f"{len(members):,} detection files across {len(vids)} videos, {len(tasks)} workers")
+        unit = "chunks"
+    else:
+        raise FileNotFoundError(
+            f"Need either {objects_dir}/ or {zip_path}.\n"
+            f"Run: python scripts/download_data.py"
+        )
 
     # 3. Parallel extraction across CPU cores
     global_index: Dict[str, List[Tuple[int, float]]] = {}
-    num_workers = min(os.cpu_count() or 4, 16)
-    
+
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        futures = [executor.submit(process_video_folder, task) for task in tasks]
+        futures = [executor.submit(worker, task) for task in tasks]
         for idx, future in enumerate(as_completed(futures), 1):
             local_idx = future.result()
             for ent, records in local_idx.items():
                 if ent not in global_index:
                     global_index[ent] = []
                 global_index[ent].extend(records)
-            if idx % 200 == 0 or idx == len(tasks):
-                print(f"Processed {idx}/{len(tasks)} videos ({len(global_index)} unique object classes found)...")
+            if idx % max(1, len(tasks) // 10) == 0 or idx == len(tasks):
+                print(f"Processed {idx}/{len(tasks)} {unit} ({len(global_index)} unique object classes found)...")
 
     # Sort posting lists by raw_idx
     total_postings = 0
@@ -150,7 +230,16 @@ def build_inverted_index(data_dir: str = "data", min_confidence: float = 0.35, o
     print(f"💾 Inverted Index File Size: {file_size_mb:.2f} MB")
 
 if __name__ == "__main__":
+    import argparse
+
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = os.path.join(base_dir, "data")
-    output_path = os.path.join(data_dir, "objects_inverted_index.json")
-    build_inverted_index(data_dir=data_dir, min_confidence=0.35, output_file=output_path)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--data", default=os.path.join(base_dir, "data"))
+    ap.add_argument("--min-confidence", type=float, default=0.35)
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    build_inverted_index(
+        data_dir=a.data,
+        min_confidence=a.min_confidence,
+        output_file=a.out or os.path.join(a.data, "objects_inverted_index.json"),
+    )
