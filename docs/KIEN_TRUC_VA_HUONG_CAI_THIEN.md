@@ -59,6 +59,8 @@ không snap keyframe**. Không đo thì đi tới mắt người, không đi t�
 | VLM Gemini | **video**, w=0.02 | **+3,3%** | ✅ |
 | VLM Gemini | video, w=0.20 | **−5,7%** (vR@1 tăng 25→30!) | ❌ |
 | lời thoại | video | −0,4% | ❌ |
+| ↳ *(phủ sóng thật là **849/873 = 97%**, không phải 24,9% — con số kia là riêng `data/captions`)* | | | |
+| ↳ *(mốc thời gian lệch trung vị **2.850 frame** ⇒ vĩnh viễn chỉ là bộ lọc **cấp video**)* | | | |
 | lời thoại có cổng chặn | video | +0,5% (nhiễu) | ❌ |
 | lời thoại theo mốc thời gian | **frame** | −1,5% | ❌ |
 | metadata video (tiêu đề, mô tả) | video | −7,6% | ❌ |
