@@ -10,7 +10,7 @@ so the fix costs nothing but bytes: send the original.
 Frames are named explicitly rather than searched, because by this point the
 frame is already settled — this is the reading step, not the finding step.
 
-    python scripts/read_answer.py --video L21_V006 --frames 561 \
+    python scripts/read_answer.py --video L01_V003 --frames 561 \
         --question "Khong tinh bang chu giai, co bao nhieu vi tri dong dat cap do 4?"
 """
 
