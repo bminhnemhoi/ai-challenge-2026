@@ -4,6 +4,11 @@ data/*
 !data/cached_40_translations.json
 !data/ground_truth.json
 !data/blank_frame_indices.json
+# built by scripts/make_submission.py during a round; never commit an upload
+submission_out/
+rehearsal/*/
+!rehearsal/queries/
+.pytest_cache/
 downloads/
 cache/
 data/cache/
@@ -52,3 +57,19 @@ submission_*.csv
 tmp/
 tmp_check/
 
+# a live round: keep the query files as a worked example, never the built upload
+round_*/*/
+!round_*/queries/
+round_*/review*.html
+round_*/*.zip
+
+# A REAL qualifier round. This repository is public, so nothing in here may be
+# committed: the folder holds the organiser's question files, the 100 answer rows
+# for each of them, and picks_verified.txt, which is the answer key with the
+# reasoning attached. The reasoning is worth sharing and the answers are not, so
+# the teaching version lives in docs/VI_DU_LUAN_CHUNG.md with the answers removed.
+# Note the pattern needs its own line: "round_*" does not match "round1".
+round1/
+round2/
+round3/
+vongthi*/

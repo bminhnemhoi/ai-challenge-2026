@@ -1,0 +1,36 @@
+# AIC 2026 — pinned to lower bounds that are known to work together.
+# Install:  pip install -r requirements.txt
+#
+# The CPU build of torch is enough to run every task; a GPU only speeds up
+# encoding. On a machine without CUDA install torch first with:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# --- core retrieval (Task 1, and the frame lookup Tasks 2 and 3 depend on) ---
+numpy>=1.26
+torch>=2.2
+transformers>=4.45
+sentencepiece>=0.2          # SigLIP-2 tokenizer
+protobuf>=4.25              # required by the sentencepiece converter
+pillow>=10.0
+requests>=2.31
+
+# --- web app ---
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+
+# --- data fetching ---
+huggingface_hub>=0.23
+deep-translator>=1.11       # Vietnamese -> English query translation
+
+# --- Task 2 (Gemini VQA); the app degrades gracefully without a key ---
+google-genai>=0.3
+python-dotenv>=1.0
+
+# --- Task 3 (TRAKE alignment) ---
+scipy>=1.11                 # Hungarian assignment for the `unordered` mode
+pyyaml>=6.0
+
+# --- development ---
+pytest>=8.0
+yt-dlp>=2025.1.1        # YouTube auto-captions (scripts/fetch_captions.py)
