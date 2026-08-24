@@ -76,6 +76,7 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 | ép các frame cách nhau ≥30/60/120 | frame | −1,3% | ❌ |
 | **đặt nhiều đáp án Q&A trên các dòng khác nhau** | dòng | **±0,0%** | ❌ |
 | chia lại ngân sách theo (video, keyframe, độ sâu) | dòng | −15% đến −30% | ❌ |
+| **chia 100 dòng bằng PHỦ XÁC SUẤT (bỏ hẳn hàm chi phí)** | **dòng** | **+10,0%** | 🔬 |
 
 ---
 
@@ -99,6 +100,36 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 >
 > Hệ quả cho hướng đi: nhóm 14 câu này cần một mô hình **định vị thời gian**
 > (video moment retrieval), không phải một bộ phân loại khung hình tốt hơn.
+
+
+
+> **Chia 100 dòng bằng phủ xác suất — mức tăng đơn lẻ lớn nhất đo được tới nay.**
+> Đo ngày 24/08/2026 bằng `scripts/experiment_phu_xac_suat.py`, trên **đường sản
+> xuất đầy đủ** (`ranked_hits`: 4-prompt + ưu tiên đỉnh + cộng điểm đối tượng),
+> 60 câu ground truth, khoảnh khắc thật **không bám keyframe**, 4 họ hạt giống
+> độc lập × 48 lần bốc:
+>
+> | | điểm | so nền |
+> |---|---|---|
+> | bộ phân bổ đang nộp (`i + 0,5·d`) | 0,3496 ± 0,0023 | — |
+> | **phủ xác suất** (nhiệt 0,02, σ=30, nửa cửa sổ 10) | **0,3845 ± 0,0016** | **+10,0%** |
+> | phủ xác suất, nhiệt 0,01 | 0,3805 ± 0,0024 | +8,8% |
+> | phủ xác suất, nhiệt 0,05 | 0,3299 ± 0,0018 | −5,6% |
+>
+> Số câu có video đúng trong 100 dòng: **55/60 → 58/60**.
+>
+> **Vì sao nó khác `experiment_per_video_depth.py`** (đã đo −15% đến −30%): cái đó
+> vẫn đi theo chi phí tuyến tính `A·v + B·m + C·d`, chỉ đổi hệ số. Cái này **bỏ hẳn
+> khái niệm chi phí**. Suy thẳng từ luật chấm thì bài toán có tên: vì `R@k` là *max*
+> trên tiền tố, mỗi câu chỉ cần **một** dòng trúng — mọi dòng trúng thêm đều vô giá
+> trị. Đó là cấu trúc của bài toán **phủ cực đại có trọng số**, không phải bài toán
+> xếp hạng. Đặt tiên nghiệm p(v, f) cho vị trí khoảnh khắc thật rồi tham lam chọn
+> dòng phủ được nhiều khối lượng **chưa phủ** nhất; trọng số hạng giảm dần
+> (1,00 / 0,80 / 0,60 / 0,40 / 0,20) khiến thứ tự tham lam đúng luôn.
+>
+> **Chưa nên đưa vào sản xuất ngay.** Còn thiếu: quét tham số tử tế (nhiệt 0,05 đã
+> âm 5,6%, tức tham số có ảnh hưởng mạnh), kiểm trên đề thật chứ không chỉ 60 câu
+> ground truth, và một đường rút lui. Nhưng đây là hướng đáng làm trước mọi thứ khác.
 
 
 ## 2b. Điểm đang mất ở ĐÂU — phép đo quan trọng nhất
