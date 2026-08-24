@@ -81,7 +81,7 @@ lần** với nhiều tổ hợp frame khác nhau, và **không đáng nộp cho
 khác** (`allocate_trake_rows`, dòng 330–399).
 
 Thêm một cái bẫy chết người và **vô hình**: cột thứ `j` của file CSV giữ frame
-của sự kiện `j`, nên **số cột chính là số sự kiện**. Một bộ tách đề bị rơi về 1
+của sự kiện `j`, và cột đầu là mã video, nên **số cột = số sự kiện + 1**. Một bộ tách đề bị rơi về 1
 sự kiện sẽ sinh file 2 cột cho câu 4 sự kiện và ăn 0 điểm — trong khi *mọi* kiểm
 tra khác vẫn pass trên dòng 2 cột đó. Đã có kiểm tra riêng cho việc này
 (`verify_submission_zip`, dòng 567–584).
@@ -490,7 +490,7 @@ Hai nguyên tắc, chép từ `_doc`:
 
 ### 4.3 Khuôn mẫu ba phần
 
-Mọi entry thật trong `round1/sharp_questions.json` (24 câu) đều theo đúng khuôn
+18 trên 24 entry thật trong `round1/sharp_questions.json` theo đủ khuôn
 này — tôi đã đọc và đối chiếu:
 
 ```
@@ -617,7 +617,7 @@ ba tham số này; nó nằm ở việc đẩy đúng keyframe lên hạng cao.
 | Giới hạn 2 frame/video, cách nhau ≥10 giây | tối ưu cho độ đo *khác*; bỏ cap **tăng điểm ở mọi bề rộng** | `src/core/kis_engine.py:15-20` |
 | `combine='max'` khi ghép các đoạn của câu dài | thưởng frame chỉ khớp một mệnh đề — "giá sách" thắng chính cảnh chứa nó | `src/core/kis_engine.py:344-346` |
 
-Kết luận trong README: *"khâu truy xuất của nhóm đã được tinh chỉnh tốt."*
+> **Chưa kiểm chứng được.** Câu này và mấy con số ngay trên vốn trích từ bản README cũ, đã bị thay khi viết lại tài liệu; không tìm thấy chúng ở bất kỳ đâu khác trong repo. Muốn dùng lại thì phải chạy lại `scripts/experiment_merge.py` và `scripts/experiment_retrieval.py` rồi ghi số mới.
 
 ### 6.2 Gộp thêm tín hiệu vào điểm số
 

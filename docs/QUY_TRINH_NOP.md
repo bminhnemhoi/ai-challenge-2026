@@ -418,7 +418,7 @@ Trên `review.html` bấm `Lệnh sửa (cách cũ)` để lấy chuỗi picks, 
 
 ```bash
 python scripts/apply_picks.py --queries round2/queries --out round2/b \
-  --picks "query-p2-1-kis=L01_V005:25605;query-p2-15-qa=L01_V006:5376:<đáp án>"
+  --picks "query-p2-1-kis=L01_V005:<frame>;query-p2-15-qa=L01_V006:<frame>:<đáp án>
 ```
 
 Cú pháp: `query=VIDEO:FRAME[:đáp án]`, ngăn nhau bằng `;`.
@@ -547,7 +547,11 @@ Nên không bao giờ upload thứ chưa qua `verify_zip.py`.
   CSV rời sẽ bị từ chối (`src/core/submission.py:450-467`). Luôn dùng
   `repackage.py`, đừng tự nén bằng chuột phải.
 
-**Nếu terminal Windows crash `UnicodeEncodeError`:** mọi script đã gọi `safe_console()`
+**Nếu terminal Windows crash `UnicodeEncodeError`:** phần lớn script đã gọi `safe_console()`
+(27/40 — `evaluate_official.py`, `experiment_retrieval.py`, `experiment_strategies.py`,
+`experiment_objects.py`, `experiment_metadata.py`, `experiment_long_query.py`,
+`download_data.py` và vài script build thì **chưa**; với chúng hãy đặt
+`set PYTHONIOENCODING=utf-8` trước khi chạy)
 (`scripts/_console.py`) nên không nên xảy ra. Nếu vẫn xảy ra ở script bạn tự viết,
 thêm hai dòng import đó vào đầu file — crash này có thể rơi **giữa** lúc ghi CSV và
 đóng gói zip, để lại một bài nộp nửa vời.

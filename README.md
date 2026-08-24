@@ -14,7 +14,8 @@ Hai bộ đề dễ lẫn vì **cả hai đều đánh số `p1-*`**:
 > Đọc tài liệu nào thấy ghi `p1-4`, hãy tự hỏi *vòng nào* trước khi tin. Toàn bộ `docs/*.md` viết
 > trước ngày 21/08 đều nói về bộ **luyện tập**.
 
-> Sắp vào giờ thi? Đừng đọc README. Mở thẳng **[docs/CONTEST_RUNBOOK.md](docs/CONTEST_RUNBOOK.md)** — quy trình 3 tiếng, in ra và làm theo.
+> Sắp vào giờ thi? Đừng đọc README. Mở thẳng **[docs/QUY_TRINH_NOP.md](docs/QUY_TRINH_NOP.md)** — quy trình 3 tiếng, in ra và làm theo.
+> (`docs/CONTEST_RUNBOOK.md` là bản cũ, thiếu bốn công cụ mới; chỉ còn dùng cho phần kỷ luật thời gian và quy định BTC.)
 
 ---
 
@@ -64,13 +65,39 @@ Tải `metadata.json` (46 MB), `embeddings_siglip2_384.npy` (**780 MB**), `blank
 
 Script chạy lại được nhiều lần: file nào xong rồi thì bỏ qua, và mỗi file tải vào `.part` rồi mới đổi tên, nên Ctrl-C giữa chừng không để lại file cụt (`scripts/download_data.py:57-76`). Nếu cuối cùng in `CHƯA XONG — n mục tải lỗi` thì **chưa xong thật**, chạy lại.
 
+### Hai thứ `download_data.py` KHÔNG tải — phải tự chuẩn bị
+
+Thiếu chúng thì kênh lời thoại im lặng trả về rỗng, **không báo lỗi gì cả**. Đây là cái mất nhiều thời gian nhất khi máy mới.
+
+1. **Transcript** — `scripts/search_transcripts.py:49` và `scripts/vlm_rerank_run.py:101` mặc định tìm ở
+   `<thư-mục-cha-của-repo>/transcripts_full`, tức **nằm ngoài repo**. Đó là 873 file JSON, mỗi file có
+   `video_id`, `title`, `full_text` và `segments` (kèm mốc thời gian). Lấy từ ổ chung của đội, hoặc tự
+   dựng bằng `python scripts/fetch_captions.py`. Nếu để chỗ khác thì truyền `--transcripts <đường-dẫn>`.
+2. **`data/captions/`** — `TranscriptIndex.load_dir()` đọc thư mục này cùng lúc với `transcripts_full`.
+   Cũng do `fetch_captions.py` sinh ra.
+
+Kiểm tra nhanh xem kênh lời thoại có sống không:
+
+```bash
+python scripts/search_transcripts.py --query "múa lân trên cột"
+```
+
+Ra danh sách video kèm mốc thời gian là được. Ra rỗng nghĩa là chưa có transcript, không phải không tìm thấy.
+
 ### Kiểm tra máy đã sẵn sàng
 
 ```bash
 python -m pytest src/task3_trake/tests tests -q
 ```
 
-Phải xanh hết. Đếm ngày 24/08/2026: **186 test** trong `tests/` và **214 test** trong `src/task3_trake/tests/`.
+Phải xanh hết. Đếm ngày 24/08/2026: **186 test** trong `tests/` và **214 test** trong `src/task3_trake/tests/`
+(cộng 15 test ở `src/task2_vqa/test_member3.py` là 415 — đó là lý do 186 + 214 không ra 415).
+
+Bộ test **không cần** chỉ mục 780 MB, chạy hết khoảng 15–20 giây. Nhưng cần **Node.js** cho các test đối
+chiếu bản JavaScript của bộ phân bổ với bản Python (`tests/test_js_allocator.py`,
+`tests/test_page_export_matches_pipeline.py`). Không có `node` thì chúng **tự bỏ qua** chứ không đỏ —
+nên nếu thấy dòng `skipped`, hãy cài Node rồi chạy lại: đó đúng là hai test bảo vệ việc "cái người duyệt
+nhìn thấy trên trang review" khớp với "cái thật sự được nộp".
 
 ---
 
@@ -160,6 +187,29 @@ notebooks/index-siglip2.ipynb  dựng lại chỉ mục SigLIP-2 trên Colab
 rehearsal/                   bộ đề diễn tập 12 câu + các lượt chạy thử
 round_p1/                    vòng LUYỆN TẬP: đề (24 câu, có commit) + các lượt chạy (không commit)
 round1/                      vòng SƠ TUYỂN 1: không commit thứ gì (xem .gitignore)
+```
+
+### Cảnh báo: `p1-4` ở hai vòng là hai câu hoàn toàn khác nhau
+
+Cả hai bộ đề đều đặt tên file `query-p1-<số>-<loại>.txt`, nhưng **nội dung không liên quan gì đến nhau**,
+và **6 trên 24 mã trùng còn khác cả loại tác vụ**:
+
+| mã | vòng luyện tập (`round_p1/`) | vòng sơ tuyển 1 (`round1/`) |
+|---|---|---|
+| `p1-4` | **trake** | **kis** |
+| `p1-9` | **kis** | **qa** |
+| `p1-17` | **kis** | **qa** |
+| `p1-18` | **trake** | **kis** |
+| `p1-19` | **qa** | **kis** |
+| `p1-22` | **qa** | **kis** |
+
+Ngoài ra `round1/` có thêm `p1-3` mà vòng luyện tập không có (25 câu so với 24).
+
+Hệ quả thực tế: mọi tài liệu trong `docs/` viết **trước 21/08/2026** đều nói về vòng **luyện tập**.
+Đọc thấy *"p1-4 là câu TRAKE"* thì đúng — nhưng chỉ đúng cho vòng luyện tập. Trước khi tin bất kỳ
+câu nào nhắc `p1-<số>`, hãy xem ngày sửa file (`git log -1 --format=%ad -- <file>`).
+
+```
 round1/                      cùng vòng đó, thư mục làm việc riêng — .gitignore chặn TOÀN BỘ (dòng 72)
 app.py                       web app FastAPI để dò tay bằng trình duyệt
 query_kis.py                 CLI cũ tra một câu qua TextualKISRetriever
@@ -185,7 +235,7 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8000
 | [docs/QUY_TRINH_NOP.md](docs/QUY_TRINH_NOP.md) | Cẩm nang chạy trong ngày thi, tính bằng phút, kèm mục "khi hỏng thì làm gì". |
 | [docs/PHAT_TRIEN.md](docs/PHAT_TRIEN.md) | Dành cho người sửa mã: chạy test, quy ước, cách thêm một kênh mới, các bẫy đã mất điểm. |
 | [docs/VI_DU_LUAN_CHUNG.md](docs/VI_DU_LUAN_CHUNG.md) | Sáu ca thật: khi ba kênh nói ba điều khác nhau thì tin ai. Mã video và đáp án **đã che**. |
-| [docs/CONTEST_RUNBOOK.md](docs/CONTEST_RUNBOOK.md) | Quy trình 3 tiếng thi, chia theo mốc phút. In ra, đừng đọc lần đầu lúc 19:30. |
+| [docs/CONTEST_RUNBOOK.md](docs/CONTEST_RUNBOOK.md) | **Bản cũ.** Kỷ luật thời gian và quy định BTC vẫn đúng; thứ tự thao tác thì đã lỗi thời — dùng `QUY_TRINH_NOP.md`. |
 | [docs/HUONG_DAN_KIEM_THU.md](docs/HUONG_DAN_KIEM_THU.md) | Chạy thử trọn một bộ đề từ đầu tới cuối, dùng chính `round_p1/queries`. |
 | [docs/KIEN_TRUC_VA_HUONG_CAI_THIEN.md](docs/KIEN_TRUC_VA_HUONG_CAI_THIEN.md) | Sơ đồ đường đi của một câu hỏi, bảng **mọi tín hiệu đã đo** (cái nào dùng, cái nào loại), và chỗ còn dư địa. |
 | [docs/WHAT_CHANGED.md](docs/WHAT_CHANGED.md) | Nhật ký đợt cải tiến 5,8 → 8,6: đã đổi gì, vì sao, và bằng chứng đo được. |
@@ -212,8 +262,13 @@ Theo thứ tự này, khoảng một buổi:
 1. **Luật chấm.** Đọc `src/core/submission.py` **31 dòng đầu**. Ba công thức R-Score được chép nguyên văn ở đó, cùng hai hệ quả chi phối toàn bộ thiết kế phía dưới. Phần còn lại của file chỉ là hiện thực hoá hai hệ quả đó.
 2. **Đường đi của một câu hỏi.** `docs/KIEN_TRUC_VA_HUONG_CAI_THIEN.md` mục 1 và mục 2. Mục 2 là bảng mọi tín hiệu đã đo — đọc nó trước khi nảy ra ý tưởng mới, phần lớn ý tưởng "nghe có lý" đã bị thử và đã đo ra âm.
 3. **Chạy thử.** Mục 2 của README này. Tự tay thấy `format check passed` một lần.
-4. **Ngày thi.** `docs/CONTEST_RUNBOOK.md`, đọc hết một lượt.
-5. **Khi nào tin máy, khi nào tin mắt.** `docs/VI_DU_LUAN_CHUNG.md`.
+4. **Vì sao cách này ăn điểm.** `docs/PHUONG_PHAP.md` — nhất là mục "những gì đã thử mà không ăn".
+5. **Khi nào tin máy, khi nào tin mắt.** `docs/VI_DU_LUAN_CHUNG.md`, sáu ca thật.
+6. **Ngày thi.** `docs/QUY_TRINH_NOP.md`, đọc hết một lượt và in ra.
+
+Hai tài liệu tra cứu, đọc khi cần chứ không đọc tuần tự: `docs/KIEN_TRUC.md` (tra xem một
+việc nằm ở file nào) và `docs/PHAT_TRIEN.md` (đọc **trước khi sửa mã** — có danh sách các bẫy
+đã từng làm mất điểm).
 
 ### Ba điều dễ làm ngược nhất
 

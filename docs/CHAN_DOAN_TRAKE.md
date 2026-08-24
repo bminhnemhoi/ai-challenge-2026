@@ -12,7 +12,7 @@ hệ thống chọn. Dưới đây là nguyên nhân, đo được, không phỏ
 |---|---|
 | Cửa sổ đáp án mỗi sự kiện | **dưới 10 frame** (luật) = 0,4 giây ở 25 fps |
 | Khoảng cách keyframe, trung vị toàn kho | **55 frame** = 2,2 giây |
-| Riêng video múa lân `L24_V009` | **92 frame** = 3,7 giây |
+| Riêng video múa lân `VIDEO-01` | **92 frame** = 3,7 giây |
 
 Một keyframe đơn lẻ rơi trúng cửa sổ 10 frame chỉ **13,3%** số lần. Thang
 ±10/±20 nâng lên tối đa **54,9%** *cho mỗi sự kiện*, và chỉ khi keyframe neo đã
@@ -43,9 +43,9 @@ ma trận điểm hoàn toàn ngẫu nhiên cùng kích thước cũng đạt đ
 
 | câu | video | #keyframe | ngưỡng nhiễu | E1 | E2 | E3 | E4 |
 |---|---|---|---|---|---|---|---|
-| p1-16 múa lân | L24_V009 | 156 | 2,62 | **1,68** | 2,64 | **1,42** | **2,05** |
-| p1-4 măng tây | L26_V208 | 189 | 2,67 | **2,66** | **2,60** | 2,71 | **2,62** |
-| p1-18 nấm | L26_V198 | 164 | 2,65 | 3,00 | 3,58 | 3,32 | **2,23** |
+| p1-16 múa lân | VIDEO-01 | 156 | 2,62 | **1,68** | 2,64 | **1,42** | **2,05** |
+| p1-4 măng tây | VIDEO-02 | 189 | 2,67 | **2,66** | **2,60** | 2,71 | **2,62** |
+| p1-18 nấm | VIDEO-03 | 164 | 2,65 | 3,00 | 3,58 | 3,32 | **2,23** |
 
 **In đậm = dưới ngưỡng nhiễu.** Với những sự kiện đó, đỉnh điểm của mô hình
 không nổi bật hơn một đỉnh ngẫu nhiên — mô hình đang chọn keyframe gần như
@@ -73,9 +73,9 @@ cháy sẵn** trên hình ghi tên nguyên liệu. Đó chính là loại tín h
 `p1-16`, 6 video hàng đầu, chênh nhau tối đa 0,58 điểm:
 
 ```
-1. L24_V009  16.63  Kim Lân Thượng Sơn Hái Linh Chi – Đoàn Lân Huỳnh Kim Lân
-2. L24_V038  16.57  Khải Sự Phi Đằng triển Hùng Uy – Đoàn Lân Khải Uy
-3. L24_V013  16.13  Hồng Sư Vượt Trường Sơn Hái Linh Chi – Đoàn Lân Minh Hào
+1. VIDEO-01  16.63  Kim Lân Thượng Sơn Hái Linh Chi – Đoàn Lân Huỳnh Kim Lân
+2. VIDEO-04  16.57  Khải Sự Phi Đằng triển Hùng Uy – Đoàn Lân Khải Uy
+3. VIDEO-05  16.13  Hồng Sư Vượt Trường Sơn Hái Linh Chi – Đoàn Lân Minh Hào
 ...
 ```
 
@@ -92,12 +92,12 @@ Với TRAKE, **sai video là 0 điểm ngay** — không có điểm thành ph�
 Đối chiếu tay trên vòng 1 tìm ra điều hình ảnh không bao giờ thấy:
 
 - Trong **toàn bộ 873 video**, đúng **2 video** nhắc tới "củ năng" — một trong đó
-  là `L26_V012` **"CỦ NĂNG OM NẤM CHAY"**, khớp chính xác `p1-18`
+  là `VIDEO-06` **"CỦ NĂNG OM NẤM CHAY"**, khớp chính xác `p1-18`
   ("món ăn về nấm", cắt nấm, cắt **củ năng**, cắt đậu hủ). Nó **không nằm trong
   top-6** của hệ thống.
-- Đúng **1 video** khớp "măng tây" + "chiên": `L26_V194` **"MĂNG TÂY CHIÊN BIA
+- Đúng **1 video** khớp "măng tây" + "chiên": `VIDEO-07` **"MĂNG TÂY CHIÊN BIA
   XỐT CÁ NGỪ"**. `p1-4` mô tả *tẩm bột rồi chiên ngập dầu*; ta đang nộp
-  `L26_V208` "TIM HEO **XÀO** MĂNG TÂY" — món xào, không tẩm bột.
+  `VIDEO-02` "TIM HEO **XÀO** MĂNG TÂY" — món xào, không tẩm bột.
 
 Lưu ý quan trọng: metadata cấp video **đã đo và làm điểm KIS tệ đi**
 (R@1 43,3% → 40,0%), nên nó **không** được đưa vào bộ chấm điểm. Nó được **hiển

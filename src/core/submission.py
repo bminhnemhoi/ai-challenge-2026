@@ -568,8 +568,10 @@ def verify_submission_zip(
             blank_answers = 0
             widths = {len(ln.split(",")) for ln in lines}
             if "trake" in Path(n).name.lower():
-                # Column j holds event j's frame, so the width IS the event
-                # count. A splitter that fell back to one event emits 2 columns
+                # A row is `video_id,frame_1,...,frame_n`, so the width is the
+                # event count PLUS ONE for the video column — 4 events means 5
+                # columns, and `widths == {2}` below means ONE event, not two.
+                # A splitter that fell back to a single event emits 2 columns
                 # for a 4-event query and scores 0 — invisibly, because every
                 # other check passes on a 2-column row.
                 if len(widths) > 1:

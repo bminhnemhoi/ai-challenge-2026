@@ -190,8 +190,8 @@ Nhóm cung cấp **809 transcript** (5,6 triệu ký tự, có mốc thời gian
 
 **Nó tìm được thứ hình ảnh mù hoàn toàn.** Tìm tay trên vòng 1:
 
-- `p1-4` "măng tây tẩm bột chiên ngập dầu" → **`L26_V194` "MĂNG TÂY CHIÊN BIA" hạng 1**, kèm đoạn nói *"măng tây xanh... lại bột mì lên"*. Hệ thống hình ảnh xếp nó hạng 3, hạng 1 là món **xào**.
-- `p1-18` "cắt nấm / cắt củ năng / cắt đậu hủ" → `L26_V012` "CỦ NĂNG OM NẤM CHAY". Trong **toàn bộ 873 video chỉ có 2 video** nhắc "củ năng". Hình ảnh không đưa nó vào top-6.
+- `p1-4` "măng tây tẩm bột chiên ngập dầu" → **`VIDEO-07` "MĂNG TÂY CHIÊN BIA" hạng 1**, kèm đoạn nói *"măng tây xanh... lại bột mì lên"*. Hệ thống hình ảnh xếp nó hạng 3, hạng 1 là món **xào**.
+- `p1-18` "cắt nấm / cắt củ năng / cắt đậu hủ" → `VIDEO-06` "CỦ NĂNG OM NẤM CHAY". Trong **toàn bộ 873 video chỉ có 2 video** nhắc "củ năng". Hình ảnh không đưa nó vào top-6.
 
 **Nhưng đo trên ground truth thì nó làm điểm TỆ ĐI** — mọi cách gộp, mọi trọng số:
 

@@ -24,15 +24,20 @@ python -m pytest -q                # 415 test — thêm src/task3_trake + src/ta
 
 Đo lúc viết tài liệu này (2026-08-24, máy Windows 11 của dự án):
 
-| Lệnh | Kết quả | Thời gian |
+| Lệnh | Kết quả | Thời gian đo được |
 |---|---|---|
-| `python -m pytest tests -q` | `186 passed, 12 warnings` | 34.9 s |
-| `python -m pytest -q` | `415 passed, 12 warnings` | 35.2 s |
+| `python -m pytest tests` | `186 passed` | 14,8 s |
+| `python -m pytest src/task3_trake/tests` | `214 passed` | 7,0 s |
+| `python -m pytest src/task2_vqa` | `15 passed` | 6,1 s |
+| `python -m pytest` (chạy hết) | `415 passed, 12 warnings` | 17,1 s khi cache đã ấm |
 
-Hai con số gần bằng nhau vì 229 test của `src/task3_trake/tests/` chỉ dùng
+Thời gian dao động mạnh theo máy và theo cache: cùng lệnh cuối, một lần đo trên máy
+nguội cho **94 s**. Số lượng test thì ổn định, cứ lấy đó mà đối chiếu.
+
+Cộng lại: 186 (`tests/`) + 214 (`src/task3_trake/tests/`) + 15 (`src/task2_vqa/test_member3.py` — một file test nằm ngoài thư mục `tests/`, đó là lý do 186 + 214 không ra 415). Nhóm task3 chạy nhanh vì chỉ dùng
 NumPy trên ma trận nhỏ, chạy trong vài mili-giây.
 
-**Bộ test KHÔNG cần chỉ mục 780 MB.** 35 giây là toàn bộ chi phí. Không có lý do
+**Bộ test KHÔNG cần chỉ mục 780 MB.** Vài chục giây là toàn bộ chi phí. Không có lý do
 gì để bỏ qua nó trước khi commit.
 
 12 warning là `DeprecationWarning` của Pillow ở `src/core/colours.py:116`
@@ -191,7 +196,8 @@ from scripts.make_submission import ranked_hits  # noqa: E402
 
 Ba điểm bắt buộc:
 
-- **`safe_console()` gọi TRƯỚC mọi lệnh in.** Console Windows mặc định là
+- **`safe_console()` gọi TRƯỚC mọi lệnh in.** Hiện 27/40 script làm đúng; script mới
+  thì bắt buộc. Console Windows mặc định là
   cp1252; in một chữ `ạ` là `UnicodeEncodeError`. Lý do nó nghiêm trọng chứ
   không chỉ khó chịu, chép từ `scripts/_console.py:5-7`: *cú crash đó rơi vào
   **giữa** lúc ghi một số CSV và lúc đóng gói zip, để lại một bài nộp nửa vời.*
@@ -537,8 +543,11 @@ Viết `AllocationPlan()` trần trong script thí nghiệm là bạn đang đo 
 plan = AllocationPlan(breadth_cost=1.0, depth_cost=0.5, step=10)
 ```
 
-Đó là cách `evaluate_official.py:97`, `loss_breakdown.py:67`, `app.py:297` đang
-làm.
+Đó là cách `evaluate_official.py:97` và `loss_breakdown.py:67` đang làm.
+`app.py:297` thì **không**: nó viết `AllocationPlan(depth_cost=0.5)`, bỏ `breadth_cost`
+và `step` cho ăn mặc định (1.0 / 10). Kết quả vẫn đúng vì mặc định trùng với cấu hình
+đang nộp, nhưng đó là may chứ không phải chắc — đổi mặc định một cái là `app.py` lặng
+lẽ đổi theo.
 
 ### 6.5 Hai chỗ trong repo ghi số sai / trỏ sai — đã kiểm chứng
 
@@ -554,14 +563,17 @@ làm.
   | Trung vị mọi khoảng cách gộp chung, toàn kho | **55.0** |
   | Trung bình toàn kho | 69.0 |
   | Trung vị của các trung vị theo từng video | 48.0 |
-  | Trung vị trên riêng 60 video trong ground truth | 71.0 |
+  | Trung vị gộp trên riêng 60 video trong ground truth | 71.0 |
+  | **Trung vị của các trung vị, trên riêng 60 video ground truth** | **62.5** |
 
-  Con số **55 là đúng** (trung vị gộp toàn kho). Con số **62 không tái hiện được**
-  ở bất kỳ cách tính nào trong bốn cách trên — đừng chép nó vào báo cáo.
+  Cả hai con số đều đúng, chỉ là **đếm trên hai tập khác nhau**: `55` là trung vị
+  gộp toàn kho 873 video; `62` là trung vị-của-trung-vị trên đúng 60 video có trong
+  `ground_truth.json` — tức tập mà `experiment_allocation.py` thực sự chạy trên đó.
+  Khi trích một trong hai, hãy nói rõ tập nào.
 
 Nếu sửa hai chỗ này, sửa bằng Edit/Write, **không** bằng PowerShell (mục 8).
 
-### 6.6 Số cột của file TRAKE chính là số sự kiện
+### 6.6 Số cột của file TRAKE = số sự kiện + 1
 
 Sai số cột thì **cả câu ăn 0 điểm**, và sai kiểu này **vô hình** vì mọi kiểm tra
 khác đều pass trên một dòng 2 cột. Nếu `make_submission.py` in cảnh báo về số sự

@@ -23,9 +23,9 @@ khung) mất khoảng **25 phút chạy nền** trước giờ soát.
 **48% khung hình có chữ đáng kể** — chủ yếu là dòng tiêu đề tin tức cháy sẵn:
 
 ```
-L21_V008 f21240: NASA HOÃN CHUYẾN BAY GIẢI CỨU PHI HÀNH GIA KẸT TRÊN ISS
-L21_V009 f19989: TP HCM: Học sinh tựu trường sớm nhất vào ngày 19/8/2024
-L21_V018 f19230: Thư ký Liên quốc kêu đình chiến tại Gaza để tiêm vaccine
+VIDEO-10 f21240: NASA HOÃN CHUYẾN BAY GIẢI CỨU PHI HÀNH GIA KẸT TRÊN ISS
+VIDEO-11 f19989: TP HCM: Học sinh tựu trường sớm nhất vào ngày 19/8/2024
+VIDEO-12 f19230: Thư ký Liên quốc kêu đình chiến tại Gaza để tiêm vaccine
 ```
 
 **Nó bắt được lỗi không công cụ nào khác bắt được.** OCR trên khung hình đang
@@ -91,9 +91,9 @@ phủ**. Không đủ cơ sở để đưa vào bộ chấm điểm.
 
 | câu | hệ thống hình ảnh | lời thoại tìm ra |
 |---|---|---|
-| `p1-4` măng tây tẩm bột chiên | `L26_V208` "TIM HEO **XÀO**" | **`L26_V194` "MĂNG TÂY CHIÊN BIA"** hạng 1, đoạn nói *"măng tây xanh… lại bột mì lên"* |
-| `p1-18` cắt nấm/củ năng/đậu hủ | `L26_V198` "MÍT NON KHO NẤM" | `L26_V012` "**CỦ NĂNG** OM NẤM CHAY" — chỉ 2/873 video nhắc "củ năng" |
-| `p1-22` phụ nữ dạy nấu ăn | `L26_V205` "BÒ NƯỚNG LÁ CÁCH" (chương trình TV) | `L30_V078` "**Lớp học** 0 đồng cho người yêu bếp" |
+| `p1-4` măng tây tẩm bột chiên | `VIDEO-02` "TIM HEO **XÀO**" | **`VIDEO-07` "MĂNG TÂY CHIÊN BIA"** hạng 1, đoạn nói *"măng tây xanh… lại bột mì lên"* |
+| `p1-18` cắt nấm/củ năng/đậu hủ | `VIDEO-03` "MÍT NON KHO NẤM" | `VIDEO-06` "**CỦ NĂNG** OM NẤM CHAY" — chỉ 2/873 video nhắc "củ năng" |
+| `p1-22` phụ nữ dạy nấu ăn | `VIDEO-13` "BÒ NƯỚNG LÁ CÁCH" (chương trình TV) | `VIDEO-14` "**Lớp học** 0 đồng cho người yêu bếp" |
 
 ---
 

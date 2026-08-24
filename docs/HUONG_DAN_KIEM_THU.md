@@ -103,7 +103,7 @@ Mở `review.html`, phóng to khung hình, đọc chữ, rồi:
 
 ```bash
 python scripts/pin_video.py --queries round_p1/queries --out round_p1/run1 \
-    --query query-p1-15-qa --video L30_V072 --answer "Xã Vạn Thắng"
+    --query query-p1-15-qa --video VIDEO-09 --answer "<đáp án>"
 ```
 
 Đáp án được dán lên **cả 100 dòng** — bỏ trống từ dòng 6 là vứt 3/5 thành phần điểm.
@@ -143,7 +143,7 @@ round_p1/queries/query-p1-7-kis.en.txt   ← bạn viết
 
 Nên công cụ **không thay thế** mà **gộp cả hai** danh sách ứng viên. Vì R@k lấy max, thêm giả thuyết chỉ có thể giúp:
 
-- Câu `query-p1-7-kis` sau khi gộp: rank 1 là `L29_V023` (video bản viết lại tin chắc), **nhưng** `L29_V003` (đáp án tự động) vẫn nằm trong top-20.
+- Câu `query-p1-7-kis` sau khi gộp: rank 1 là `VIDEO-15` (video bản viết lại tin chắc), **nhưng** `VIDEO-16` (đáp án tự động) vẫn nằm trong top-20.
 - Cả hai khả năng đều được phủ. Chọn một trong hai mới là rủi ro.
 
 Cách viết: như caption ảnh, **chi tiết phân biệt để lên đầu**, và **giải mã tham chiếu gián tiếp** thành thứ nhìn thấy được.

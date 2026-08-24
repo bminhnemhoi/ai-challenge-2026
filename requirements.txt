@@ -34,3 +34,8 @@ pyyaml>=6.0
 # --- development ---
 pytest>=8.0
 yt-dlp>=2025.1.1        # YouTube auto-captions (scripts/fetch_captions.py)
+
+# Doc chu tren khung hinh (src/core/ocr.py). Nang: keo theo torch + mot bo model
+# ~100 MB tai lan chay dau. Chi can neu ban chay scripts/run_ocr.py hoac
+# scripts/search_ocr.py; phan con lai cua duong ong chay duoc ma khong co no.
+easyocr>=1.7

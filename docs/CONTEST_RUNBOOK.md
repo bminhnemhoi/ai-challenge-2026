@@ -1,5 +1,16 @@
 # RUNBOOK — 3 tiếng thi, làm đúng thứ tự này
 
+> ## ⚠ ĐÃ CŨ — hãy dùng [QUY_TRINH_NOP.md](QUY_TRINH_NOP.md)
+>
+> Tài liệu này viết ngày 21/08/2026, **trước** khi có bốn công cụ đã ăn điểm ở vòng sơ tuyển 1.
+> Nó không hề nhắc tới `verify_hypotheses.py` (phân xử khi hai kênh mâu thuẫn),
+> `read_answer.py` (đọc chữ/số ở độ phân giải gốc), `search_transcripts.py` (tìm bằng lời thoại),
+> hay kỹ thuật **câu hỏi phân biệt**. Làm đúng theo trang này là bỏ mất phần lớn cái mới.
+>
+> Giữ lại vì phần **kỷ luật thời gian** và **quy định BTC** ở dưới vẫn đúng.
+> Còn thứ tự thao tác thì theo `QUY_TRINH_NOP.md`.
+
+
 > Mỗi đợt chỉ mở **3 tiếng** và chỉ được nộp **3 lần**, **lần cuối mới tính điểm**.
 > In trang này ra. Đừng đọc lần đầu vào lúc 19:30.
 
@@ -127,7 +138,7 @@ Lệnh này chạy trong một giây (không nạp index) và dùng **đúng** b
 
 ```bash
 python scripts/apply_picks.py --queries round1/queries --out round1/b \
-  --picks "query-1-kis=L21_V025:12480;query-15-qa=L30_V072:5376:Xã Vạn Thắng"
+  --picks "query-1-kis=VIDEO-08:<frame>;query-15-qa=VIDEO-09:<frame>:<đáp án>
 ```
 
 Xem câu nào nên soi trước:

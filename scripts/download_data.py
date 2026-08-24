@@ -29,7 +29,13 @@ HF_DIRECT_FILES = [
 
 # Zipped packages from BTC / HF
 ZIP_PACKAGES = [
-    ("media-info.zip", f"{HF_CDN}/media-info.zip", "media-info"),
+    # Save under the name the rest of the repo READS. Seven call sites open
+    # `data/media-info-aic25-b1.zip` — build_review_page.py:73,
+    # search_transcripts.py:66, search_ocr.py:87, fetch_captions.py:47 and
+    # experiment_metadata.py among them. Downloading it as "media-info.zip"
+    # left every one of them without titles or watch URLs, and none of them
+    # says so out loud: they just return nothing.
+    ("media-info-aic25-b1.zip", f"{HF_CDN}/media-info.zip", "media-info"),
     ("map-keyframes-aic25-b1.zip", "https://aic-data.ledo.io.vn/map-keyframes-aic25-b1.zip", "map-keyframes"),
     ("objects-aic25-b1.zip", "https://aic-data.ledo.io.vn/objects-aic25-b1.zip", "objects"),
 ]

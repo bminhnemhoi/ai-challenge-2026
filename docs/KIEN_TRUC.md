@@ -137,8 +137,8 @@ Trước khi có chặng nào, phải có chỉ mục. Kiểm chứng trực ti�
 Một dòng `metadata.json` trông như thế này:
 
 ```json
-{"video_id": "L21_V001", "n": 1, "frame_filename": "001.jpg",
- "frame_idx": 0, "pts_time": 0.0, "fps": 30.0, "rel_path": "L21_V001/001.jpg"}
+{"video_id": "VIDEO-17", "n": 1, "frame_filename": "001.jpg",
+ "frame_idx": 0, "pts_time": 0.0, "fps": 30.0, "rel_path": "VIDEO-17/001.jpg"}
 ```
 
 Hai trường dễ nhầm và bạn sẽ gặp lại chúng ở khắp nơi:
@@ -211,7 +211,7 @@ Không khớp gì thì mặc định là `kis` — an toàn, vì dòng KIS là *
 
 ### `split_events` (dòng 77–134) — chỗ dễ mất cả câu nhất
 
-**Số sự kiện tách ra CHÍNH LÀ số cột CSV**, và bộ chấm so cột `j` với cửa sổ `j`.
+Một dòng TRAKE là `video_id,frame_1,…,frame_n`, nên **số cột = số sự kiện + 1** (cột đầu là mã video). Bộ chấm so cột `frame_j` với cửa sổ `j`.
 Đếm sai không phải là mất một sự kiện — là **0 điểm cả câu**.
 
 Bốn nhánh, theo thứ tự tường minh giảm dần:
@@ -807,7 +807,7 @@ vấn đề (rỗng = sạch). Nó kiểm cả những thứ BTC liệt kê lẫ
 | Đáp án Q&A rỗng | Luật 2.1.2 chấm 0 |
 | CSV **thiếu** (qua `expect_names`) | Một câu bị crash thì không sinh file nào mà archive vẫn *trông* hợp lệ |
 | CSV **thừa** (qua `expect_names`) | File từ vòng trước nằm lại trong cùng thư mục `csv/` sẽ bị đóng gói theo |
-| Số cột TRAKE không đồng nhất, hoặc chỉ có 2 cột | **Số cột chính là số sự kiện.** Sai kiểu này VÔ HÌNH vì mọi kiểm tra khác đều pass trên dòng 2 cột |
+| Số cột TRAKE không đồng nhất, hoặc chỉ có 2 cột | **Số cột = số sự kiện + 1**, nên 2 cột nghĩa là đề bị tách thành **một** sự kiện. Sai kiểu này VÔ HÌNH vì mọi kiểm tra khác đều pass trên dòng 2 cột |
 
 > ⚠️ Hàm này `break` ngay khi gặp dòng hỏng đầu tiên **trong một file** (dòng
 > 589–596). Nghĩa là nó báo lỗi đầu tiên chứ không liệt kê hết. Sửa rồi chạy lại,
@@ -861,7 +861,7 @@ nằm trong CSV**.
 Nhận một chuỗi như:
 
 ```
-query-p1-1-kis=L01_V005:25605;query-p1-15-qa=L01_V006:5376:<đáp án>
+query-p1-1-kis=L01_V005:<frame>;query-p1-15-qa=L01_V006:<frame>:<đáp án>
 ```
 
 và áp **tất cả** trong **một** lần nạp chỉ mục, thay vì nạp lại ma trận 780 MB cho
@@ -938,8 +938,8 @@ ground truth đều là **mô tả cảnh NHÌN THẤY** (*"xe ô tô con màu �
 bao phủ và im lặng về loại câu nó không bao phủ**.
 
 Trên bộ đề **vòng luyện tập** (`round_p1/`, đã kèm trong repo), cùng kênh đó tìm ra thứ hình ảnh mù hoàn toàn:
-`p1-4` "măng tây tẩm bột chiên" → `L26_V194` **"MĂNG TÂY CHIÊN BIA"** hạng 1 (hệ thống
-hình ảnh xếp nó hạng 3); `p1-18` → `L26_V012` **"CỦ NĂNG OM NẤM CHAY"**, mà trong toàn
+`p1-4` "măng tây tẩm bột chiên" → `VIDEO-07` **"MĂNG TÂY CHIÊN BIA"** hạng 1 (hệ thống
+hình ảnh xếp nó hạng 3); `p1-18` → `VIDEO-06` **"CỦ NĂNG OM NẤM CHAY"**, mà trong toàn
 bộ 873 video chỉ có 2 video nhắc "củ năng".
 
 Bố trí theo đúng bằng chứng: **không cộng điểm, nhưng đưa tới mắt người.**
@@ -1069,7 +1069,7 @@ có hai bản cài đặt (`review_export.js`) thì có test đòi hai bản kh�
 — tất cả nuốt exception và đi tiếp. Một query hỏng vẫn được ghi **một dòng giữ chỗ**,
 vì CSV rỗng sẽ khiến bộ kiểm tra chặn **cả gói nộp**, còn một dòng sai thì không bao
 giờ làm tụt R@k nào (`make_submission.py:554-562`).
-Cùng tinh thần: mọi script gọi `safe_console()` ngay sau import, vì trên Windows code
+Cùng tinh thần: **27 trên 40** script gọi `safe_console()` ngay sau import, vì trên Windows code
 page mặc định là cp1252 và **in một chữ "ạ" là `UnicodeEncodeError`** — mà crash đó có
 thể rơi vào *giữa* lúc ghi CSV và đóng gói zip, để lại một bài nộp nửa vời.
 
