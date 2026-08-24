@@ -1,0 +1,32 @@
+# Bảng chọn hiện ra khi ai đó bấm "New issue" trên repo này.
+#
+# Phần lớn câu hỏi gửi tới một repo đang đi thi không phải là lỗi phần mềm, mà
+# là "chạy lệnh nào", "sao nó báo thế này", "sửa chỗ này thì phải chạy test gì".
+# Hai câu đó đã có sẵn câu trả lời trong docs/ rồi. Hai đường dẫn dưới đây đẩy
+# người hỏi về đúng trang đó trước, thay vì để họ mở một issue rồi chờ.
+#
+# Lưu ý khi thêm/sửa file trong thư mục này: thư mục hiện CHƯA có form nào
+# (chưa có bug_report.yml / feature_request.yml). Cộng với
+# blank_issues_enabled: false ở dưới, bảng chọn tạm thời chỉ gồm đúng hai liên
+# kết này — tức là hiện không mở được issue mới. Thêm một file form .yml vào
+# thư mục này thì nó sẽ tự hiện lên phía trên hai liên kết.
+#
+# Đường dẫn phải là URL blob tuyệt đối trỏ vào nhánh `main` của origin
+# (github.com/khanhle1406/ai-challenge-2026). Bảng chọn này render trên
+# github.com nên đường dẫn tương đối kiểu `docs/...` sẽ không mở đúng.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Hỏi về quy trình ngày thi
+    url: https://github.com/khanhle1406/ai-challenge-2026/blob/main/docs/QUY_TRINH_NOP.md
+    about: >-
+      Cẩm nang bấm giờ cho vòng 3 tiếng: gõ lệnh gì, mất bao lâu, làm sao biết
+      bước đó đã xong đúng. Có mục 13 "KHI HỎNG THÌ LÀM GÌ" — xem đó trước.
+
+  - name: Hỏi về cách sửa mã
+    url: https://github.com/khanhle1406/ai-challenge-2026/blob/main/docs/PHAT_TRIEN.md
+    about: >-
+      Dành cho người sắp mở một file .py ra và đổi một dòng: cách chạy test,
+      quy ước mã nguồn, các bẫy đã làm mất điểm thật, và danh sách kiểm trước
+      khi commit ở mục 8.

@@ -52,13 +52,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # Ba nhom, chay het: 186 + 214 + 15 = 415. Nhom task2_vqa nam ngoai thu muc
+      # tests/ nen rat de bi bo quen — do la ly do liet ke ro tung duong dan.
       - name: Chạy test
-        run: python -m pytest tests src/task3_trake/tests -q
+        run: python -m pytest tests src/task3_trake/tests src/task2_vqa -q
 
       - name: Không được có test nào bị bỏ qua vì thiếu công cụ
         shell: bash
         run: |
-          out=$(python -m pytest tests src/task3_trake/tests -q 2>&1 | tail -3)
+          out=$(python -m pytest tests src/task3_trake/tests src/task2_vqa -q 2>&1 | tail -3)
           echo "$out"
           if echo "$out" | grep -qi "skipped"; then
             echo "::error::Có test bị bỏ qua — thường là thiếu node. Bỏ qua âm thầm nghĩa là không ai kiểm nữa."
@@ -69,17 +71,28 @@ jobs:
     name: Không rò rỉ khoá và đáp án
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 vì bước dưới soi CẢ LỊCH SỬ, không chỉ cây hiện tại. Một
+      # khoá bị commit rồi xoá ở commit sau thì vẫn nằm trong lịch sử và vẫn đọc
+      # được — `git grep` trần sẽ bỏ lọt đúng trường hợp nguy hiểm nhất.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Repo này CÔNG KHAI. Ba thứ tuyệt đối không được commit, và cả ba đều đã
       # suýt lọt một lần: khoá API, thư mục vòng thi thật, và bản đồ đáp án.
-      - name: Không có khoá API trong lịch sử làm việc
+      - name: Không có khoá API — soi cả cây hiện tại lẫn lịch sử
         run: |
+          fail=0
           if git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'; then
-            echo "::error::Có chuỗi giống khoá Google API trong repo. Gỡ ra và ĐỔI KHOÁ ngay."
-            exit 1
+            echo "::error::Khoá Google API trong cây làm việc. Gỡ ra và ĐỔI KHOÁ ngay."
+            fail=1
           fi
-          echo "Không thấy khoá nào."
+          if git log --all -p --no-color | grep -nE '^\+.*AIza[0-9A-Za-z_-]{30,}' | head -5; then
+            echo "::error::Khoá Google API từng bị commit. Xoá ở commit sau KHÔNG đủ — lịch sử vẫn đọc được. ĐỔI KHOÁ."
+            fail=1
+          fi
+          [ "$fail" = 0 ] && echo "Không thấy khoá nào, kể cả trong lịch sử."
+          exit $fail
 
       - name: Không commit dữ liệu vòng thi thật
         run: |

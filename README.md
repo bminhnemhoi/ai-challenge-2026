@@ -1,8 +1,31 @@
 # AI Challenge HCMC 2026 — truy xuất video đa phương thức
 
+[![CI](https://github.com/khanhle1406/ai-challenge-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/khanhle1406/ai-challenge-2026/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![tests](https://img.shields.io/badge/tests-415%20passed-brightgreen.svg)](#kiểm-tra-máy-đã-sẵn-sàng)
+
+Nhập một câu tiếng Việt mô tả một khoảnh khắc — nhận về file `submission.zip` đúng định dạng ban tổ chức,
+100 dòng cho mỗi câu hỏi, đã tự kiểm định dạng.
+
 Hệ thống tìm khoảnh khắc trong video cho **Hội thi Thử thách Trí tuệ Nhân tạo TP.HCM 2026 (AIC 2026)**.
 Kho dữ liệu: **873 video / 177.321 keyframe**, chỉ mục **SigLIP-2 SO400M-384** (ma trận `177321 × 1152`, float32 — kiểm bằng `numpy` trên `data/embeddings_siglip2_384.npy`).
 Ba loại đề: **KIS** (tìm cảnh), **Q&A** (tìm cảnh + trả lời), **TRAKE** (tìm chuỗi khoảnh khắc có thứ tự).
+
+```mermaid
+flowchart LR
+    Q["Câu hỏi<br/>tiếng Việt"] --> R["Truy xuất<br/>SigLIP-2<br/>400 ứng viên"]
+    R --> M{"Ba kênh<br/>đối chiếu"}
+    M -->|hình ảnh| V["điểm tương đồng"]
+    M -->|lời thoại| T["BM25 trên<br/>873 transcript"]
+    M -->|mắt VLM| G["Gemini xem<br/>từng khung"]
+    V & T & G --> H["Người duyệt<br/>review.html"]
+    H --> A["Chia 100 dòng<br/>i + 0,5·d"]
+    A --> Z["submission.zip<br/>đã kiểm định dạng"]
+```
+
+**Điểm mấu chốt:** ban tổ chức chấm **video ĐÚNG *và* frame nằm trong cửa sổ `[s,e]`**. Đo "độ chính
+xác cấp video" là cái bẫy đã giữ đội ở 5,8 điểm — đã ba lần một thay đổi làm tăng R@1 cấp video mà
+**giảm** điểm thi. Chi tiết ở [docs/PHUONG_PHAP.md](docs/PHUONG_PHAP.md).
 
 **Đang ở đâu:** vừa nộp xong **vòng sơ tuyển đợt 1** (25 câu) — chưa có điểm. Trước đó, trên bộ đề
 **luyện tập** (24 câu), điểm đi từ **5,8 lên 8,6 / 24** qua bốn mốc 5,8 → 7,2 → 7,8 → 8,6
@@ -13,6 +36,20 @@ Hai bộ đề dễ lẫn vì **cả hai đều đánh số `p1-*`**:
 
 > Đọc tài liệu nào thấy ghi `p1-4`, hãy tự hỏi *vòng nào* trước khi tin. Toàn bộ `docs/*.md` viết
 > trước ngày 21/08 đều nói về bộ **luyện tập**.
+
+## Mục lục
+
+| | |
+|---|---|
+| [1. Cài đặt](#1-cài-đặt-5-phút-chưa-tính-thời-gian-tải-dữ-liệu) | môi trường, khoá API, dữ liệu |
+| [2. Chạy thử](#2-chạy-thử--một-lệnh-ra-file-nộp) | một lệnh ra `submission.zip` |
+| [3. Cấu trúc thư mục](#3-cấu-trúc-thư-mục) | file nào làm gì |
+| [4. Tài liệu chi tiết](#4-tài-liệu-chi-tiết) | 12 tài liệu trong `docs/` |
+| [5. Đọc gì trước](#5-đọc-gì-trước--cho-người-mới-vào) | lộ trình một buổi cho người mới |
+| [6. Định dạng nộp bài](#6-định-dạng-nộp-bài) | luật chấm và các lỗi mất trắng câu |
+| [Đóng góp](CONTRIBUTING.md) · [Bảo mật](SECURITY.md) | quy trình PR, và thứ không được commit |
+
+---
 
 > Sắp vào giờ thi? Đừng đọc README. Mở thẳng **[docs/QUY_TRINH_NOP.md](docs/QUY_TRINH_NOP.md)** — quy trình 3 tiếng, in ra và làm theo.
 > (`docs/CONTEST_RUNBOOK.md` là bản cũ, thiếu bốn công cụ mới; chỉ còn dùng cho phần kỷ luật thời gian và quy định BTC.)

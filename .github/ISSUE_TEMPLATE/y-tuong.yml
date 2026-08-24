@@ -1,0 +1,223 @@
+# Mẫu đề xuất ý tưởng cải tiến (GitHub Issue Forms).
+#
+# Vì sao mẫu này dài hơn bình thường: repo đã cài đặt và đo tử tế hàng chục ý
+# tưởng "nghe rất có lý", và phần lớn cho kết quả ÂM (docs/PHUONG_PHAP.md mục 6).
+# Chỗ tốn kém không phải là gõ code, mà là ba ngày đi sai hướng vì không ai hỏi
+# "đo bằng gì" ngay từ đầu. Nên mẫu hỏi kế hoạch ĐO trước khi hỏi kế hoạch code.
+#
+# Hai nhãn ở khoá `labels` phải được tạo sẵn trong Settings > Labels của repo,
+# nếu chưa có thì GitHub sẽ lặng lẽ bỏ qua chứ không báo lỗi.
+
+name: Đề xuất ý tưởng cải tiến
+description: Một ý tưởng để nâng điểm thi, kèm kế hoạch đo trước khi viết code
+title: "[Ý tưởng] "
+labels: ["y-tuong", "can-do-luong"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Đọc 30 giây này trước khi gõ
+
+        Rất nhiều ý tưởng ở repo này **nghe có lý, đã được cài đặt, đã được đo tử tế, và thua**.
+        Vài dòng có thật trong bảng ở `docs/PHUONG_PHAP.md` mục 6:
+
+        | Ý tưởng | Kết quả đo |
+        |---|---|
+        | Gộp metadata video (tiêu đề, mô tả, keyword) | KIS R@1 **43,3% → 40,0%** |
+        | Nhãn đối tượng cộng theo **frame** | **−7,4%** ở trọng số 0,05 — mà video R@1 lại tăng 26 → 30 |
+        | Lời thoại gộp theo mốc thời gian từng frame | ±0,0% ở trọng số tốt nhất; cả dải là **−1,5% đến −20%** |
+        | Trọng số VLM 0,10 / 0,20 | **−2,1% / −5,7%** — mà video R@1 lại tăng 25 → 29 |
+        | Gộp hai danh sách ứng viên rồi lấy điểm cao hơn | **0,305**, so với **0,337** của cách đang dùng |
+
+        Để ý cột phải: **hai lần chỉ số phụ đi lên trong khi điểm thi đi xuống.**
+        Tổng cộng đã ba lần như vậy (`docs/PHUONG_PHAP.md` mục 2.3, dòng 200).
+        Đó là lý do mẫu này bắt trả lời "đo bằng gì" trước khi bàn "code thế nào".
+
+        Chưa biết đo thế nào thì **vẫn cứ mở issue** — chỉ cần ghi thẳng là chưa biết,
+        đừng bịa ra một kế hoạch đo cho có.
+
+  - type: input
+    id: tom-tat
+    attributes:
+      label: Tóm tắt trong một câu
+      description: >-
+        Viết như một khẳng định về hệ quả, giống quy ước đặt tên test và tên commit
+        của repo — không phải mô tả công việc.
+      placeholder: OCR chữ trên biển hiệu đẩy đúng keyframe lên hạng cao, chứ không chỉ chọn đúng video
+    validations:
+      required: true
+
+  - type: textarea
+    id: y-tuong-cu-the
+    attributes:
+      label: Ý tưởng cụ thể — sửa ở đâu, sửa cái gì
+      description: |
+        Nói rõ đụng vào file/hàm nào, thêm tín hiệu gì, đổi tham số nào.
+
+        Nếu là **cộng thêm một tín hiệu vào điểm số**, bắt buộc nói rõ cộng theo **frame**
+        hay theo **video**. Mọi tín hiệu cấp video chỉ xếp lại được *video*, mà chọn đúng
+        video chỉ chiếm 22% phần điểm lấy lại được; còn 60% nằm ở **vị trí frame**
+        (`docs/PHUONG_PHAP.md:634-636` và mục 7).
+      placeholder: |
+        Sửa ở đâu:
+        Cơ chế vì sao nó nâng ĐIỂM THI (không phải vì sao nó "nghe hợp lý"):
+        Cộng theo frame hay theo video:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: da-doc-cai-khong-an
+    attributes:
+      label: Đã đọc mục "Những gì đã thử mà KHÔNG ăn"
+      description: >-
+        Đây là mục quan trọng nhất để đồng đội không làm lại một việc đã thua.
+        Không tick thì issue sẽ bị hỏi lại đúng câu này.
+      options:
+        - label: Tôi đã đọc `docs/PHUONG_PHAP.md` mục 6 — *Những gì đã thử và KHÔNG ăn* (từ dòng 605)
+          required: true
+        - label: Tôi đã đọc mục 2.5 — *Kỷ luật đo lường, quy tắc bốn điểm* (từ dòng 265)
+          required: true
+
+  - type: textarea
+    id: khac-gi-cai-da-thua
+    attributes:
+      label: Ý tưởng này khác gì dòng gần nhất trong bảng đã đo âm
+      description: >-
+        Chọn ra dòng GẦN NHẤT với ý tưởng của bạn trong bảng ở mục 6, rồi nói nó khác
+        chỗ nào. Nếu thật sự không dòng nào gần, viết "không dòng nào gần" kèm một câu
+        giải thích. Câu trả lời tệ nhất là bỏ trống — vì đó chính là cách một ý tưởng
+        đã thua quay lại lần thứ hai.
+      placeholder: |
+        Dòng gần nhất:
+        Khác ở chỗ:
+    validations:
+      required: true
+
+  - type: dropdown
+    id: script-do
+    attributes:
+      label: Sẽ đo bằng script nào
+      description: >-
+        Repo có 14 script `experiment_*` trong `scripts/`; mọi giá trị mặc định đang
+        dùng đều được chọn ra từ chúng. Chọn được nhiều mục.
+      multiple: true
+      options:
+        - "scripts/evaluate_official.py — điểm chính thức trên 60 mẫu, chạy trước và sau"
+        - "scripts/loss_breakdown.py — điểm đang mất ở đâu (sai video / hạng thấp / lệch frame)"
+        - "scripts/experiment_allocation.py — cách chia 100 dòng"
+        - "scripts/experiment_answer_hedge.py — đáp án Q&A được chấm theo TỪNG DÒNG"
+        - "scripts/experiment_frame_from_speech.py — lời thoại chọn FRAME"
+        - "scripts/experiment_frame_promote.py — đẩy đúng keyframe lên trong đúng video"
+        - "scripts/experiment_long_query.py — câu dài vượt giới hạn token"
+        - "scripts/experiment_merge.py — cách kết hợp bản dịch tay"
+        - "scripts/experiment_metadata.py — metadata video của BTC"
+        - "scripts/experiment_objects.py — nhãn đối tượng của BTC"
+        - "scripts/experiment_objects_rerank.py — đối tượng: theo frame hay theo video"
+        - "scripts/experiment_per_video_depth.py — nhiều keyframe/video hay ít mà sâu"
+        - "scripts/experiment_retrieval.py — ensemble / làm mượt / chuẩn hoá"
+        - "scripts/experiment_strategies.py — xếp hạng theo TRƯỜNG HỢP XẤU NHẤT"
+        - "scripts/experiment_transcripts.py — lời thoại cấp video"
+        - "scripts/experiment_vlm.py — mô hình thị giác nhìn lại frame"
+        - "Chưa có script phù hợp — tôi sẽ viết script mới theo docs/PHAT_TRIEN.md mục 4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bo-du-lieu
+    attributes:
+      label: Đo trên bộ dữ liệu nào
+      options:
+        - "data/ground_truth.json — 60 câu, đáp án được rút thăm lại trong khe keyframe (mặc định của evaluate_official.py)"
+        - "round_p1/queries — 24 câu vòng luyện tập, đối chiếu tay (TUYỆT ĐỐI không dán nội dung picks_verified.txt vào issue)"
+        - "rehearsal/queries — 12 câu, không có đáp án: chỉ kiểm được đường ống và định dạng, KHÔNG kiểm được điểm"
+        - "Tập khác hoặc tự dựng — mô tả rõ trong phần kế hoạch đo bên dưới"
+    validations:
+      required: true
+
+  - type: textarea
+    id: ke-hoach-do
+    attributes:
+      label: Kế hoạch đo — lệnh cụ thể, số lần rút thăm, dải cửa sổ
+      description: |
+        Dán **lệnh sẽ chạy**, không phải mô tả chung chung. Bốn quy tắc bắt buộc
+        (`docs/PHUONG_PHAP.md` mục 2.5):
+
+        1. Dùng `final_score` trong `src/core/submission.py`, **không** dùng video R@1 hay bất kỳ proxy nào.
+        2. Đáp án **không snap** — rút thăm lại khoảnh khắc thật trong khe keyframe.
+        3. **Nhiều lần rút thăm** (8 là tối thiểu, 24 là đáng tin, 64 khi hiệu ứng nhỏ) và báo trên **cả dải** độ rộng cửa sổ, vì BTC không công bố nó. `evaluate_official.py:46` dùng `WINDOWS = (10, 20, 50, 100, 200)`; `experiment_allocation.py` mặc định `--windows 6,10,20`.
+        4. **Báo số âm nếu nó âm.**
+
+        Một cải tiến chỉ thắng ở đúng một độ rộng cửa sổ thì không phải cải tiến.
+      placeholder: |
+        # điểm nền, trước khi đổi gì
+        python scripts/evaluate_official.py --draws 24
+
+        # thí nghiệm, quét cả dải cửa sổ
+        python scripts/experiment_allocation.py --windows 6,10,20 --draws 24
+
+        # số lần rút thăm dự định: 24
+        # sẽ báo cáo: điểm trước / điểm sau / chênh lệch, ở TỪNG độ rộng cửa sổ
+    validations:
+      required: true
+
+  - type: textarea
+    id: nguong-vut-bo
+    attributes:
+      label: Điều gì sẽ khiến bạn VỨT ý tưởng này
+      description: >-
+        Viết ngưỡng ra TRƯỚC khi đo, nếu không thì đo xong sẽ tự tìm lý do giữ lại.
+        Ví dụ "nếu điểm chính thức không tăng ít nhất 1% ở mọi độ rộng cửa sổ thì tôi
+        đóng issue này". `scripts/experiment_vlm.py` ghi nguyên văn trong docstring:
+        *the honest negative reported if that is what comes out.*
+      placeholder: Tôi đóng issue này nếu ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cong-suc
+    attributes:
+      label: Ước lượng công suất
+      description: >-
+        Ước lượng thô cũng được, nhưng phải có — nó quyết định ý tưởng nào làm trước
+        khi sát ngày nộp.
+      options:
+        - "Dưới 1 giờ — đổi một tham số rồi chạy lại script có sẵn"
+        - "Nửa buổi (1-4 giờ) — thêm một cờ cho script có sẵn, hoặc một thí nghiệm nhỏ"
+        - "Một ngày — viết script experiment_* mới theo docs/PHAT_TRIEN.md mục 4"
+        - "Nhiều ngày — chạm vào bộ truy hồi hoặc đường ống nộp bài"
+        - "Cần GPU / quota API / trích xuất lại dữ liệu — phải bàn trước vì tiêu tài nguyên chung"
+        - "Chưa ước lượng được"
+    validations:
+      required: true
+
+  - type: textarea
+    id: rui-ro
+    attributes:
+      label: Rủi ro — cái gì có thể hỏng (không bắt buộc)
+      description: >-
+        Nhắc riêng một cái bẫy đã trả giá: chèn ứng viên mới lên ĐẦU danh sách là thao
+        tác nguy hiểm, vì 30 chỗ hạng đầu là hữu hạn và bản đầu tiên của kênh lời thoại
+        đã xáo hỏng bốn câu vốn đã đúng. Nối vào CUỐI thì an toàn về mặt toán học
+        (`docs/PHUONG_PHAP.md` mục 6.4).
+      placeholder: Ý tưởng này có chèn gì lên đầu danh sách không? Có đổi định dạng file nộp không?
+
+  - type: checkboxes
+    id: ky-luat
+    attributes:
+      label: Kỷ luật chung
+      options:
+        - label: Tôi sẽ KHÔNG dùng độ chính xác cấp video (video R@1) để kết luận — đã ba lần nó tăng trong khi điểm thi giảm
+          required: true
+        - label: Issue này không chứa khoá API, không chứa đáp án vòng thi, không chứa nội dung `picks_verified.txt` hay `sharp_questions.json`
+          required: true
+        - label: Nếu ý tưởng đụng vào truy hồi, script mới sẽ gọi `ranked_hits` chứ không gọi `engine.search`, và tôi sẽ thêm tên script vào danh sách `must_agree` (`tests/test_review_workflow.py:109-117`)
+        - label: Trước khi mở PR tôi sẽ chạy `python -m pytest tests src/task3_trake/tests -q` — đúng lệnh CI chạy, 400 test
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        Sau khi mở issue: bàn xong kế hoạch đo rồi mới code. Kết quả đo — **kể cả khi âm** —
+        dán ngược lại vào issue này, vì một phép đo âm được ghi lại vẫn tiết kiệm thời gian
+        cho người sau, còn một phép đo âm bị im lặng thì sẽ có người làm lại từ đầu.

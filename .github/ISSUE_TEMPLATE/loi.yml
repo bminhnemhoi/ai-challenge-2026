@@ -1,0 +1,182 @@
+# Mẫu báo lỗi (GitHub Issue Forms) cho repo CÔNG KHAI khanhle1406/ai-challenge-2026.
+#
+# Ba lưu ý cho người sửa file này:
+#   * `labels` phải là một MẢNG. Nhãn chưa tồn tại trong repo thì GitHub bỏ qua
+#     nhãn đó chứ không tự tạo — vào Settings > Labels tạo `loi` trước.
+#   * `render: shell` biến ô nhập thành khối mã, nên người báo lỗi không phải tự
+#     gõ dấu ``` — nhưng GitHub cũng không hiện `placeholder` cho ô đã render,
+#     vì vậy mọi ví dụ của các ô đó nằm trong `description`.
+#   * Sửa xong thì tự kiểm cú pháp trước khi commit, đừng đợi GitHub báo:
+#       python -c "import yaml;yaml.safe_load(open('.github/ISSUE_TEMPLATE/loi.yml',encoding='utf-8'))"
+
+name: Báo lỗi
+description: Một thứ trong repo chạy ra kết quả khác với thứ mã nguồn hoặc tài liệu hứa
+title: "[lỗi] "
+labels: ["loi"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Repo này công khai.** Mọi thứ dán vào đây ai cũng đọc được, và xoá đi
+        cũng không lấy lại được — email thông báo đã gửi kèm nguyên văn nội dung cũ.
+
+        Trước khi dán bất kỳ output nào, bỏ ba thứ ra:
+
+        * **Khoá API.** Nội dung `.env`, `GEMINI_API_KEY`, mọi chuỗi bắt đầu bằng
+          `AIza...`. CI có job `guard` chặn chuỗi này trong mã nguồn
+          (`.github/workflows/ci.yml`), nhưng nó **không** soi nội dung issue.
+          Lỡ dán rồi thì **đổi khoá**, xoá bình luận là chưa đủ.
+        * **Đề và đáp án vòng thi thật:** mọi thứ trong `round1/`, đặc biệt
+          `round1/picks_verified.txt` và `round1/sharp_questions.json`, cùng
+          `round_p1/picks_verified.txt`. Cả ba đều bị `.gitignore` chặn có chủ ý.
+        * **Cặp `video_id,frame_id` của một câu đang thi** — đó chính là đáp án.
+
+        Cần một ví dụ để tái hiện thì dùng đề đã được commit sẵn:
+        `rehearsal/queries/` (12 câu diễn tập) hoặc `round_p1/queries/`
+        (vòng luyện tập). Hai bộ này công khai từ đầu, dán thoải mái.
+
+  - type: textarea
+    id: mo-ta
+    attributes:
+      label: Lỗi là gì
+      description: >-
+        Hai ba câu là đủ. Cái gì hỏng, hỏng từ khi nào (commit nào còn chạy được thì càng tốt),
+        và nó đang chặn bạn làm việc gì.
+      placeholder: |
+        Đóng gói xong nhưng bước tự kiểm định dạng từ chối file zip, trong khi CSV nhìn bằng mắt thì đúng.
+        Hôm qua cùng lệnh đó vẫn chạy được.
+    validations:
+      required: true
+
+  - type: textarea
+    id: lenh
+    attributes:
+      label: Lệnh đã chạy
+      description: >-
+        Chép nguyên văn, đủ mọi tham số — trong repo này rất nhiều lỗi nằm ở cờ dòng lệnh
+        chứ không nằm trong hàm. Chạy từ **gốc repo**: `conftest.py` chèn gốc repo vào
+        `sys.path`, gọi từ thư mục khác thì `import src...` sẽ chết.
+        Ví dụ: `python scripts/make_submission.py --queries rehearsal/queries --out rehearsal/check --no-answer`
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: mong-doi
+    attributes:
+      label: Kết quả mong đợi
+      description: >-
+        Bạn chờ thấy gì, và **vì sao** bạn chờ thấy điều đó — trích tài liệu hay `file:dòng`
+        đã hứa như vậy. Nếu chính tài liệu sai thì đó cũng là một lỗi đáng báo.
+      placeholder: |
+        Chờ thấy dòng `format check passed` như README mục 2 mô tả.
+    validations:
+      required: true
+
+  - type: textarea
+    id: thuc-te
+    attributes:
+      label: Kết quả thật
+      description: >-
+        Dán nguyên văn, đừng tóm tắt và đừng cắt traceback — dòng cuối cùng ít khi là dòng
+        nói lên nguyên nhân. Giữ cả những dòng cảnh báo trông có vẻ vô hại. Nhớ xoá khoá API
+        nếu output có in ra.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: khu-vuc
+    attributes:
+      label: Khu vực bị ảnh hưởng
+      description: Chưa chắc thì chọn "Khác / chưa rõ", đừng đoán.
+      options:
+        - "Truy xuất — tìm ứng viên (src/core/kis_engine.py, src/task1_kis/)"
+        - "Chấm điểm & đóng gói (src/core/submission.py, scripts/make_submission.py, verify_zip.py, repackage.py)"
+        - "VLM — Gemini chấm lại ảnh hoặc trả lời Q&A (src/core/vlm.py, gemini_engine.py, scripts/vlm_rerank_run.py, answer_qa.py)"
+        - "Lời thoại & OCR (src/core/transcripts.py, ocr.py, scripts/search_transcripts.py, search_ocr.py)"
+        - "TRAKE — chuỗi khoảnh khắc (src/task3_trake/)"
+        - "Trang review (scripts/build_review_page.py, scripts/review_export.js, scripts/apply_picks.py)"
+        - "Khác / chưa rõ"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: he-dieu-hanh
+    attributes:
+      label: Hệ điều hành
+      description: >-
+        Hỏi vì hai lỗi đã từng xảy ra chỉ có trên Windows — console cp1252 nuốt tiếng Việt,
+        và PowerShell làm hỏng UTF-8 khi ghi file. Đó cũng là lý do CI chạy cả
+        ubuntu-latest lẫn windows-latest.
+      options:
+        - Windows 11
+        - Windows 10
+        - WSL (Windows Subsystem for Linux)
+        - macOS
+        - Linux
+        - Khác
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Phiên bản Python
+      description: Dán kết quả của `python -V`. CI chạy 3.12; máy dự án đang là 3.12.6.
+      placeholder: "3.12.6"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cach-cai
+    attributes:
+      label: Cài thư viện bằng file nào
+      description: >-
+        `requirements-dev.txt` chỉ có 5 gói (pytest, numpy, scipy, pyyaml, pillow), cố ý không có
+        torch/transformers — đủ để chạy bộ test nhưng **không** chạy được đường truy xuất thật.
+        Trả lời câu này thường loại luôn được một nửa giả thuyết.
+      options:
+        - requirements.txt
+        - requirements-dev.txt
+        - Cả hai
+        - Không rõ
+    validations:
+      required: false
+
+  - type: textarea
+    id: ket-qua-test
+    attributes:
+      label: Bộ test nói gì (nếu có chạy)
+      description: >-
+        Chạy đúng lệnh mà CI chạy — `python -m pytest tests src/task3_trake/tests -q` — rồi dán
+        vài dòng cuối. Bộ test không cần chỉ mục 780 MB nên chạy được cả trên máy chưa tải dữ liệu.
+        Thấy chữ `skipped` thì đừng bỏ qua: trên máy là bỏ qua vì thiếu công cụ, nhưng CI có hẳn
+        một bước cho đỏ khi thấy chữ đó.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: them
+    attributes:
+      label: Thông tin thêm
+      description: >-
+        Ảnh chụp màn hình, đường dẫn tới lượt chạy, cái bạn đã thử mà không ăn thua, hay giả thuyết
+        của bạn về nguyên nhân. Bỏ trống cũng được.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: truoc-khi-gui
+    attributes:
+      label: Trước khi gửi
+      options:
+        - label: >-
+            Tôi đã kiểm lại từng ô ở trên: **không có API key** (chuỗi `AIza...`, nội dung `.env`)
+            và **không có đề hay đáp án của vòng thi** dán vào issue này.
+          required: true
+        - label: Tôi đã xem qua các issue đang mở để không báo trùng.
+          required: false
+        - label: Tôi đã `git pull` bản mới nhất và lỗi vẫn còn.
+          required: false
