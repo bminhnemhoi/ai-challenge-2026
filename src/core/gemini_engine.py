@@ -17,8 +17,15 @@ from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 
-from dotenv import load_dotenv
-load_dotenv()
+# python-dotenv is a convenience, not a requirement. Importing it
+# unconditionally used to abort `import src` on any machine that lacked it,
+# which took Task 1 and Task 3 down with it even though neither uses Gemini.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - env-dependent
+    pass
 
 try:
     from google import genai
