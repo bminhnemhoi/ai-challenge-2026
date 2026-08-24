@@ -1,0 +1,15 @@
+# Đủ để chạy TOÀN BỘ 400 test trong `tests/` và `src/task3_trake/tests/`.
+#
+# Danh sách này không phải phỏng đoán: dựng một venv sạch, cài đúng năm gói dưới
+# đây, chạy `pytest tests src/task3_trake/tests` → 400 passed in 18,5 s
+# (đo ngày 24/08/2026). Thiếu pillow thì 13 test đỏ.
+#
+# Cố tình KHÔNG có torch/transformers: bộ test không cần chỉ mục SigLIP-2, và từ
+# khi `src/core/__init__.py` nạp lười thì `import src` cũng không kéo chúng vào
+# nữa. Muốn chạy thật đường truy xuất thì cài `requirements.txt`.
+
+pytest>=8.0
+numpy>=1.26
+scipy>=1.11      # thuật toán gán Hungarian trong chế độ `unordered` của TRAKE
+pyyaml>=6.0      # src/task3_trake/config/trake.yaml
+pillow>=10.0     # thu nhỏ khung hình trong src/core/vlm.py và src/core/colours.py

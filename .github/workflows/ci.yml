@@ -1,0 +1,100 @@
+# Chạy trên mọi push và mọi pull request.
+#
+# Cố ý KHÔNG cài torch/transformers: bộ test không cần chỉ mục SigLIP-2, nên
+# `requirements-dev.txt` chỉ có 5 gói và cả job xong trong khoảng một phút.
+# Một CI chạy hai phút thì người ta còn chờ; chạy hai mươi phút thì người ta bỏ qua.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Đẩy commit mới lên cùng một PR thì huỷ lượt chạy cũ, khỏi xếp hàng vô ích.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Cả đội làm trên Windows, còn CI mặc định là Linux — chạy cả hai vì
+        # repo này đã ăn đủ hai lỗi chỉ xuất hiện trên Windows: console cp1252
+        # nuốt tiếng Việt, và PowerShell làm hỏng UTF-8 khi ghi file.
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      # 23 test đối chiếu bản JavaScript của bộ phân bổ với bản Python. Không có
+      # node thì chúng TỰ BỎ QUA chứ không đỏ — đúng loại lỗ hổng khiến người ta
+      # tưởng đã kiểm mà thật ra chưa.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cài thư viện
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Chạy test
+        run: python -m pytest tests src/task3_trake/tests -q
+
+      - name: Không được có test nào bị bỏ qua vì thiếu công cụ
+        shell: bash
+        run: |
+          out=$(python -m pytest tests src/task3_trake/tests -q 2>&1 | tail -3)
+          echo "$out"
+          if echo "$out" | grep -qi "skipped"; then
+            echo "::error::Có test bị bỏ qua — thường là thiếu node. Bỏ qua âm thầm nghĩa là không ai kiểm nữa."
+            exit 1
+          fi
+
+  guard:
+    name: Không rò rỉ khoá và đáp án
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Repo này CÔNG KHAI. Ba thứ tuyệt đối không được commit, và cả ba đều đã
+      # suýt lọt một lần: khoá API, thư mục vòng thi thật, và bản đồ đáp án.
+      - name: Không có khoá API trong lịch sử làm việc
+        run: |
+          if git grep -InE 'AIza[0-9A-Za-z_-]{30,}' -- . ':!*.lock'; then
+            echo "::error::Có chuỗi giống khoá Google API trong repo. Gỡ ra và ĐỔI KHOÁ ngay."
+            exit 1
+          fi
+          echo "Không thấy khoá nào."
+
+      - name: Không commit dữ liệu vòng thi thật
+        run: |
+          bad=$(git ls-files | grep -E '^(round[0-9]|vongthi)|picks_verified\.txt|sharp_questions\.json' || true)
+          if [ -n "$bad" ]; then
+            echo "$bad"
+            echo "::error::Đây là đề của BTC hoặc đáp án của đội — repo công khai thì không được commit."
+            exit 1
+          fi
+          echo "Sạch."
+
+      - name: File .env không bao giờ được theo dõi
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "::error::.env đang bị git theo dõi."
+            exit 1
+          fi
+          echo "Sạch."

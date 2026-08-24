@@ -15,8 +15,6 @@ therefore exposed lazily through ``__getattr__`` (PEP 562): the name still
 works, it just loads on first use and raises where it can be understood.
 """
 
-from src.core import AIC2026Evaluator, KeyframeIndexBuilder, build_official_btc_index
-
 __all__ = [
     "build_official_btc_index",
     "KeyframeIndexBuilder",
@@ -27,6 +25,12 @@ __all__ = [
 ]
 
 _LAZY = {
+    # src.core is lazy too: it re-exports the torch-backed index builder, so
+    # naming it here kept `import src` costing a full torch + transformers load
+    # for every script and every test.
+    "build_official_btc_index": ("src.core", "build_official_btc_index"),
+    "KeyframeIndexBuilder": ("src.core", "KeyframeIndexBuilder"),
+    "AIC2026Evaluator": ("src.core", "AIC2026Evaluator"),
     "TextualKISRetriever": ("src.task1_kis", "TextualKISRetriever"),
     "VisualQAEngine": ("src.task2_vqa", "VisualQAEngine"),
     "TRAKEEngine": ("src.task3_trake", "TRAKEEngine"),
