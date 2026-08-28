@@ -73,8 +73,10 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 
 | **ưu tiên đỉnh cục bộ** (keyframe nổi hơn hai bên) | **frame** | **+2,2%** | ✅ |
 | VLM xếp lại frame *bên trong* video | frame | −4,6% | ❌ |
-| ↳ đo lại bằng **câu hỏi phân biệt** (24 câu, 24 lần bốc) | frame | **−34,7%** | ❌ |
-| ↳ cùng thế nhưng xếp lại toàn cục | frame | −3,4% | ❌ |
+| ↳ đo lại bằng **câu hỏi phân biệt**, trộn kiểu gom-khối | frame | ~~−34,7%~~ **ĐO NHẦM** | ⚠ |
+| ↳ đo lần ba, hoán vị **giữ-slot** (sạch): nguyên văn đề | frame | +0,6% (hoà) | ❌ |
+| ↳ giữ-slot, câu hỏi phân biệt | frame | −5% → −11% | ❌ |
+| ↳ đối chứng: chính phép gom-khối, KHÔNG đổi thứ tự frame nào | frame | **−35% → −39%** | 🔬 artifact |
 | ép các frame cách nhau ≥30/60/120 | frame | −1,3% | ❌ |
 | **đặt nhiều đáp án Q&A trên các dòng khác nhau** | dòng | **±0,0%** | ❌ |
 | chia lại ngân sách theo (video, keyframe, độ sâu) | dòng | −15% đến −30% | ❌ |
@@ -100,8 +102,20 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 > thời gian — và khi ta để nó đảo thứ tự keyframe, nó cướp mất thang phân bổ sâu từ
 > keyframe mà SigLIP-2 đã chọn đúng 48% số lần.
 >
-> Hệ quả cho hướng đi: nhóm 14 câu này cần một mô hình **định vị thời gian**
-> (video moment retrieval), không phải một bộ phân loại khung hình tốt hơn.
+> **Đo lần ba (28/08, giữ-slot — sau khi phản biện phát hiện artifact):** con số
+> −34,7% hoá ra đo nhầm — phép trộn gom-khối kéo cả khối frame của video 1 lên
+> đầu, tự nó gây −35% → −39% *dù không đổi thứ tự frame nào*. Bản đo sạch
+> (hoán vị giữ nguyên slot video) cho: nguyên văn đề +0,6% (hoà), câu hỏi phân
+> biệt −5% → −11%. Và độ đo không dính bộ phân bổ nói rõ vì sao: **trong các
+> slot đã truy xuất, SigLIP thuần đã đặt keyframe gần đáp án ở hạng nội-video
+> trung vị 1,0 (hạng-1: 60%)** — không còn chỗ cho bộ xếp lại nào.
+>
+> Hệ quả cho hướng đi (thay kết luận cũ): vấn đề của nhóm thất bại **không phải
+> thứ tự slot mà là keyframe đúng không được truy xuất vào slot nào** (nhất quán
+> với phép mổ xẻ "9/15 câu keyframe đúng cách ứng viên hạng-1 hơn 1.000 frame").
+> Việc đáng đo tiếp theo: **thêm ứng viên** — nạp toàn bộ keyframe của các video
+> dẫn đầu (điểm SigLIP có sẵn qua `query_similarities`) vào tiên nghiệm của bộ
+> phân bổ phủ xác suất, thay vì chỉ 400 ứng viên toàn cục.
 
 
 

@@ -74,8 +74,25 @@ Quy tắc:
 Trả về DUY NHẤT câu hỏi, không giải thích."""
 
 
+_CAU_HOI_CACHE = ROOT / "data" / "vlm" / "sharp_questions_gt.json"
+
+
 def sinh_cau_hoi_phan_biet(client, model, query: str) -> str:
-    """Đề bài -> câu hỏi phân biệt. Hỏng thì trả lại chính đề bài (tức là về hành vi cũ)."""
+    """Đề bài -> câu hỏi phân biệt. Hỏng thì trả lại chính đề bài (tức là về hành vi cũ).
+
+    Cache xuống đĩa theo nguyên văn đề. Không cache thì mỗi lần chạy lại tốn 60
+    gọi LLM VÀ — tệ hơn — chỉ cần câu sinh ra lệch một dấu cách là toàn bộ điểm
+    chấm khung hình đã cache (bucket theo sha1 của câu hỏi) thành mồ côi.
+    """
+    import json as _json
+
+    try:
+        cache = _json.loads(_CAU_HOI_CACHE.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        cache = {}
+    if query in cache:
+        return cache[query]
+
     from google.genai import types
 
     try:
@@ -85,7 +102,14 @@ def sinh_cau_hoi_phan_biet(client, model, query: str) -> str:
             config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=400),
         )
         out = " ".join((r.text or "").split())
-        return out if len(out) > 40 else query
+        if len(out) > 40:
+            cache[query] = out
+            _CAU_HOI_CACHE.parent.mkdir(parents=True, exist_ok=True)
+            _CAU_HOI_CACHE.write_text(
+                _json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8"
+            )
+            return out
+        return query
     except Exception:  # noqa: BLE001
         return query
 
@@ -243,10 +267,73 @@ def main() -> int:
             out.append(moi)
         return out
 
+    def xep_lai_giu_slot(scores_of, w):
+        """Hoán vị GIỮ SLOT — bản sửa sau khi phản biện phát hiện artifact.
+
+        Bản gom-khối (xep_lai_trong_video) kéo TOÀN BỘ frame của video 1 lên đầu
+        danh sách, làm 30 dòng phẳng đầu (n_flat) sụp từ ~10 video xuống 1-2
+        video — tự nó gây −38% dù không đổi thứ tự frame nào bên trong video.
+        Con số −34,7% từng được đọc là "VLM phá điểm" nhiều khả năng đo nhầm
+        chính cơ chế này.
+
+        Ở đây cấu trúc slot giữ nguyên tuyệt đối: vị trí i vốn thuộc video v thì
+        vẫn thuộc video v; chỉ có VIỆC FRAME NÀO của v ngồi ở slot nào là xếp
+        lại theo tín hiệu mới. Độ rộng phủ video của bộ phân bổ không đổi một
+        ly — đây mới là phép đo sạch của giả thuyết "tín hiệu X chọn frame
+        trong video tốt hơn SigLIP".
+        """
+        out = []
+        for qi, hits in enumerate(hits_of):
+            sc = scores_of[qi]
+            slots = defaultdict(list)
+            for i, h in enumerate(hits):
+                slots[h.video_id].append(i)
+            moi = list(hits)
+            for vid, pos in slots.items():
+                mems = sorted(
+                    (hits[i] for i in pos),
+                    key=lambda h: -(h.score + w * sc.get((h.video_id, h.frame_idx), (0.0, ""))[0]),
+                )
+                for i, h in zip(pos, mems):
+                    moi[i] = h
+            out.append(moi)
+        return out
+
+    # ---- hạng nội-video của keyframe gần đáp án — độ đo KHÔNG dính bộ phân bổ --
+    def hang_noi_video(scores_of, w):
+        ranks = []
+        for qi, g in enumerate(gt):
+            gv = g["video_id"]
+            arr = kf[gv]
+            dung = int(arr[np.argmin(np.abs(arr - int(g["frame_idx"])))])
+            trong = [h for h in hits_of[qi] if h.video_id == gv]
+            if not any(h.frame_idx == dung for h in trong):
+                continue
+            thu = sorted(
+                trong,
+                key=lambda h: -(h.score + w * scores_of[qi].get((h.video_id, h.frame_idx), (0.0, ""))[0]),
+            )
+            ranks.append(1 + next(i for i, h in enumerate(thu) if h.frame_idx == dung))
+        if not ranks:
+            return float("nan"), 0.0
+        return float(np.median(ranks)), sum(1 for r in ranks if r == 1) / len(ranks)
+
+    md0, top0 = hang_noi_video([{} for _ in gt], 0.0)
+    print(f"\nHẠNG NỘI-VIDEO của keyframe gần đáp án (trong các slot đã truy xuất):")
+    print(f"  SigLIP thuần                     : trung vị {md0:.1f}, hạng-1 {top0:.0%}")
+    for nhan_r, scores_r in (("nguyên văn đề", raw_of), ("câu hỏi phân biệt", sharp_of)):
+        for w_r in (0.2, 1.0):
+            md, top = hang_noi_video(scores_r, w_r)
+            print(f"  + {nhan_r:18s} w={w_r:<4}: trung vị {md:.1f}, hạng-1 {top:.0%}")
+
     print(f"\n{'cách xếp lại':24s}{'cách hỏi':22s}{'w':>6}{'điểm':>9}{'so nền':>10}")
     print("-" * 71)
     ket = [(base, "nền (không chấm lại)", "", 0.0)]
-    for kieu, fn in (("trong video", xep_lai_trong_video), ("toàn cục", xep_lai_toan_cuc)):
+    for kieu, fn in (
+        ("giữ slot (sạch)", xep_lai_giu_slot),
+        ("gom khối (artifact)", xep_lai_trong_video),
+        ("toàn cục", xep_lai_toan_cuc),
+    ):
         for w in [float(x) for x in args.weights.split(",")]:
             for nhan, scores_of in (("nguyên văn đề", raw_of), ("câu hỏi phân biệt", sharp_of)):
                 m = sum(cham(fn(scores_of, w))) / len(windows)
