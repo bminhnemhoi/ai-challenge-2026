@@ -595,6 +595,23 @@ document.querySelectorAll('.ansbox input').forEach(inp => {{
 // answer off the screen for a Q&A, or break a tie the retriever is unsure about.
 
 const CDN = "{cdn}";
+const LOCAL = {local_json};
+
+// Trang này là "bước ăn điểm nhất" của vòng thi, và trước đây nó phụ thuộc 100%
+// vào CDN Hugging Face: mạng phòng thi chập là 55 phút soát mắt chết theo. Ảnh
+// nào CDN không trả được sẽ thử lại từ bản mirror trên đĩa — data/frames, cùng
+// cấu trúc <video>/NNN.jpg do VLMJudge để lại khi cache. Bắt ở pha capture vì
+// sự kiện error của <img> không bubble; đánh dấu data-fbk để không lặp vô hạn
+// khi cả bản mirror cũng thiếu.
+document.addEventListener('error', function (ev) {{
+  const t = ev.target;
+  if (!t || t.tagName !== 'IMG' || !LOCAL || t.dataset.fbk) return;
+  if (t.src.indexOf(CDN) === 0) {{
+    t.dataset.fbk = '1';
+    t.src = LOCAL + t.src.slice(CDN.length);
+  }}
+}}, true);
+
 let vi = null;   // {{qid, video, frame, ev}}
 
 // ---- the YouTube player -----------------------------------------------
@@ -1003,6 +1020,13 @@ def main() -> int:
         default=str(ROOT.parent / "transcripts_full"),
         help="comma-separated folders of transcript JSON; data/captions is always added",
     )
+    ap.add_argument(
+        "--local-mirror",
+        default=None,
+        help="thư mục ảnh dự phòng khi CDN chết (mặc định: <data>/frames — cache "
+             "thumbnail 512px của VLMJudge, cùng cấu trúc <video>/NNN.jpg với CDN). "
+             "Truyền chuỗi rỗng để tắt.",
+    )
     ap.add_argument("--no-transcripts", action="store_true")
     ap.add_argument("--no-ocr", action="store_true")
     ap.add_argument(
@@ -1016,6 +1040,18 @@ def main() -> int:
     args = ap.parse_args()
     if args.pool < args.top:
         args.pool = args.top
+
+    # Đường lui khi CDN chết. Trang mở bằng file:// nên mirror cũng phải là
+    # file:/// — trình duyệt cho phép ảnh file từ trang file. as_uri() lo phần
+    # mã hoá đường dẫn Windows (ổ đĩa, khoảng trắng) thay ta.
+    if args.local_mirror is None:
+        mirror_dir = Path(args.data) / "frames"
+    else:
+        mirror_dir = Path(args.local_mirror) if args.local_mirror else None
+    local_mirror_url = mirror_dir.resolve().as_uri() if mirror_dir else ""
+    if mirror_dir and not mirror_dir.is_dir():
+        print(f"luu y: mirror {mirror_dir} chua ton tai — chay "
+              f"scripts/mirror_keyframes.py de co duong lui khi mat mang")
 
     qdir = Path(args.queries)
     out = Path(args.out) if args.out else qdir.parent / "review.html"
@@ -1506,6 +1542,7 @@ def main() -> int:
         plan_json=json.dumps(plan),
         vid_json=json.dumps(vid_data, separators=(",", ":")),
         cdn=CDN,
+        local_json=json.dumps(local_mirror_url),
     )
     out.write_text(page, encoding="utf-8")
 

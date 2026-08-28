@@ -71,6 +71,7 @@ def _render_page():
     return PAGE.format(
         body="", qdir="q", outdir="o", nq=0, warnlist="[]", tag="t",
         alloc_js=alloc, data_json="{}", vid_json="{}", cdn="https://example.invalid",
+        local_json='"file:///C:/mirror"',
         plan_json='{"breadthCost":1.0,"depthCost":0.5,"step":10,'
                   '"budget":100,"maxDepth":24,"nFlat":30}',
     )
@@ -83,6 +84,22 @@ def test_review_page_template_has_no_unfilled_placeholders():
     assert leftover == [], f"unfilled placeholders: {leftover}"
     # every {{ }} written for str.format must have collapsed to a single brace
     assert "{{" not in filled and "}}" not in filled
+
+
+def test_review_page_falls_back_to_the_local_mirror_when_the_cdn_dies():
+    """The page is the round's most valuable tool and it used to be 100% CDN.
+
+    A contest-room network blip must not kill the 55 minutes of eyeball review,
+    so every image that fails to load off the CDN retries once from the on-disk
+    mirror (data/frames, same <video>/NNN.jpg layout). The handler has to be on
+    the CAPTURE phase — img error events do not bubble — and must mark the
+    element so a missing mirror file cannot loop forever.
+    """
+    filled = _render_page()
+    assert "addEventListener('error'" in filled
+    assert "}, true);" in filled, "img error events do not bubble; capture phase required"
+    assert "LOCAL + t.src.slice(CDN.length)" in filled
+    assert "dataset.fbk" in filled, "must not retry the same image forever"
 
 
 def test_review_page_offers_an_answer_box_for_qa_only():
