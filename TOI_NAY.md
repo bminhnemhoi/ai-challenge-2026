@@ -88,6 +88,16 @@ python scripts/verify_zip.py round2/final/submission.zip --queries round2/querie
 
 Chỉ lượt cuối tính điểm. `verify_zip` xong mới bấm nộp. **Đệm 8 phút** — vòng 1 suýt trễ.
 
+## Chiến lược 3 key (kiểm sống lúc 19h)
+
+| key | vai trò | lệnh |
+|---|---|---|
+| Gemini chính (free) | **ngựa thồ**: VLM rerank, verify_hypotheses — khối lượng lớn, có cache + xoay 6 model | mặc định, không cần cờ |
+| Gemini dự phòng (`AQ.`) | khi cạn quota cả 6 model: sửa **một dòng** `GEMINI_API_KEY=` trong `.env` thành giá trị của `GEMINI_API_KEY_DUPHONG` rồi chạy tiếp — cache vẫn dùng được nguyên | đổi tay trong `.env` |
+| OpenAI **gpt-5.2** (trả phí) | **đọc số/chữ mọi câu Q&A** (chính xác nhất — đã đọc đúng chữ trên hình lúc thử 19h) + ý kiến thứ hai khi hai model Gemini cãi nhau. Vài chục call/vòng ≈ vài cent; đắt là khi đọc SAI một đáp án | `python scripts/read_answer.py --provider openai --video <V> --frames <F> --neighbours 2 --question "..."` |
+
+Đừng dùng OpenAI cho việc khối lượng lớn (rerank cả trăm khung) — không có cache, tốn thật.
+
 ## Khi hỏng — 4 kịch bản đã có thuốc
 
 | sự cố | thuốc |

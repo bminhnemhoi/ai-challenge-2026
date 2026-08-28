@@ -59,6 +59,14 @@ def main() -> int:
     ap.add_argument("--frames", required=True, help="comma-separated frame indices")
     ap.add_argument("--question", required=True)
     ap.add_argument("--model", default="gemini-3.1-flash-lite")
+    ap.add_argument(
+        "--provider",
+        choices=["gemini", "openai"],
+        default="gemini",
+        help="openai = gpt-5.2 trả phí: chính xác nhất cho đọc số/chữ, dùng cho "
+             "các câu Q&A ăn tiền và làm ý kiến thứ hai khi Gemini tự mâu thuẫn. "
+             "Vài chục call/vòng chỉ tốn vài cent — đắt là khi đọc SAI một đáp án.",
+    )
     ap.add_argument("--max-side", type=int, default=1536)
     ap.add_argument("--neighbours", type=int, default=0, help="also read n keyframes either side")
     ap.add_argument("--max-tokens", type=int, default=900,
@@ -72,11 +80,41 @@ def main() -> int:
     from google import genai
     from google.genai import types
 
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not key:
-        print("Khong co GEMINI_API_KEY")
-        return 2
-    client = genai.Client(api_key=key)
+    if args.provider == "openai":
+        okey = os.environ.get("OPENAI_API_KEY")
+        if not okey:
+            print("Khong co OPENAI_API_KEY trong .env")
+            return 2
+        if args.model.startswith("gemini"):
+            args.model = "gpt-5.2"
+        client = None
+    else:
+        key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not key:
+            print("Khong co GEMINI_API_KEY")
+            return 2
+        client = genai.Client(api_key=key)
+
+    def hoi_openai(blob: bytes, question: str) -> str:
+        import base64
+        import urllib.request as _rq
+
+        body = json.dumps({
+            "model": args.model,
+            "messages": [{"role": "user", "content": [
+                {"type": "image_url", "image_url": {
+                    "url": "data:image/jpeg;base64," + base64.b64encode(blob).decode()}},
+                {"type": "text", "text": question},
+            ]}],
+            # gpt-5.x là model suy nghĩ: phần lớn ngân sách tiêu TRƯỚC chữ đầu
+            # tiên, nên trần thấp sẽ trả về chuỗi rỗng chứ không phải câu ngắn
+            "max_completion_tokens": max(args.max_tokens, 2000),
+        }).encode()
+        r = json.load(_rq.urlopen(_rq.Request(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {okey}", "Content-Type": "application/json"},
+            data=body), timeout=120))
+        return r["choices"][0]["message"]["content"] or ""
 
     meta = json.loads((Path(args.data) / "metadata.json").read_text(encoding="utf-8"))
     arr = sorted(
@@ -103,12 +141,15 @@ def main() -> int:
         if not blob:
             continue
         try:
-            r = client.models.generate_content(
-                model=args.model,
-                contents=[types.Part.from_bytes(data=blob, mime_type="image/jpeg"), args.question],
-                config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=args.max_tokens),
-            )
-            txt = " ".join((r.text or "").split())
+            if args.provider == "openai":
+                txt = " ".join(hoi_openai(blob, args.question).split())
+            else:
+                r = client.models.generate_content(
+                    model=args.model,
+                    contents=[types.Part.from_bytes(data=blob, mime_type="image/jpeg"), args.question],
+                    config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=args.max_tokens),
+                )
+                txt = " ".join((r.text or "").split())
             print(f"  frame {f:<7d} ({len(blob) // 1024} KB)  {txt[:900]}")
         except Exception as exc:  # noqa: BLE001
             print(f"  frame {f:<7d} LOI {type(exc).__name__}: {str(exc)[:90]}")
