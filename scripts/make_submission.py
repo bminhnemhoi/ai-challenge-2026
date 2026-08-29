@@ -373,11 +373,12 @@ def _object_boost(engine, hits, query_en):
 def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
     """One dispatch point so KIS and Q&A can never disagree on the allocator.
 
-    ``coverage`` is the probability-coverage allocator (+15.3% on TEST,
-    docs/SHIP_PHU_XAC_SUAT.md); ``hybrid`` is the shipped baseline and stays
-    the default until the step-3 gate has been run on THIS build.  The hybrid
-    plan is passed through as the coverage tail-fill plan, so the rows past
-    the point where coverage runs out of mass are exactly the hybrid rows.
+    ``coverage`` is the probability-coverage allocator, the default since the
+    ship gate passed on this exact code path (+15.3%/+16.0% over hybrid on the
+    two TEST halves, >2 sigma — docs/SHIP_PHU_XAC_SUAT.md §3b); ``hybrid`` is
+    the previous baseline, kept as the one-flag rollback.  The hybrid plan is
+    passed through as the coverage tail-fill plan, so the rows past the point
+    where coverage runs out of mass are exactly the hybrid rows.
     """
     if allocator == "coverage":
         return allocate_coverage_rows(
@@ -496,10 +497,11 @@ def main() -> int:
     ap.add_argument(
         "--allocator",
         choices=("hybrid", "coverage"),
-        default="hybrid",
-        help="how KIS/Q&A rows are spent: 'hybrid' (shipped baseline) or 'coverage' "
-        "(probability coverage, +15.3%% on TEST — docs/SHIP_PHU_XAC_SUAT.md). "
-        "The default flips only after the gate in that doc is green on this build.",
+        default="coverage",
+        help="how KIS/Q&A rows are spent. 'coverage' (probability coverage) is the "
+        "default since the ship gate passed on this exact build: +15.3%%/+16.0%% "
+        "over hybrid on the two TEST halves, >2 sigma (docs/SHIP_PHU_XAC_SUAT.md "
+        "s3b). 'hybrid' is the previous baseline and the one-flag rollback.",
     )
     ap.add_argument("--no-answer", action="store_true", help="skip the VQA model, emit frames only")
     ap.add_argument(

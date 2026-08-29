@@ -40,7 +40,7 @@ from scripts.make_submission import (  # noqa: E402
     split_qa,
 )
 from src.core.colours import colours_in_query  # noqa: E402
-from src.core.submission import MAX_ROWS, allocate_trake_rows  # noqa: E402
+from src.core.submission import MAX_ROWS, CoveragePlan, allocate_trake_rows  # noqa: E402
 
 CDN = "https://huggingface.co/datasets/BaeBaeBoo1010/aic2026-keyframes/resolve/main"
 
@@ -58,6 +58,48 @@ _STOP = {"khoảnh", "khắc", "đầu", "tiên", "video", "đoạn", "thấy", 
 OBJ_SKIP = {"Clothing", "Human face", "Human body", "Human head", "Human arm",
             "Human leg", "Human hand", "Human nose", "Human hair", "Human eye",
             "Human mouth", "Human ear", "Footwear", "Sports equipment"}
+
+
+def read_allocator(run_out) -> str:
+    """Which allocator the paired make_submission run used.
+
+    make_submission writes ``allocator.txt`` next to its CSVs precisely so this
+    page and apply_picks can follow the same allocation — the page embedding it
+    in PLAN is what keeps the zip the browser builds equal to the zip the
+    pipeline wrote once the coverage allocator ships (docs/SHIP_PHU_XAC_SUAT.md
+    buoc 4). A run without the marker predates the flag and was hybrid by
+    construction.
+    """
+    f = Path(run_out) / "csv" / "allocator.txt"
+    if f.is_file():
+        v = f.read_text(encoding="utf-8").strip()
+        if v:
+            return v
+    return "hybrid"
+
+
+def build_plan(allocator: str) -> dict:
+    """The PLAN object the in-browser allocators read.
+
+    The coverage parameters come from :class:`CoveragePlan` itself, never
+    copied by hand: an early draft of the ship plan carried sigma=20 /
+    nua_cua_so=10 and that combination measures at only +4.6% against the
+    locked +15.3% (docs/SHIP_PHU_XAC_SUAT.md, "CANH BAO tham so").
+    """
+    cp = CoveragePlan()
+    return {
+        "breadthCost": 1.0,
+        "depthCost": DEFAULT_DEPTH_COST,
+        "step": 10,
+        "budget": MAX_ROWS,
+        "maxDepth": 24,
+        "nFlat": DEFAULT_N_FLAT,
+        "allocator": allocator,
+        "nhiet": cp.nhiet,
+        "sigma": cp.sigma,
+        "nuaCuaSo": cp.nua_cua_so,
+        "luoi": cp.luoi,
+    }
 
 
 def load_video_info(data_dir: Path, video_ids) -> dict:
@@ -876,8 +918,14 @@ function rowsFor(qid) {{
     }}
     return d.chainRows[+st.order[0].slice(1)] || [];
   }}
-  const rows = allocateHybridRows(
-    orderedCands(qid).map(c => ({{v: c[0], f: c[1], last: c[2]}})), PLAN.nFlat, PLAN);
+  const cands = orderedCands(qid).map(c => ({{v: c[0], f: c[1], last: c[2], s: c[3]}}));
+  // PLAN.allocator picks the machine allocation. A query the operator TOUCHED
+  // always takes the old hybrid path with the dragged order — that keeps the
+  // "card #1 = row 1" promise the drag test locks; coverage's first row is a
+  // grid point, not the top card, so it applies only where the machine decides.
+  const rows = (PLAN.allocator === 'coverage' && !st.touched)
+    ? allocateCoverageRows(cands, PLAN)
+    : allocateHybridRows(cands, PLAN.nFlat, PLAN);
   return d.task === 'qa' ? rows.map(r => [r[0], r[1], st.answer]) : rows;
 }}
 
@@ -1388,7 +1436,10 @@ def main() -> int:
                 "task": "trake",
                 "text": text[:600],
                 "shown": len(chains),
-                "cands": [[c["video_id"], c["sequence_frames"][0], None] for c in chains],
+                "cands": [
+                    [c["video_id"], c["sequence_frames"][0], None, round(float(c["score"]), 4)]
+                    for c in chains
+                ],
                 "chainRows": chain_rows,
             }
             if uncertain:
@@ -1450,8 +1501,15 @@ def main() -> int:
             "text": text[:600],
             "shown": len(shown),
             # the pool beyond --top is never drawn but the allocator needs it to
-            # fill ranks 31-100, so the exported zip matches make_submission
-            "cands": [[h.video_id, int(h.frame_idx), h.video_last_frame] for h in hits],
+            # fill ranks 31-100, so the exported zip matches make_submission.
+            # The 4th element is the retrieval score rounded to 4 decimals —
+            # the shared contract with the JS coverage port: the Python
+            # allocator rounds at its entry, the JS uses this value verbatim,
+            # so what is embedded HERE is the allocator input on both sides
+            "cands": [
+                [h.video_id, int(h.frame_idx), h.video_last_frame, round(float(h.score), 4)]
+                for h in hits
+            ],
         }
 
         if uncertain:
@@ -1521,14 +1579,10 @@ def main() -> int:
           + (f", {len(missing)} without a YouTube link" if missing else ", all with a YouTube link"))
 
     alloc_js = (ROOT / "scripts" / "review_export.js").read_text(encoding="utf-8")
-    plan = {
-        "breadthCost": 1.0,
-        "depthCost": DEFAULT_DEPTH_COST,
-        "step": 10,
-        "budget": MAX_ROWS,
-        "maxDepth": 24,
-        "nFlat": DEFAULT_N_FLAT,
-    }
+    allocator = read_allocator(run_out)
+    plan = build_plan(allocator)
+    print(f"allocator cua trang: {allocator}"
+          + ("" if allocator == "hybrid" else "  (doc tu allocator.txt cua run)"))
 
     page = PAGE.format(
         body="\n".join(blocks),

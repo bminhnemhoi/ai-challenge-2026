@@ -279,6 +279,8 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8000
 | [docs/DOC_NOI_DUNG_ANH.md](docs/DOC_NOI_DUNG_ANH.md) | Ba kênh mà embedding không biểu diễn được: chữ trên hình, màu chủ thể, lời nói. |
 | [docs/CHAN_DOAN_TRAKE.md](docs/CHAN_DOAN_TRAKE.md) | Vì sao TRAKE yếu, và **trần lý thuyết** đo được của nó. |
 | [docs/SUA_VONG_1.md](docs/SUA_VONG_1.md) | Các câu **vòng luyện tập** từng nộp sai, kèm bằng chứng. Tên file dễ gây nhầm. |
+| [docs/SHIP_PHU_XAC_SUAT.md](docs/SHIP_PHU_XAC_SUAT.md) | Hồ sơ ship bộ phân bổ **phủ xác suất** (+15,3%/+16,0% TEST, >2σ): bằng chứng, cổng chống overfit, port JS, và mục "điều chưa biết". Mặc định `make_submission` từ 29/08. |
+| [docs/RUNBOOK_NGAY_THI.md](docs/RUNBOOK_NGAY_THI.md) | Trình tự thao tác ngày thi bản mới: lệnh từng bước, lệnh rút lui `--allocator hybrid`, bảng sự cố-và-thuốc. |
 
 Hai lưu ý về tài liệu:
 

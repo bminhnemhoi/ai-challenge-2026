@@ -233,6 +233,18 @@ port JS + test parity xanh TRƯỚC (bước 4), rồi mới lật mặc định
 commit — nếu lật trước, trang review (còn xuất hybrid) sẽ lệch với zip của
 pipeline, chính là chỗ kế hoạch này cấm.
 
+**BƯỚC 4 HOÀN TẤT + MẶC ĐỊNH ĐÃ LẬT (29/08 tối).** `allocateCoverageRows`
+trong `review_export.js` khớp `allocate_coverage_rows` **từng dòng**:
+8 test parity trong suite (5 seed fuzz cụm-theo-video, đuôi lấp ×2, hoà đối
+xứng, và test trang thật — trích DATA+PLAN từ HTML đã render rồi so node vs
+Python trên chính pool của trang, bịt bẫy làm tròn) + stress đối kháng
+**220 pool khớp từng dòng** (điểm bằng hàng loạt, video 30 frame, last=None,
+1→400 ứng viên, biên lượng tử 1e-4). Trang đọc `allocator.txt` của run; câu
+operator đã kéo thả vẫn đi hybrid (lời hứa "thẻ #1 = dòng 1" giữ nguyên).
+PLAN của trang lấy tham số từ chính `CoveragePlan()` — không chép tay.
+Mặc định `make_submission --allocator` giờ là **coverage**; rút lui =
+`--allocator hybrid`.
+
 ## 4. Điều chưa biết
 
 1. **Phân bố điểm SigLIP của đề vòng sau** có thể khác 60 câu GT — tham số nhạy
