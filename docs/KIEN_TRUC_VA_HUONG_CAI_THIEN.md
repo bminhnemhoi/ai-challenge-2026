@@ -80,7 +80,9 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 | ép các frame cách nhau ≥30/60/120 | frame | −1,3% | ❌ |
 | **đặt nhiều đáp án Q&A trên các dòng khác nhau** | dòng | **±0,0%** | ❌ |
 | chia lại ngân sách theo (video, keyframe, độ sâu) | dòng | −15% đến −30% | ❌ |
-| **chia 100 dòng bằng PHỦ XÁC SUẤT (bỏ hẳn hàm chi phí)** | **dòng** | **+10,0%** | 🔬 |
+| **chia 100 dòng bằng PHỦ XÁC SUẤT (bỏ hẳn hàm chi phí)** (0,02; σ=30; nửa=6) | **dòng** | **+15,3% TEST** (chọn trên TUNE lẻ +15,7%, chấm 1 lần trên TEST chẵn, >2σ; seed mới +13,9→+16,2%) | ✅ ship |
+| ↳ tổ hợp argmax fold xuôi (0,03; 30; 10) | dòng | TUNE chẵn +20,1% → **TEST lẻ −1,0% (HOÀ)** — overfit, protocol chặn đúng | ❌ |
+| tiêm keyframe nội-video top-K vào tiên nghiệm bộ phủ | dòng | TUNE −0,4→−1,2%; **TEST +0,2% (HOÀ)** — 54/60 câu đã có coverage, 6 câu nghẽn delta=0,000 | ❌ |
 
 ---
 
@@ -113,26 +115,36 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 > Hệ quả cho hướng đi (thay kết luận cũ): vấn đề của nhóm thất bại **không phải
 > thứ tự slot mà là keyframe đúng không được truy xuất vào slot nào** (nhất quán
 > với phép mổ xẻ "9/15 câu keyframe đúng cách ứng viên hạng-1 hơn 1.000 frame").
-> Việc đáng đo tiếp theo: **thêm ứng viên** — nạp toàn bộ keyframe của các video
-> dẫn đầu (điểm SigLIP có sẵn qua `query_similarities`) vào tiên nghiệm của bộ
-> phân bổ phủ xác suất, thay vì chỉ 400 ứng viên toàn cục.
+> ~~Việc đáng đo tiếp theo: **thêm ứng viên** — nạp toàn bộ keyframe của các video
+> dẫn đầu vào tiên nghiệm của bộ phân bổ phủ xác suất.~~ **ĐÃ ĐO (28/08,
+> `experiment_phu_noi_video.py`): KHÔNG ăn** — TEST +0,2% (HOÀ), TUNE âm nhẹ.
+> Tiền đề sai trên toàn tập: 54/60 câu **đã có** keyframe gần đáp án nhất trong
+> 400 ứng viên; ở 6 câu nghẽn (chỉ số 5, 9, 12, 15, 40, 41) delta = 0,000 vì
+> SigLIP xếp keyframe đáp án hạng nội-video 95–227 ngay trong video đúng.
+> Con số +27,5% là **cận trên oracle**, không phải mục tiêu với tới được bằng
+> tiêm ứng viên — cần tín hiệu định vị nội-video KHÁC SigLIP thuần
+> (chi tiết: `docs/SHIP_PHU_XAC_SUAT.md` §2).
 
 
 
 > **Chia 100 dòng bằng phủ xác suất — mức tăng đơn lẻ lớn nhất đo được tới nay.**
-> Đo ngày 24/08/2026 bằng `scripts/experiment_phu_xac_suat.py`, trên **đường sản
-> xuất đầy đủ** (`ranked_hits`: 4-prompt + ưu tiên đỉnh + cộng điểm đối tượng),
-> 60 câu ground truth, khoảnh khắc thật **không bám keyframe**, 4 họ hạt giống
-> độc lập × 48 lần bốc:
+> Đo lần đầu 24/08/2026 bằng `scripts/experiment_phu_xac_suat.py` (+10,0% với
+> tổ hợp 0,02/σ=30/nửa=10 trên cả 60 câu). Quét lưới 48 tổ hợp 28–29/08 bằng
+> `scripts/experiment_phu_quet_luoi.py` với chia **TUNE/TEST** chẵn/lẻ và hạt
+> giống tách rời — số quyết định là số **TEST** (nửa câu chưa từng dùng để chọn):
 >
 > | | điểm | so nền |
 > |---|---|---|
-> | bộ phân bổ đang nộp (`i + 0,5·d`) | 0,3496 ± 0,0023 | — |
-> | **phủ xác suất** (nhiệt 0,02, σ=30, nửa cửa sổ 10) | **0,3845 ± 0,0016** | **+10,0%** |
-> | phủ xác suất, nhiệt 0,01 | 0,3805 ± 0,0024 | +8,8% |
-> | phủ xác suất, nhiệt 0,05 | 0,3299 ± 0,0018 | −5,6% |
+> | nền TEST chẵn (bộ phân bổ đang nộp `i + 0,5·d`) | 0,3421 ± 0,0041 | — |
+> | **phủ xác suất (nhiệt 0,02, σ=30, nửa cửa sổ 6) — TEST chẵn, chọn trên TUNE lẻ** | **0,3946 ± 0,0028** | **+15,3%** (>2σ) |
+> | cùng tổ hợp, TUNE lẻ (nơi nó được chọn) | 0,4097 | +15,7% |
+> | tổ hợp argmax fold xuôi (0,03; 30; 10) — TUNE chẵn +20,1% | TEST lẻ 0,3491 | **−1,0% HOÀ = overfit** |
+> | phủ xác suất, nhiệt 0,05 (đo 24/08, 60 câu) | 0,3299 ± 0,0018 | −5,6% |
 >
-> Số câu có video đúng trong 100 dòng: **55/60 → 58/60**.
+> Kiểm chứng độc lập bằng 2 họ hạt giống hoàn toàn mới (70000, 123450): giữ
+> **+13,9% → +16,2%** trên mọi lát cắt. Kỳ vọng thận trọng cho kế hoạch điểm:
+> **≈ +7%** (trung bình out-of-fold 2 fold). Số câu có video đúng trong 100 dòng
+> (fold xuôi): **27/30 → 30/30**.
 >
 > **Vì sao nó khác `experiment_per_video_depth.py`** (đã đo −15% đến −30%): cái đó
 > vẫn đi theo chi phí tuyến tính `A·v + B·m + C·d`, chỉ đổi hệ số. Cái này **bỏ hẳn
@@ -143,9 +155,11 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 > dòng phủ được nhiều khối lượng **chưa phủ** nhất; trọng số hạng giảm dần
 > (1,00 / 0,80 / 0,60 / 0,40 / 0,20) khiến thứ tự tham lam đúng luôn.
 >
-> **Chưa nên đưa vào sản xuất ngay.** Còn thiếu: quét tham số tử tế (nhiệt 0,05 đã
-> âm 5,6%, tức tham số có ảnh hưởng mạnh), kiểm trên đề thật chứ không chỉ 60 câu
-> ground truth, và một đường rút lui. Nhưng đây là hướng đáng làm trước mọi thứ khác.
+> **ĐÃ CHỐT SHIP (29/08)** với tổ hợp **nhiệt 0,02, σ=30, nửa cửa sổ 6, lưới 5**
+> — kế hoạch từng bước, cổng hồi quy trước merge, và mục "điều chưa biết" nằm ở
+> `docs/SHIP_PHU_XAC_SUAT.md`. Lưu ý: mặc định vẫn là hybrid cho tới khi cổng
+> TUNE/TEST trên **bản ship** (đuôi lấp + lượng tử hoá + làm tròn score) xanh;
+> đường rút lui là cờ `--allocator hybrid`.
 
 
 ## 2b. Điểm đang mất ở ĐÂU — phép đo quan trọng nhất
