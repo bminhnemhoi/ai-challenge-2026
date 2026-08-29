@@ -115,7 +115,8 @@ def test_a_full_round_builds_a_compliant_archive(tmp_path):
             [(v, f, "Màu đỏ") for v, f in rows],
         )
     write_query_csv(
-        csv_dir / "query-12-trake.csv", [("L25_V007", 130, 322, 547), ("L25_V007", 130, 322, 537)]
+        csv_dir / "query-12-trake.csv",
+        [("L25_V007", 130 + i, 322 + i, 547 + i) for i in range(100)],
     )
 
     z = package_submission(csv_dir, tmp_path / "submission.zip")

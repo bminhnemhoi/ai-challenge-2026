@@ -208,7 +208,10 @@ def test_answer_with_a_comma_cannot_corrupt_the_csv(tmp_path):
 
     csv_dir = tmp_path / "csv"
     answer = 'Quê hương là chùm khế ngọt, cho con trèo hái mỗi ngày'
-    write_query_csv(csv_dir / "query-p1-19-qa.csv", [("L28_V012", 20790, answer)])
+    write_query_csv(
+        csv_dir / "query-p1-19-qa.csv",
+        [("L28_V012", 20790 + 10 * i, answer) for i in range(100)],
+    )
 
     raw = (csv_dir / "query-p1-19-qa.csv").read_text(encoding="utf-8")
     assert '"' not in raw, f"a field got RFC-quoted: {raw!r}"
