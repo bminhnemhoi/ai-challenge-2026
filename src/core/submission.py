@@ -327,6 +327,155 @@ def allocate_hybrid_rows(
     return rows
 
 
+@dataclass
+class CoveragePlan:
+    """Parameters of the probability-coverage allocator.
+
+    The defaults are the combination locked on 29/08/2026 by a two-fold
+    TUNE/TEST sweep (48 combinations, selection on TUNE only, one read of
+    TEST): +15.3% over the hybrid allocator on TEST, held at +13.9..+16.2%
+    under two seed families never used during selection.  Details and the
+    full evidence chain: docs/SHIP_PHU_XAC_SUAT.md.
+
+    Do NOT "fix" these back to sigma=20 / nua_cua_so=10 — an earlier draft
+    of the ship plan carried those by mistake and they measure at only +4.6%.
+    The safe hand-tuning region, if a contest ever forces one, is
+    nhiet 0.015-0.02, sigma 20-30, nua_cua_so 6-10; nhiet >= 0.03 is unstable
+    across folds and nhiet 0.05 measured -5.6%.
+    """
+
+    #: softmax temperature over retrieval scores; decides how concentrated
+    #: the prior is on the top candidates
+    nhiet: float = 0.02
+    #: width of the Gaussian kernel each candidate spreads around its frame
+    sigma: float = 30.0
+    #: assumed half-width of the (unpublished) answer window when computing
+    #: how much probability mass one submitted row covers
+    nua_cua_so: int = 6
+    #: time-axis discretisation step
+    luoi: int = 5
+    budget: int = MAX_ROWS
+
+
+#: probability mass is snapped to this grid right after the Gaussian pass, so
+#: the JS port of this allocator (review_export.js) lands on bit-identical
+#: numbers despite np.exp and Math.exp differing in the last ulp
+_MASS_QUANTUM = 1e-9
+
+
+def allocate_coverage_rows(
+    candidates: Sequence[Candidate],
+    plan: Optional[CoveragePlan] = None,
+    tail_n_flat: int = 20,
+    tail_plan: Optional[AllocationPlan] = None,
+) -> List[Tuple[str, int]]:
+    """Spend the 100 rows by greedy weighted max-coverage of a location prior.
+
+    Final Score = (1/5) sum R@k where R@k is a MAX over the first k rows, so a
+    correct row at rank r is worth exactly (number of thresholds >= r)/5 and
+    every further correct row is worth nothing.  That is the structure of a
+    coverage problem, not a ranking problem: build a prior p(video, frame) for
+    where the true moment is (softmax over retrieval scores, spread by a
+    Gaussian around each keyframe), then greedily pick the row that covers the
+    most NOT-YET-COVERED mass.  The decreasing rank weights make greedy the
+    right order.
+
+    Determinism contract, shared with the JS port — change one side only ever
+    together with the other and its parity tests:
+
+    * candidate scores are rounded to 4 decimals here, at the entry, because
+      the review page embeds 4-decimal scores; both sides must see identical
+      inputs or a 5e-5 score difference flips near-tie grid cells at nhiet 0.02
+    * per-video mass is quantised to ``_MASS_QUANTUM`` via floor(x*1e9+0.5)
+      (identical IEEE ops in JS), absorbing exp() last-ulp differences
+    * videos are visited in candidate insertion order (dict / Map), and every
+      argmax keeps the FIRST maximum
+
+    The greedy loop stops when no uncovered mass is left, which for tiny pools
+    or pinned short videos is well short of ``budget`` — but the verifier
+    treats a short file as a truncation accident, and rows 51..100 are free
+    lottery tickets.  The remainder is therefore filled from
+    :func:`allocate_hybrid_rows`, minus duplicates.  On the 60 ground-truth
+    queries coverage fills 100/100 rows by itself, so the tail never touched
+    the measured +15.3%.
+    """
+    import numpy as np
+
+    plan = plan or CoveragePlan()
+    if not candidates:
+        return []
+
+    # ---- prior: each candidate spreads mass around its keyframe -----------
+    diem = np.array([round(float(c.score), 4) for c in candidates], dtype=np.float64)
+    w = np.exp((diem - diem.max()) / max(plan.nhiet, 1e-9))
+    w /= w.sum()
+
+    theo_video: Dict[str, List[Tuple[int, float, int]]] = {}
+    for c, wi in zip(candidates, w):
+        # None means "end of video unknown" — leave the grid unclamped on the
+        # right, exactly as frame_ladder treats hi=None (JS port: 2**31)
+        last = int(c.video_last_frame) if c.video_last_frame is not None else 1 << 31
+        theo_video.setdefault(c.video_id, []).append((int(c.frame_idx), float(wi), last))
+
+    khoi: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+    for vid, items in theo_video.items():
+        last = max(x[2] for x in items)
+        lo = max(0, min(x[0] for x in items) - 4 * int(plan.sigma))
+        hi = max(lo, min(last, max(x[0] for x in items) + 4 * int(plan.sigma)))
+        truc = np.arange(lo, hi + 1, plan.luoi, dtype=np.int64)
+        if truc.size == 0:
+            continue
+        mass = np.zeros(truc.size, dtype=np.float64)
+        for f, wi, _ in items:
+            mass += wi * np.exp(-0.5 * ((truc - f) / plan.sigma) ** 2)
+        mass = np.floor(mass / _MASS_QUANTUM + 0.5) * _MASS_QUANTUM
+        khoi[vid] = (truc, mass)
+
+    # ---- greedy: each step takes the row covering the most new mass -------
+    chua_phu = {v: m.copy() for v, (_t, m) in khoi.items()}
+    nua = max(1, plan.nua_cua_so // plan.luoi)
+    rows: List[Tuple[str, int]] = []
+    da_dung: set = set()
+
+    while len(rows) < plan.budget:
+        tot_v, tot_i, tot_gia = None, -1, 0.0
+        for vid, (truc, _m) in khoi.items():
+            con = chua_phu[vid]
+            if con.size == 0:
+                continue
+            tich = np.cumsum(np.concatenate(([0.0], con)))
+            lo = np.maximum(0, np.arange(con.size) - nua)
+            hi = np.minimum(con.size, np.arange(con.size) + nua + 1)
+            gia = tich[hi] - tich[lo]
+            j = int(np.argmax(gia))
+            if gia[j] > tot_gia and (vid, int(truc[j])) not in da_dung:
+                tot_v, tot_i, tot_gia = vid, j, float(gia[j])
+        if tot_v is None or tot_gia <= 0:
+            break
+        truc, _ = khoi[tot_v]
+        f = int(truc[tot_i])
+        rows.append((tot_v, f))
+        da_dung.add((tot_v, f))
+        lo = max(0, tot_i - nua)
+        chua_phu[tot_v][lo : tot_i + nua + 1] = 0.0
+
+    # ---- mandatory tail fill: a submitted file must carry all 100 rows ----
+    if len(rows) < plan.budget:
+        seen = set(rows)
+        fill = AllocationPlan(budget=plan.budget, **(
+            {k: getattr(tail_plan, k) for k in ("breadth_cost", "depth_cost", "step", "max_depth")}
+            if tail_plan else {}
+        ))
+        for key in allocate_hybrid_rows(candidates, n_flat=tail_n_flat, plan=fill):
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(key)
+            if len(rows) >= plan.budget:
+                break
+    return rows[: plan.budget]
+
+
 def allocate_trake_rows(
     video_id: str,
     event_frames: Sequence[int],

@@ -34,6 +34,7 @@ safe_console()
 from scripts.make_submission import (  # noqa: E402
     DEFAULT_DEPTH_COST,
     DEFAULT_N_FLAT,
+    allocate_rows,
     detect_task,
     ranked_hits,
     read_en_override,
@@ -129,6 +130,17 @@ def main() -> int:
     ap.add_argument("--depth-cost", type=float, default=DEFAULT_DEPTH_COST)
     ap.add_argument("--step", type=int, default=10)
     ap.add_argument("--pin-budget", type=int, default=50)
+    ap.add_argument(
+        "--allocator",
+        choices=("hybrid", "coverage"),
+        default=None,
+        help="allocator for the NON-pinned rows. Default: whatever "
+        "make_submission wrote into <out>/csv/allocator.txt, else hybrid — a "
+        "repack must not silently switch allocator mid-contest. Rows for a "
+        "pick WITH a confirmed frame always use hybrid: a human-confirmed "
+        "instant has ~zero uncertainty, so the dense ladder around it IS the "
+        "optimal coverage of a known point.",
+    )
     ap.add_argument("--allow-blank-answers", action="store_true")
     args = ap.parse_args()
 
@@ -149,9 +161,19 @@ def main() -> int:
         print(f"ERROR: {csv_dir} does not exist — run make_submission.py first")
         return 2
 
+    if args.allocator is None:
+        marker = csv_dir / "allocator.txt"
+        args.allocator = (
+            marker.read_text(encoding="utf-8").strip() if marker.is_file() else "hybrid"
+        )
+        if args.allocator not in ("hybrid", "coverage"):
+            print(f"ERROR: {marker} says {args.allocator!r} — not an allocator this build knows")
+            return 2
+
     from src.core.kis_engine import KISEngine
 
-    print(f"{len(picks)} correction(s); loading the index once ...", flush=True)
+    print(f"{len(picks)} correction(s); allocator={args.allocator}; loading the index once ...",
+          flush=True)
     eng = KISEngine(args.data).load()
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=args.depth_cost, step=args.step)
     trake = None
@@ -255,15 +277,25 @@ def main() -> int:
                 min(args.n_flat, len(pin_cands)),
             )
 
-            pin_rows = allocate_hybrid_rows(
-                pin_cands,
-                n_flat=pin_n_flat,
-                plan=AllocationPlan(breadth_cost=plan.breadth_cost, depth_cost=plan.depth_cost,
-                                    step=plan.step, budget=args.pin_budget),
+            pin_alloc_plan = AllocationPlan(
+                breadth_cost=plan.breadth_cost, depth_cost=plan.depth_cost,
+                step=plan.step, budget=args.pin_budget,
             )
-            rest_rows = allocate_hybrid_rows(
+            if frames_chain or frame is not None:
+                # A confirmed frame must lead the file literally.  Coverage's
+                # softmax at nhiet 0.02 would collapse the prior onto GRID
+                # cells near the pin, not the pinned frame itself — row 1
+                # would drift off the instant the human approved.  The score
+                # 1e9 sentinel from pin_plan also has no meaning to a softmax.
+                pin_rows = allocate_hybrid_rows(pin_cands, n_flat=pin_n_flat, plan=pin_alloc_plan)
+            else:
+                # Video confirmed but not the instant: the candidates keep
+                # their real retrieval scores, so the chosen allocator runs
+                # exactly as it would in make_submission.
+                pin_rows = allocate_rows(pin_cands, args.allocator, pin_n_flat, pin_alloc_plan)
+            rest_rows = allocate_rows(
                 [Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in rest],
-                n_flat=args.n_flat, plan=plan,
+                args.allocator, args.n_flat, plan,
             )
             seen = set(pin_rows)
             rows = pin_rows + [r for r in rest_rows if r not in seen]

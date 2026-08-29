@@ -39,6 +39,8 @@ from src.core.submission import (  # noqa: E402
     MAX_ROWS,
     AllocationPlan,
     Candidate,
+    CoveragePlan,
+    allocate_coverage_rows,
     allocate_hybrid_rows,
     allocate_trake_rows,
     csv_name_for_query,
@@ -368,18 +370,37 @@ def _object_boost(engine, hits, query_en):
         return hits
 
 
+def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
+    """One dispatch point so KIS and Q&A can never disagree on the allocator.
+
+    ``coverage`` is the probability-coverage allocator (+15.3% on TEST,
+    docs/SHIP_PHU_XAC_SUAT.md); ``hybrid`` is the shipped baseline and stays
+    the default until the step-3 gate has been run on THIS build.  The hybrid
+    plan is passed through as the coverage tail-fill plan, so the rows past
+    the point where coverage runs out of mass are exactly the hybrid rows.
+    """
+    if allocator == "coverage":
+        return allocate_coverage_rows(
+            cands,
+            plan=CoveragePlan(budget=plan.budget),
+            tail_n_flat=n_flat,
+            tail_plan=plan,
+        )
+    return allocate_hybrid_rows(cands, n_flat=n_flat, plan=plan)
+
+
 def build_kis_rows(engine, query_text: str, n_flat: int, depth_cost: float, step: int,
-                   query_en: Optional[str] = None):
+                   query_en: Optional[str] = None, allocator: str = "hybrid"):
     hits = merged_hits(engine, query_text, query_en)
     cands = [
         Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits
     ]
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
-    return allocate_hybrid_rows(cands, n_flat=n_flat, plan=plan)
+    return allocate_rows(cands, allocator, n_flat, plan)
 
 
 def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: float, step: int,
-                  query_en: Optional[str] = None):
+                  query_en: Optional[str] = None, allocator: str = "hybrid"):
     """Q&A rows: the same frames as KIS, every one carrying an answer.
 
     The answer column is the same string on every row.  Leaving later rows
@@ -395,7 +416,7 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
     hits = merged_hits(engine, context or query_text, query_en)
     cands = [Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits]
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
-    frame_rows = allocate_hybrid_rows(cands, n_flat=n_flat, plan=plan)
+    frame_rows = allocate_rows(cands, allocator, n_flat, plan)
 
     answer = ""
     if answerer is not None and hits:
@@ -472,6 +493,14 @@ def main() -> int:
     ap.add_argument("--depth-cost", type=float, default=DEFAULT_DEPTH_COST)
     ap.add_argument("--step", type=int, default=10,
                     help="ladder spacing; must not exceed the assumed answer-window width")
+    ap.add_argument(
+        "--allocator",
+        choices=("hybrid", "coverage"),
+        default="hybrid",
+        help="how KIS/Q&A rows are spent: 'hybrid' (shipped baseline) or 'coverage' "
+        "(probability coverage, +15.3%% on TEST — docs/SHIP_PHU_XAC_SUAT.md). "
+        "The default flips only after the gate in that doc is green on this build.",
+    )
     ap.add_argument("--no-answer", action="store_true", help="skip the VQA model, emit frames only")
     ap.add_argument(
         "--no-objects",
@@ -511,6 +540,10 @@ def main() -> int:
     csv_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"{len(qfiles)} query files in {qdir}")
+    print(f"allocator: {args.allocator}")
+    # the review page and apply_picks read this to stay on the same allocator;
+    # package_submission only globs *.csv so it never enters the upload
+    (csv_dir / "allocator.txt").write_text(args.allocator + "\n", encoding="utf-8")
     print("loading the SigLIP-2 index (this is the slow part; it happens once) ...", flush=True)
     t0 = time.time()
     from src.core.kis_engine import KISEngine
@@ -536,11 +569,13 @@ def main() -> int:
                 rows = build_trake_rows(engine, text, args.step, query_en=en)
             elif task == "qa":
                 rows = build_qa_rows(
-                    engine, text, answerer, args.n_flat, args.depth_cost, args.step, query_en=en
+                    engine, text, answerer, args.n_flat, args.depth_cost, args.step,
+                    query_en=en, allocator=args.allocator,
                 )
             else:
                 rows = build_kis_rows(
-                    engine, text, args.n_flat, args.depth_cost, args.step, query_en=en
+                    engine, text, args.n_flat, args.depth_cost, args.step,
+                    query_en=en, allocator=args.allocator,
                 )
         except Exception as exc:  # noqa: BLE001
             print(f"  {qf.name:26s} FAILED: {type(exc).__name__}: {exc}")
