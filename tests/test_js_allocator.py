@@ -108,10 +108,15 @@ def test_browser_zip_passes_the_real_verifier(tmp_path):
     """The zip the page hands the operator must satisfy verify_submission_zip."""
     from src.core.submission import verify_submission_zip
 
+    # full 100-row files, matching what the page really exports — shorter files
+    # now (correctly) trip the verifier's truncation guard
     files = [
-        {"name": "submission/query-p1-1-kis.csv", "text": "L21_V001,100\nL21_V001,110\n"},
-        {"name": "submission/query-p1-15-qa.csv", "text": "L30_V072,1745,Xã Vạn Thắng\n"},
-        {"name": "submission/query-p1-4-trake.csv", "text": "L26_V208,10,20,30,40\n"},
+        {"name": "submission/query-p1-1-kis.csv",
+         "text": "".join(f"L21_V001,{100 + 10 * i}\n" for i in range(100))},
+        {"name": "submission/query-p1-15-qa.csv",
+         "text": "".join(f"L30_V072,{1745 + 10 * i},Xã Vạn Thắng\n" for i in range(100))},
+        {"name": "submission/query-p1-4-trake.csv",
+         "text": "".join(f"L26_V208,{10 + i},{20 + i},{30 + i},{40 + i}\n" for i in range(100))},
     ]
     data = _run_js(
         "console.log(JSON.stringify(Array.from(A.buildZip(" + json.dumps(files) + "))))"
@@ -124,7 +129,9 @@ def test_browser_zip_passes_the_real_verifier(tmp_path):
     with zipfile.ZipFile(zp) as zf:
         assert zf.testzip() is None
         assert sorted(zf.namelist()) == sorted(f["name"] for f in files)
-        assert zf.read("submission/query-p1-15-qa.csv").decode("utf-8") == "L30_V072,1745,Xã Vạn Thắng\n"
+        qa = zf.read("submission/query-p1-15-qa.csv").decode("utf-8")
+        assert qa.startswith("L30_V072,1745,Xã Vạn Thắng\n")
+        assert len(qa.strip().split("\n")) == 100
 
     expect = {Path(f["name"]).name for f in files}
     assert verify_submission_zip(zp, expect_names=expect) == []
