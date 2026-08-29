@@ -226,7 +226,8 @@ def test_csv_name_follows_the_query_file_stem():
 
 def test_zip_contains_the_mandatory_submission_folder(tmp_path):
     d = tmp_path / "csvs"
-    write_query_csv(d / "query-1-kis.csv", [("L01_V001", 505), ("L01_V001", 515)])
+    # 100 rows, because a shorter file now (correctly) draws a truncation warning
+    write_query_csv(d / "query-1-kis.csv", [("L01_V001", 505 + 10 * i) for i in range(100)])
     z = package_submission(d, tmp_path / "sub.zip")
     with zipfile.ZipFile(z) as zf:
         assert zf.namelist() == ["submission/query-1-kis.csv"]
