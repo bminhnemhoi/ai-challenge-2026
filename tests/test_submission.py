@@ -277,3 +277,23 @@ def test_packaging_empty_dir_raises(tmp_path):
 
 def test_rank_thresholds_are_the_published_ones():
     assert RANK_THRESHOLDS == (1, 5, 20, 50, 100)
+
+
+def test_a_truncated_csv_is_flagged_even_though_it_is_legal(tmp_path):
+    """Round 2, live: a by-hand edit deleted rows by their answer text and left a
+    4-row file. The rules allow it (the limit is a maximum), so the verifier said
+    "format check passed" — and 96 free R@100 chances went in the bin. This
+    pipeline always fills 100 rows, so a short file can only mean truncation.
+    """
+    import zipfile
+
+    from src.core.submission import verify_submission_zip
+
+    csv_dir = tmp_path / "csv"
+    csv_dir.mkdir()
+    (csv_dir / "query-1-kis.csv").write_bytes(b"L01_V001,10\nL01_V001,20\n")
+    zp = tmp_path / "submission.zip"
+    with zipfile.ZipFile(zp, "w") as z:
+        z.write(csv_dir / "query-1-kis.csv", "submission/query-1-kis.csv")
+    problems = verify_submission_zip(zp)
+    assert any("only 2 rows" in p for p in problems), problems

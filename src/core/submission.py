@@ -551,6 +551,17 @@ def verify_submission_zip(
                 continue
             if len(lines) > expect_max_rows:
                 problems.append(f"{n}: {len(lines)} rows exceeds the {expect_max_rows} limit")
+            elif len(lines) < expect_max_rows:
+                # Legal by the rules (the limit is a maximum) but in THIS pipeline
+                # every file is built full, so a short file is a truncation bug.
+                # It happened in round 2: a by-hand edit that deleted rows by their
+                # answer left a 4-row file, this check did not exist, and the zip
+                # sailed through "format check passed" with 96 free chances thrown
+                # away. Every unused row is a free R@100 lottery ticket.
+                problems.append(
+                    f"{n}: only {len(lines)} rows — legal, but this pipeline always "
+                    f"fills {expect_max_rows}; a short file means something truncated it"
+                )
             if ".mp4" in text:
                 problems.append(f"{n}: video ids must not carry the .mp4 extension")
             if '"' in text:
