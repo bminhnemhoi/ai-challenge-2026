@@ -157,9 +157,13 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 >
 > **ĐÃ CHỐT SHIP (29/08)** với tổ hợp **nhiệt 0,02, σ=30, nửa cửa sổ 6, lưới 5**
 > — kế hoạch từng bước, cổng hồi quy trước merge, và mục "điều chưa biết" nằm ở
-> `docs/SHIP_PHU_XAC_SUAT.md`. Lưu ý: mặc định vẫn là hybrid cho tới khi cổng
-> TUNE/TEST trên **bản ship** (đuôi lấp + lượng tử hoá + làm tròn score) xanh;
-> đường rút lui là cờ `--allocator hybrid`.
+> `docs/SHIP_PHU_XAC_SUAT.md`. Đường rút lui là cờ `--allocator hybrid`.
+>
+> **CỔNG BẢN SHIP ĐÃ XANH (29/08 chiều)** — `scripts/so_sanh_allocator.py` chấm
+> đúng đường mã `allocate_rows` của make_submission (làm tròn 4 chữ số + lượng tử
+> hoá 1e-9 + đuôi lấp): nửa chẵn **+15,3%**, nửa lẻ **+16,0%**, trùng số thí
+> nghiệm tới 4 chữ số; độ trễ 167 ms/câu (max 578 ms). Chi tiết + bảng từng câu:
+> `docs/SHIP_PHU_XAC_SUAT.md` §3b.
 
 
 ## 2b. Điểm đang mất ở ĐÂU — phép đo quan trọng nhất
