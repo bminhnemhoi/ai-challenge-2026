@@ -99,8 +99,11 @@ TUNE (ở đó nó −1,2%) và vẫn < 2σ — không được nhặt số này
 Script tái lập (~2,5 phút CPU, không API): `scripts/experiment_phu_noi_video.py`,
 dùng cache `data/_prodhits60.json` + `data/_sims_siglip60.npz` (sim SigLIP của
 MỌI keyframe × 60 câu — thí nghiệm định vị nội-video sau này đều cần).
-Việc còn nợ khi rảnh: chạy lại một lần với nền (0,02; 30; 6) thay vì (0,02; 30; 10)
-để đóng hồ sơ đúng nền, và sửa script chỉ chấm biến thể chốt trên TEST.
+~~Việc còn nợ khi rảnh: chạy lại một lần với nền (0,02; 30; 6).~~ **ĐÃ TRẢ
+(29/08 chiều):** chạy lại với đúng nền chốt — TUNE chẵn: cả 6 biến thể ≤ nền
+(−0,2% đến −1,9%); biến thể chọn trên TUNE (K=3, m=0.5) hoà trên TEST
+(0,4048 vs 0,4058, −0,2% < 2σ). K=10 m=1.0 lại nhô +1,3% trên TEST mà không
+được chọn trên TUNE — đúng mồi overfit đã cảnh báo, không nhặt. NO-GO đứng vững.
 
 ---
 
