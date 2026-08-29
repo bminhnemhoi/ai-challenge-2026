@@ -170,7 +170,9 @@ def test_verifier_catches_blank_qa_answers(tmp_path):
 
 
 def test_verifier_accepts_a_filled_qa_file(tmp_path):
-    z = _zip_with(tmp_path, "query-9-qa.csv", [("V", 100, "Màu đỏ"), ("V", 110, "Màu đỏ")])
+    # 100 rows: a shorter file now (correctly) draws the truncation warning
+    z = _zip_with(tmp_path, "query-9-qa.csv",
+                  [("V", 100 + 10 * i, "Màu đỏ") for i in range(100)])
     assert verify_submission_zip(z) == []
 
 
