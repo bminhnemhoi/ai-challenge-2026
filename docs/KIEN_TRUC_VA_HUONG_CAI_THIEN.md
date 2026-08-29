@@ -83,6 +83,9 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 | **chia 100 dòng bằng PHỦ XÁC SUẤT (bỏ hẳn hàm chi phí)** (0,02; σ=30; nửa=6) | **dòng** | **+15,3% TEST** (chọn trên TUNE lẻ +15,7%, chấm 1 lần trên TEST chẵn, >2σ; seed mới +13,9→+16,2%) | ✅ ship |
 | ↳ tổ hợp argmax fold xuôi (0,03; 30; 10) | dòng | TUNE chẵn +20,1% → **TEST lẻ −1,0% (HOÀ)** — overfit, protocol chặn đúng | ❌ |
 | tiêm keyframe nội-video top-K vào tiên nghiệm bộ phủ | dòng | TUNE −0,4→−1,2%; **TEST +0,2% (HOÀ)** — 54/60 câu đã có coverage, 6 câu nghẽn delta=0,000 | ❌ |
+| làm mượt SigLIP theo trục thời gian (định vị nội-video, đo trên 6 câu nghẽn) | keyframe | cứu 1/6 (câu 12: hạng 10→1), phá câu 5 (16→51); câu 40/41 vẫn hạng 200+ | ❌ |
+| pha CLIP-B32 vào SigLIP nội-video (z-blend, 6 câu nghẽn) | keyframe | không thêm thông tin; câu 9 tệ hơn (95→141) | ❌ |
+| OCR keyword-match định vị nội-video (6 câu nghẽn, 4 video có OCR) | keyframe | 0/4 nổ gần GT — kể cả logo "60 Giây" (chữ 3D cách điệu) | ❌ |
 
 ---
 

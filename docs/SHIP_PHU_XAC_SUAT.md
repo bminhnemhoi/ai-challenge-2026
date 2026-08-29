@@ -247,9 +247,24 @@ pipeline, chính là chỗ kế hoạch này cấm.
 4. **Độ trễ thật trên máy thi** chưa đo (ước < 2 s/câu) — đo ở bước 5.4.
 5. **Coverage không chữa nghẽn truy xuất**: nó chỉ chia lại 100 dòng trong pool
    sẵn có. Nhóm 6 câu nghẽn (5, 9, 12, 15, 40, 41) cần tín hiệu định vị nội-video
-   KHÁC SigLIP thuần (làm mượt theo trục thời gian; transcript/OCR/objects của
-   riêng top 3–5 video). Mọi biến thể mới đo TRƯỚC trên 6 câu này — không kéo nổi
-   nhóm này thì khỏi tốn 60 câu.
+   KHÁC SigLIP thuần. **Các tín hiệu RẺ đã đo trên đúng 6 câu này (29/08 chiều)
+   — KHÔNG CÓ CỬA:**
+
+   | câu | #kf | SigLIP thô | mượt w=3 | mượt w=7 | +CLIP z-blend |
+   |---|---|---|---|---|---|
+   | 5 | 150 | 16 | 51 | 49 | 18 |
+   | 9 | 145 | 95 | 38 | 40 | 141 |
+   | 12 | 379 | 10 | **4** | **1** | 10 |
+   | 15 | 470 | 17 | 26 | 20 | 14 |
+   | 40 | 305 | 225 | 265 | 276 | 207 |
+   | 41 | 260 | 150 | 238 | 248 | 148 |
+
+   (hạng nội-video của keyframe đáp án; nhỏ hơn = tốt hơn). Làm mượt thời gian
+   cứu đúng 1/6 (câu 12) và làm câu 5 tệ gấp ba; CLIP không thêm thông tin;
+   OCR keyword-match không nổ ở câu nào trong 4 câu có OCR (kể cả câu 40 —
+   logo "60 Giây" 3D cách điệu, OCR không đọc được). Kết luận: nhóm này chỉ còn
+   đường **quét VLM tại trận trên top 3–5 video** (đã có quy trình trong playbook,
+   từng crack p2-17/p2-26) — không có tín hiệu tiền tính rẻ nào đáng ship.
 6. **Hai số không còn cache đứng sau**: `prodhits_uniq7841.json` (đối chiếu cache
    24/08) không có trong repo; "+16,0% lẻ/hạt giống TEST" không nằm trong cache
    nào. Cả hai khớp phép đo độc lập bằng seed mới (+15,8%/+16,2%) nên đáng tin,
