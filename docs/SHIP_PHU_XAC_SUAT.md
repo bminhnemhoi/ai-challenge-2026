@@ -206,6 +206,30 @@ Tất cả phải xanh trước khi merge nhánh:
 
 ---
 
+## 3b. KẾT QUẢ CỔNG BƯỚC 3 — chạy 29/08/2026 trên BẢN SHIP
+
+`python scripts/so_sanh_allocator.py` — phân bổ bằng đúng `allocate_rows` của
+make_submission (làm tròn score 4 chữ số + lượng tử hoá 1e-9 + đuôi lấp),
+chấm theo luật harness (họ hạt giống TEST gốc 90000, cửa sổ 6/10/20, 4 họ × 48 bốc):
+
+| nửa | nền (hybrid) | coverage bản ship | so nền | phán quyết |
+|---|---|---|---|---|
+| chẵn | 0,3421 ± 0,0041 | 0,3946 ± 0,0027 | **+15,3%** | GIỮ ĐƯỢC (> 2σ) |
+| lẻ | 0,3527 ± 0,0047 | 0,4090 ± 0,0014 | **+16,0%** | GIỮ ĐƯỢC (> 2σ) |
+
+Số bản ship TRÙNG số thí nghiệm tới 4 chữ số — làm tròn, lượng tử hoá và đuôi
+lấp không đổi kết quả (điều chưa biết #2: ĐÃ ĐÓNG). Độ trễ thật: **167 ms/câu
+trung bình, p95 278 ms, max 578 ms** (điều chưa biết #4: ĐÃ ĐÓNG — xa dưới
+ước lượng 2 s). Từng câu: 26 câu tăng / 12 câu giảm / còn lại hoà; video dòng 1
+đổi ở 17/60 câu. Câu giảm mạnh nhất: chỉ số 37 (−0,40), 12 và 24 (−0,20) —
+đúng dạng đã biết: coverage rải rộng nên khi hybrid vốn đặt trúng video ở
+dòng 1, phần thang sâu bị mỏng đi; bù lại là 26 câu tăng, tổng vẫn +15/16%.
+
+Điều kiện đổi mặc định make_submission ĐÃ THOẢ; thứ tự thao tác vẫn là:
+port JS + test parity xanh TRƯỚC (bước 4), rồi mới lật mặc định trong MỘT
+commit — nếu lật trước, trang review (còn xuất hybrid) sẽ lệch với zip của
+pipeline, chính là chỗ kế hoạch này cấm.
+
 ## 4. Điều chưa biết
 
 1. **Phân bố điểm SigLIP của đề vòng sau** có thể khác 60 câu GT — tham số nhạy
