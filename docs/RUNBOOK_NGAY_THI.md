@@ -59,6 +59,24 @@ python -m pytest tests/test_page_export_matches_pipeline.py -q   # trang = pipel
 - KHÔNG BAO GIỜ sửa CSV bằng tay/Excel. Mọi sửa chữa đi qua `apply_picks.py`
   (nó giữ nguyên allocator của run nhờ `allocator.txt`).
 
+## 2b. Điền đáp án Q&A (làm NGAY sau make_submission, trước khi soát)
+
+```
+python scripts/answer_qa.py --queries round<N>/de/queries --out round<N>/run1 --repackage
+```
+
+Mặc định đã là cấu hình **đã đo**: ảnh gốc 1900px + 4 keyframe lân cận + 2 video
+dự phòng + lời thoại ±30 s + prompt cấm bỏ trống — **86,7%** độ chính xác đáp án
+trên TEST so với 63,3% của đường cũ (`docs/NGHIEN_CUU_SOTA.md` §1①).
+
+- Câu nào model trả `confidence` thấp → ưu tiên soát tay, nó vẫn đoán chứ không
+  bỏ trống (bỏ trống là 0 điểm chắc chắn).
+- **Không bao giờ để trống ô đáp án**, kể cả khi không chắc. Sai và trống đều 0
+  điểm, nhưng đoán thì còn cơ hội.
+- Câu nào cần đọc chữ nhỏ (biển số, bảng hiệu, con số thập phân) → chốt lại bằng
+  `python scripts/read_answer.py --video <V> --frames <f> --question "..." --provider openai`.
+- Đường lui nếu nghi ngờ: `--neo 0` quay về đường cũ (12 thumbnail 512px).
+
 ## 3. Sửa theo góp ý người xem (giữa các lượt)
 
 ```

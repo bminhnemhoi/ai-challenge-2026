@@ -86,6 +86,9 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 | làm mượt SigLIP theo trục thời gian (định vị nội-video, đo trên 6 câu nghẽn) | keyframe | cứu 1/6 (câu 12: hạng 10→1), phá câu 5 (16→51); câu 40/41 vẫn hạng 200+ | ❌ |
 | pha CLIP-B32 vào SigLIP nội-video (z-blend, 6 câu nghẽn) | keyframe | không thêm thông tin; câu 9 tệ hơn (95→141) | ❌ |
 | OCR keyword-match định vị nội-video (6 câu nghẽn, 4 video có OCR) | keyframe | 0/4 nổ gần GT — kể cả logo "60 Giây" (chữ 3D cách điệu) | ❌ |
+| **Q&A: ảnh gốc + lời thoại ±30 s + cấm bỏ trống + 2 keyframe lân cận** | **đáp án** | **63,3% → 86,7% TEST** (chọn trên TUNE, >2 sd; `experiment_qa_answer.py`) | ✅ ship |
+| ↳ chỉ đổi sang ảnh gốc, giữ prompt cũ | đáp án | 71,7% → **65,0%** — model chép băng rôn thay vì trả lời | ❌ |
+| ↳ thêm 4 khung nhiễu của video xếp sau | đáp án | 86,7% → 86,7% (TEST 90,0%) — **không tốn gì**, cho phép giữ dự phòng video | ✅ ship |
 
 ---
 
