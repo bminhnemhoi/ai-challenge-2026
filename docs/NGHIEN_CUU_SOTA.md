@@ -306,6 +306,34 @@ Hai hệ quả trái chiều, cả hai đều quan trọng:
   thời gian" — đó là bài toán *độ chính xác mốc*, đây là bài toán *không có gì
   cả*. Ước lượng: PhoWhisper/Whisper-large-v3 trên Colab, vài giờ.
 
+#### Đã phục hồi một phần (30/08 tối): 217 → **349** video có lời thoại
+
+Kiểm lại thì 656 file rỗng **không phải** vì YouTube không có phụ đề — cả ba
+video thử đều có track `vi-orig`/`vi`. Chúng là di chứng của một lượt quét cũ bị
+YouTube chặn giữa chừng. `scripts/fetch_captions.py --retry-empty` (cờ này đã có
+sẵn cho đúng tình huống này) phục hồi **+132 video**, đưa kho lời thoại lên
+349/873 và 3,6 triệu ký tự.
+
+**Còn 490 video bị chặn**, YouTube đòi đăng nhập. Chạy chậm không cứu được
+(`--workers 1 --sleep 3` vẫn bị chặn ⇒ chặn theo IP, không theo tần suất).
+Cách duy nhất còn lại là dùng cookie của một trình duyệt đã đăng nhập YouTube:
+
+```
+python scripts/fetch_captions.py --retry-empty --cookies-from-browser chrome
+```
+
+**Việc này cần người quyết**, vì nó đưa thao tác tải hàng loạt vào dưới danh
+nghĩa tài khoản YouTube của bạn — rủi ro thấp nhưng khác 0. Script không cache
+âm tính cho video bị chặn, nên chạy lại lúc nào cũng tiếp tục đúng chỗ.
+
+Lưu ý khi đọc số: trên **60 câu GT** phủ sóng chỉ tăng 29 → 33, nên không đo lại
+được gì đáng kể ở đó. Giá trị thật nằm ở **câu thi thật** — đúng lớp câu nêu tên
+riêng/địa danh mà bộ GT không có (chính là `query-p1-19`, `p1-22` đã mất ở vòng
+1). Đây lại là hệ quả của cùng một vấn đề phân bố nêu ở trên: bộ GT toàn mô tả
+cảnh nhìn thấy, nên nó **không đo được kênh lời thoại** y như nó không đo được
+cấu trúc thời gian. Đo trực tiếp: BM25 lời thoại tự nó tìm đúng video ở top-5
+cho **9/60** câu GT (top-1: 4/60).
+
 ### Kết quả ba lane, gọn
 
 | lane | kết luận | số |
