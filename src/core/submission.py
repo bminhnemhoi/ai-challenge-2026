@@ -327,6 +327,47 @@ def allocate_hybrid_rows(
     return rows
 
 
+def reserve_tail_rows(
+    rows: Sequence[Tuple[str, int]],
+    extras: Sequence[Tuple[str, int]],
+    budget: int = MAX_ROWS,
+) -> List[Tuple[str, int]]:
+    """Guarantee the last rows to candidates a *different channel* found.
+
+    Appending a candidate to the end of the retriever's list does NOT give it a
+    row.  Both allocators spend the budget on the strongest candidates: the
+    hybrid ladder orders slots by ``breadth_cost * i + depth_cost * d``, so a
+    candidate at index 400 has a cost no ladder depth can beat, and the coverage
+    prior gives a sentinel-scored candidate a softmax weight of ~1e-20.  A
+    speech- or OCR-found video therefore vanished silently — which is how
+    query-p1-19 and query-p1-22 were lost in round 1: only the spoken channel
+    ever found them, and the pipeline then dropped them.
+
+    The fix has to be structural, not a nudge to the scores: reserve the last
+    ``len(extras)`` slots outright.  That trade is nearly free and strictly
+    bounded — the rows given up are ranks 96..100, worth 0.2 each and only when
+    the answer sits exactly there, while a video that no other channel found is
+    worth up to a full 1.0.  Never insert these at the front: R@k is a maximum
+    over a PREFIX, so a row at the end can only ever raise the score, and one at
+    the top displaces whatever was there.
+
+    Extras already present in ``rows`` are dropped (they need no reservation),
+    and their relative order is preserved.
+    """
+    out = [tuple(r) for r in rows]
+    have = set(out)
+    want: List[Tuple[str, int]] = []
+    for e in extras:
+        key = (e[0], int(e[1]))
+        if key in have or key in want:
+            continue
+        want.append(key)
+    if not want:
+        return out[:budget]
+    keep = max(0, budget - len(want))
+    return out[:keep] + want[: budget - keep]
+
+
 @dataclass
 class CoveragePlan:
     """Parameters of the probability-coverage allocator.

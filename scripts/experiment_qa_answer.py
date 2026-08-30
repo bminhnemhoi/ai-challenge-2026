@@ -155,26 +155,59 @@ def _khoa(bien: str, g: dict, model: str) -> str:
 
 
 def hoi(judge, model, blobs, prompt):
+    """Một lượt hỏi, dùng ĐÚNG cơ chế chống 429 của VLMJudge.
+
+    Free tier đếm request theo PHÚT và theo MODEL. Lần chạy đầu của thí nghiệm
+    này gọi thẳng một model duy nhất và mất 35/60 câu vào 429 — con số 25/60
+    đúng khi ấy là con số của hạn mức, không phải của model. Xoay vòng qua các
+    model lite ngang cơ (``_model_order``) nhân tốc độ dùng được lên, còn 429
+    theo-ngày thì phải ghi sổ và bỏ qua thay vì ngủ chờ (``_is_daily_quota``).
+    """
     from google.genai import types
 
+    from src.core.vlm import RETRY_WAIT, _is_daily_quota
+
     client = judge._get_client()
-    r = client.models.generate_content(
-        model=model,
-        contents=[*[types.Part.from_bytes(data=b, mime_type="image/jpeg") for b in blobs], prompt],
-        config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=1200),
-    )
-    u = getattr(r, "usage_metadata", None)
-    if u:
-        judge.calls += 1
-        judge.tokens_in += u.prompt_token_count or 0
-        judge.tokens_out += u.candidates_token_count or 0
-    m = re.search(r"\{.*\}", r.text or "", re.S)
-    if not m:
-        return {"answer": "", "raw": (r.text or "")[:200]}
-    try:
-        return json.loads(m.group(0))
-    except Exception:  # noqa: BLE001
-        return {"answer": "", "raw": m.group(0)[:200]}
+    parts = [types.Part.from_bytes(data=b, mime_type="image/jpeg") for b in blobs]
+    last = None
+    for m_name in judge._model_order():
+        if m_name in judge.exhausted:
+            continue
+        for lan in range(3):
+            try:
+                r = client.models.generate_content(
+                    model=m_name,
+                    contents=[*parts, prompt],
+                    config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=1200),
+                )
+                u = getattr(r, "usage_metadata", None)
+                if u:
+                    judge.calls += 1
+                    judge.tokens_in += u.prompt_token_count or 0
+                    judge.tokens_out += u.candidates_token_count or 0
+                mm = re.search(r"\{.*\}", r.text or "", re.S)
+                if not mm:
+                    return {"answer": "", "raw": (r.text or "")[:200], "model": m_name}
+                try:
+                    j = json.loads(mm.group(0))
+                    j["model"] = m_name
+                    return j
+                except Exception:  # noqa: BLE001
+                    return {"answer": "", "raw": mm.group(0)[:200], "model": m_name}
+            except Exception as exc:  # noqa: BLE001
+                last = exc
+                msg = str(exc)
+                if _is_daily_quota(msg):
+                    judge.exhausted.add(m_name)
+                    break
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    time.sleep(RETRY_WAIT[min(lan, len(RETRY_WAIT) - 1)])
+                    continue
+                if "503" in msg or "UNAVAILABLE" in msg:
+                    time.sleep(2.0 * (lan + 1))
+                    continue
+                break
+    raise last or RuntimeError("het model kha dung")
 
 
 def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
@@ -298,12 +331,17 @@ def main() -> int:
         ket_qua[bien] = ket
         print(f"  xong sau {time.time()-t0:.0f}s  ({sum(1 for k in ket if k.get('dung'))}/{len(gt)} đúng tổng)")
 
-    print(f"\n{'biến thể':<16}{'TUNE':>9}{'TEST':>9}{'cả 60':>9}   (độ chính xác đáp án)")
-    print("-" * 55)
+    print(f"\n{'biến thể':<16}{'TUNE':>9}{'TEST':>9}{'cả 60':>9}{'lỗi gọi':>9}   (độ chính xác đáp án)")
+    print("-" * 64)
+    hong = {}
     for bien in tens:
         k = ket_qua[bien]
+        hong[bien] = sum(1 for r in k if r.get("loi"))
         print(f"{bien:<16}{do_chinh_xac(k, i_tune):9.1%}{do_chinh_xac(k, i_test):9.1%}"
-              f"{do_chinh_xac(k, range(len(gt))):9.1%}")
+              f"{do_chinh_xac(k, range(len(gt))):9.1%}{hong[bien]:9d}")
+    if any(hong.values()):
+        print("\n! CÓ LỖI GỌI API — các câu hỏng bị tính là SAI, nên các con số trên là")
+        print("  CẬN DƯỚI, chưa kết luận được. Chạy lại (câu đã xong nằm trong cache).")
 
     chot = max(tens, key=lambda b: do_chinh_xac(ket_qua[b], i_tune))
     goc = tens[0]

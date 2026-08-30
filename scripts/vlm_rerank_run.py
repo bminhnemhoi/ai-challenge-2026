@@ -49,6 +49,7 @@ safe_console()
 from scripts.make_submission import (  # noqa: E402
     DEFAULT_DEPTH_COST,
     DEFAULT_N_FLAT,
+    allocate_rows,
     detect_task,
     ranked_hits,
     read_en_override,
@@ -60,10 +61,10 @@ from src.core.submission import (  # noqa: E402
     MAX_ROWS,
     AllocationPlan,
     Candidate,
-    allocate_hybrid_rows,
     allocate_trake_rows,
     csv_name_for_query,
     package_submission,
+    reserve_tail_rows,
     verify_submission_zip,
     write_query_csv,
 )
@@ -104,6 +105,17 @@ def main() -> int:
     )
     ap.add_argument("--from-speech", type=int, default=4,
                     help="videos to add from the spoken channel per query (0 = off)")
+    ap.add_argument(
+        "--tail-rows", type=int, default=6,
+        help="rows RESERVED at the very end for candidates only another channel "
+        "found. Appending them to the candidate list is not enough: no allocator "
+        "ever spends a row on index 400 (see reserve_tail_rows). 0 = off.",
+    )
+    ap.add_argument("--tail-per-video", type=int, default=2,
+                    help="cap of reserved rows per text-found video, so the "
+                    "reservation covers several videos rather than one")
+    ap.add_argument("--allocator", choices=("hybrid", "coverage"), default="coverage",
+                    help="row allocator for the machine rows (docs/SHIP_PHU_XAC_SUAT.md)")
     args = ap.parse_args()
 
     judge = VLMJudge(args.data, model=args.model)
@@ -311,18 +323,35 @@ def main() -> int:
         # score — while one inserted at the top displaces whatever was there and
         # can lower it. The first version of this let speech candidates compete
         # for rank 1 and it reshuffled four queries that were already right.
-        known = {(c.video_id, c.frame_idx) for c in cs}
-        tail = [
-            (scores.get((v, f), (0.0, ""))[0], v, f)
-            for v, f, _fn in extras
-            if (v, f) not in known
-        ]
-        for s, v, f in sorted(tail, reverse=True):
-            if s >= 0.5:
-                cs.append(Candidate(v, f, -1.0, eng.last_frame.get(v, f)))
-                known.add((v, f))
+        rows = allocate_rows(cs, args.allocator, args.n_flat, plan)[:MAX_ROWS]
 
-        rows = allocate_hybrid_rows(cs, n_flat=args.n_flat, plan=plan)[:MAX_ROWS]
+        # A candidate only another channel found needs a RESERVED row, not a
+        # place at the end of the candidate list: with 400 candidates competing
+        # for 100 rows, neither allocator ever reaches index 400 (the hybrid
+        # ladder's cost i + 0.5d is unbeatable at that i, and the coverage prior
+        # gives a sentinel score ~1e-20 of the mass). The previous version
+        # appended to `cs` and additionally dropped anything the VLM scored
+        # below 0.5 — so the spoken channel, the only thing that found
+        # query-p1-19 and query-p1-22, contributed nothing at all.
+        if args.tail_rows > 0 and extras:
+            per_video: dict = {}
+            ranked_extras = sorted(
+                ((scores.get((v, f), (0.0, ""))[0], v, f) for v, f, _fn in extras),
+                key=lambda t: -t[0],
+            )
+            reserve = []
+            for _s, v, f in ranked_extras:
+                if per_video.get(v, 0) >= args.tail_per_video:
+                    continue
+                per_video[v] = per_video.get(v, 0) + 1
+                reserve.append((v, int(f)))
+                if len(reserve) >= args.tail_rows:
+                    break
+            rows = reserve_tail_rows(rows, reserve, budget=MAX_ROWS)
+            added = [r for r in reserve if r in rows]
+            if added:
+                print(f"       giu {len(added)} dong cuoi cho {len(per_video)} video "
+                      f"kenh khac tim ra: {', '.join(sorted(per_video))}")
         if task == "qa":
             # keep any answer a previous run or a human already wrote
             answer = ""
