@@ -39,7 +39,8 @@ kèm phản biện dò-thiếu-sót (hardening đường trả lời).
 **Làm gì:** `answer_qa.py` hiện gửi 12 thumbnail 512px cho Gemini một lượt.
 Đổi thành: (a) **ảnh gốc ~1900px** (đúng thao tác tay đã cứu 4 câu vòng 2);
 (b) nhét **lời thoại ±30 giây** quanh khung hình (kho `data/captions/` có sẵn
-**873/873 video**); (c) prompt ép **danh từ cụ thể nhất** + bắt trích nguồn
+**217/873 video có nội dung thật** — xem cảnh báo bên dưới); (c) prompt ép
+**danh từ cụ thể nhất** + bắt trích nguồn
 (nhìn thấy / nghe thấy / đọc thấy) để người soát kiểm nhanh; (d) **tự nhất quán**
 trên khung lân cận, bất đồng thì gắn cờ ⚠ để ưu tiên soát tay.
 
@@ -269,18 +270,81 @@ top-24 thuần thì không.
 
 ---
 
+## 3b. HAI PHÁT HIỆN LÀM ĐỔI ƯU TIÊN (30/08, từ ba lane đo)
+
+### ⚠ Bộ đo 60 câu MÙ với hơn nửa số câu BTC thật sự ra
+
+Lane cặp-thời-gian đo cổng "câu này có mô tả hai cảnh nối tiếp không":
+
+| tập câu | tỷ lệ có cấu trúc hai cảnh |
+|---|---|
+| **60 câu ground truth của ta** | **0 / 60 (0%)** |
+| đề THẬT của BTC | **28 / 55 (51%)** — vòng 1: 16/25, vòng 2: 12/30 |
+
+Ba chốt chặn xác nhận con số 0 không phải lỗi prompt: (1) kiểm từ vựng không
+dùng LLM cũng cho cận trên 1/60, và cái đó là dương tính giả; (2) **cùng prompt**
+bật 51% trên đề thật; (3) đọc tay 60 câu — tất cả đều là quan hệ **không gian
+trong một khung hình**.
+
+Hệ quả nặng hơn bản thân lever ③: **60 câu GT được viết bằng cách nhìn MỘT
+keyframe, còn BTC ra đề bằng cách xem MỘT ĐOẠN VIDEO.** Mọi kỹ thuật khai thác
+cấu trúc thời gian — và đó đúng là họ kỹ thuật mà các đội vô địch VBS dùng —
+đều **không thể đo được** trên bộ đo hiện tại. Đây là lý do thật sự khiến lever
+② (mở rộng harness) phải làm trước: vấn đề không phải cỡ mẫu mà là **phân bố**.
+
+### ⚠ `data/captions/` chỉ có 217/873 video có nội dung
+
+873 là số **file**, không phải số video có lời thoại: 656 file rỗng. Trên 60 câu
+ground truth chỉ **29/60** video có lời thoại. Con số "873/873" từng lưu truyền
+trong tài liệu (và trong chính đợt ship Q&A này) là sai — đã sửa ở mọi chỗ.
+
+Hai hệ quả trái chiều, cả hai đều quan trọng:
+- Mức **+23,3%** của bước trả lời Q&A đạt được **dù kênh lời thoại im lặng ở
+  quá nửa số câu** — tức con số đó là cận dưới.
+- Mở ra một việc đáng làm **chưa từng nằm trong danh sách**: chạy ASR cho 656
+  video còn thiếu. Việc này **KHÁC** cửa đã đóng "đừng re-transcribe để sửa mốc
+  thời gian" — đó là bài toán *độ chính xác mốc*, đây là bài toán *không có gì
+  cả*. Ước lượng: PhoWhisper/Whisper-large-v3 trên Colab, vài giờ.
+
+### Kết quả ba lane, gọn
+
+| lane | kết luận | số |
+|---|---|---|
+| mở rộng harness từ đề thật | **HOÀ** | 15 mục người-kiểm-chứng (7 KIS, 8 Q&A, 0 TRAKE); TEST 30 → 37 câu, ngưỡng chỉ hạ 10% — **chưa mở khoá lever ②** |
+| truy vấn cặp thời gian | **CHƯA ĐO ĐƯỢC** | cổng bật 0/60 GT nhưng 28/55 đề thật; hai lát cắt thay thế **mâu thuẫn về dấu** — không ship |
+| kênh tiêu đề/metadata | **HOÀ** | +0,0000 trên TEST; chỉ số chẩn đoán đứng yên (28/30 → 28/30) — đóng cửa cho đường phân bổ dòng |
+
+Kèm một cuộc **kiểm toán bất ngờ**: lane harness mở lại khung hình gốc 1280px và
+**bác bỏ 6 bằng chứng từng được ghi là "đã kiểm chứng"** (trong đó có hai mục ghi
+"tin cậy 95%/100%"). Bài học: nhãn "đã kiểm chứng" trong các file picks không
+đồng nghĩa với "BTC chấm đúng" — điểm tổng 10,0/30 nói rằng **đa số pick vẫn sai**.
+
 ## 4. Trình tự triển khai đề nghị
 
+**Bản cập nhật 30/08 sau khi ba lane trả kết quả** (thứ tự cũ ở dưới, gạch bỏ):
+
 ```
-TUẦN 1  ① Q&A đa kênh + ảnh gốc      (đo được ngay, ăn điểm thật lớn nhất)
-        ⑤ vá A2 + mở pool ứng viên   (rẻ, rủi ro ~0, chạy song song)
-TUẦN 2  ② mở rộng harness GT         (chặn mọi thứ sau; chia được cho nhiều người)
-        ③ truy vấn cặp thời gian     (đo trên harness mới, mạnh hơn)
-TUẦN 3  ④ PE-Core + RRF hai tầng     (cổng rẻ 6 câu nghẽn trước khi tốn GPU)
-        Gemini grounding (triage)    (tầng A nửa ngày, dừng nếu lệch > 3 s)
+XONG    ① Q&A đa kênh + ảnh gốc      70,0% -> 93,3% TEST, ĐÃ SHIP
+        ⑤ vá A2 (reserve_tail_rows)  ĐÃ SHIP; nhánh tiêu đề: HOÀ, đóng cửa
+
+TIẾP THEO, theo đúng thứ tự này:
+1. VIẾT LẠI BỘ ĐO cho khớp phân bố BTC — việc quan trọng nhất còn lại.
+   Câu mới phải viết bằng cách XEM MỘT ĐOẠN VIDEO, không phải nhìn một keyframe;
+   nhắm ~50% câu có cấu trúc hai cảnh, cho khớp 51% của đề thật. Không có bước
+   này thì lever ③ và mọi kỹ thuật thời gian VĨNH VIỄN không đo được, và ta sẽ
+   tiếp tục tối ưu cho một phân bố mà BTC không ra.
+2. ASR 656 video còn thiếu lời thoại (Colab, vài giờ) — kênh thứ hai hiện im
+   lặng ở 2/3 kho. Rẻ, và nó nâng trần của thứ vừa ship.
+3. ④ PE-Core + RRF hai tầng — cổng rẻ 6 câu nghẽn trước khi tốn GPU.
+4. ③ cặp thời gian — chỉ sau khi bước 1 xong; giờ chưa đo được.
+5. TRAKE: vẫn bị chặn cứng vì 0 câu TRAKE có mốc chốt tay. ~20 phút/câu,
+   không có đường tắt.
 KHI CÓ BATCH 2: dựng lại chỉ mục GIỐNG HỆT, rồi chạy lại cả 2 fold
-        (luật sau merge trong SHIP_PHU_XAC_SUAT.md) trước khi giữ tham số
+   (luật sau merge trong SHIP_PHU_XAC_SUAT.md) trước khi giữ tham số.
 ```
+
+~~TUẦN 1 ① + ⑤ · TUẦN 2 ② + ③ · TUẦN 3 ④~~ — thứ tự cũ giả định bộ đo 60 câu
+đại diện cho đề thật. Phép đo 0/60 vs 28/55 cho thấy nó không.
 
 **Quy tắc bất di bất dịch:** mỗi hạng mục chỉ được vào sản xuất sau khi qua cổng
 TUNE/TEST với luật hoà 2σ, và mọi con số vào tài liệu phải có file cache đứng sau.

@@ -159,7 +159,11 @@ def tai_anh(video_id: str, filename: str, max_side: int) -> bytes | None:
 
 
 def nap_loi_thoai(data_dir: Path) -> dict:
-    """{video_id: [(giây, câu), ...]} từ data/captions — 873/873 video."""
+    """{video_id: [(giây, câu), ...]} từ data/captions.
+
+    873 FILE nhưng chỉ 217 file có nội dung (656 rỗng); 29/60 video của bộ
+    ground truth có lời thoại. Đừng chép lại con số "873/873" — đó là đếm file.
+    """
     d = data_dir / "captions"
     out = {}
     if not d.is_dir():

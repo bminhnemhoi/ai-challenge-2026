@@ -80,7 +80,14 @@ def full_frame(video_id: str, filename: str, max_side: int):
 
 
 def nap_loi_thoai(data_dir: Path) -> dict:
-    """{video_id: [(giây, câu)]} từ data/captions — kênh thứ hai, 873/873 video."""
+    """{video_id: [(giây, câu)]} từ data/captions.
+
+    CẢNH BÁO số liệu: thư mục có 873 FILE nhưng chỉ **217 file có nội dung
+    thật** (656 rỗng) — con số "873/873 video" từng lưu truyền trong tài liệu
+    là đếm file, không phải đếm phủ sóng. Trên 60 câu ground truth chỉ 29/60
+    video có lời thoại. Kênh này vì thế im lặng ở quá nửa số câu, và mức
+    +23,3% đo được của bước trả lời là mức đạt được DÙ THẾ.
+    """
     d = Path(data_dir) / "captions"
     out = {}
     if not d.is_dir():
@@ -101,14 +108,16 @@ def loi_thoai_quanh(caps: dict, video_id: str, giay: float, cua_so: float = 30.0
 
 #: Đo trên 60 câu ground truth, chia TUNE/TEST 30/30 (scripts/experiment_qa_answer.py,
 #: 30/08/2026): prompt này cộng ảnh gốc + lời thoại + 2 keyframe lân cận đưa độ
-#: chính xác đáp án từ 63,3% lên 86,7% trên TEST (>2 sd). Ba điều nó sửa, mỗi
+#: chính xác đáp án từ 70,0% lên 93,3% trên TEST (>2 sd, chấm bằng trọng tài
+#: LLM — proxy sát bộ chấm ngữ nghĩa của BTC nhất). Ba điều nó sửa, mỗi
 #: điều đều đo được riêng — chi tiết ở docs/NGHIEN_CUU_SOTA.md §1①:
 #:
 #:  * bản cũ dặn "không thấy thì trả chuỗi rỗng" và model nghe lời ở 11/60 câu.
 #:    Đáp án rỗng CHẮC CHẮN 0 điểm còn đáp án đoán sai cũng 0 — nên đoán là trội
 #:    tuyệt đối. Cấm bỏ trống xoá sạch cả 11 câu đó.
-#:  * ảnh gốc MỘT MÌNH làm tệ đi (71,7% → 65,0%): độ phân giải cao cho model
-#:    thấy thêm chữ nền và nó chép băng rôn thay vì trả lời. Phải cấm rõ.
+#:  * ảnh gốc MỘT MÌNH gần như không đổi (75,0% → 76,7%): độ phân giải cao cho
+#:    model thấy thêm chữ nền và nó chép băng rôn thay vì trả lời — chỉ ăn khi
+#:    đi kèm prompt cấm chép băng rôn.
 #:  * lời thoại quanh khoảnh khắc là kênh thứ hai — thứ ảnh không có.
 PROMPT = """Bạn đang trả lời một câu hỏi về một đoạn video tiếng Việt.
 
@@ -142,7 +151,7 @@ def main() -> int:
     ap.add_argument("--neo", type=int, default=2,
                     help="số keyframe LÂN CẬN mỗi bên quanh khung neo (0 = tắt, "
                     "quay về đường cũ). Cấu hình đã đo: 2 (tức 5 khung), "
-                    "86,7%% TEST so 63,3%% của đường cũ — docs/NGHIEN_CUU_SOTA.md")
+                    "93,3%% TEST so 70,0%% của đường cũ — docs/NGHIEN_CUU_SOTA.md")
     ap.add_argument("--them-video", type=int, default=2,
                     help="số video xếp sau được đưa thêm 1 khung, để phòng khi "
                     "video hạng 1 sai (sản xuất không biết trước khung nào đúng)")
