@@ -127,6 +127,11 @@ BIEN_THE = {
     "net_loi_doan": dict(net=True, loi=True, prompt="doan", lan_can=0),
     "net_loi_doan_lan": dict(net=True, loi=True, prompt="doan", lan_can=2),
     "goc_loi_doan": dict(net=False, loi=True, prompt="doan", lan_can=0),
+    # Sản xuất KHÔNG biết khung nào đúng: nó phải đưa cả ứng viên của các video
+    # khác vào. Biến thể này thêm 4 khung nhiễu từ 2 video xếp sau trong
+    # ranked_hits — đo đúng cái giá của việc không biết trước, thứ mà mọi biến
+    # thể trên (được cho xem đúng khung) không thể trả lời.
+    "net_loi_doan_lan_nhieu": dict(net=True, loi=True, prompt="doan", lan_can=2, nhieu=2),
 }
 
 # --------------------------------------------------------------------------- ảnh
@@ -239,11 +244,12 @@ def hoi(judge, model, blobs, prompt):
     raise last or RuntimeError("het model kha dung")
 
 
-def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
+def chay_bien_the(bien, gt, judge, caps, meta_by_key, kf_theo_video, cache_dir, model, args,
+                  nhieu_theo_cau=None):
     """Trả [{dap_an, dung, ...}] cho từng câu; cache mỗi câu một file."""
     cfg = BIEN_THE[bien]
     ket = []
-    for g in gt:
+    for qi, g in enumerate(gt):
         f = cache_dir / f"{bien}_{_khoa(bien, g, model)}.json"
         if f.is_file() and not args.refresh:
             # chấm lại tại chỗ đọc: hai cờ khớp là hàm thuần của (đáp án, chuẩn)
@@ -255,14 +261,32 @@ def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
             continue
 
         # --- khung hình: khung GT, cộng lân cận nếu biến thể yêu cầu
-        keys = [(g["video_id"], int(g["frame_idx"]))]
+        #
+        # 4/60 câu (chỉ số 9, 40, 41, 57) có frame_idx KHÔNG phải keyframe nào
+        # trong chỉ mục — 93% khoảnh khắc thật rơi trúng keyframe, số còn lại
+        # rơi vào khe giữa hai keyframe. Bỏ qua chúng thì phép đo mất đúng nhóm
+        # khó nhất; ép về keyframe gần nhất mới là thứ đường sản xuất thực sự
+        # nộp cho câu đó, nên đó là thứ đáng đo.
+        khoa_goc = (g["video_id"], int(g["frame_idx"]))
+        if khoa_goc not in meta_by_key:
+            gan = kf_theo_video.get(g["video_id"]) or []
+            if gan:
+                fi = min(gan, key=lambda f: abs(f - int(g["frame_idx"])))
+                khoa_goc = (g["video_id"], fi)
+        keys = [khoa_goc]
         if cfg["lan_can"]:
-            n = int(g["n"])
+            n = int(meta_by_key[khoa_goc]["n"]) if khoa_goc in meta_by_key else int(g["n"])
             for d in range(1, cfg["lan_can"] + 1):
                 for nn in (n - d, n + d):
                     k = (g["video_id"], nn)
                     if k in meta_by_key:
                         keys.append(k)
+        # khung nhiễu: video xếp sau trong ranked_hits, giống hệt tình huống thật
+        if cfg.get("nhieu") and nhieu_theo_cau is not None:
+            for vid, fi in (nhieu_theo_cau.get(qi) or [])[: cfg["nhieu"] * 2]:
+                if (vid, fi) in meta_by_key and (vid, fi) not in keys:
+                    keys.append((vid, fi))
+
         blobs = []
         for vid, fi in keys:
             m = meta_by_key.get((vid, fi))
@@ -387,9 +411,33 @@ def main() -> int:
     # ground_truth dùng frame_idx; bảng tra theo (video, frame_idx) và theo (video, n)
     by_frame = {(m["video_id"], int(m["frame_idx"])): m for m in meta}
     meta_by_key = {**meta_by_key, **by_frame}
+    kf_theo_video: dict = {}
+    for m in meta:
+        kf_theo_video.setdefault(m["video_id"], []).append(int(m["frame_idx"]))
 
     caps = nap_loi_thoai(data)
-    print(f"{len(gt)} câu Q&A ground truth | lời thoại: {len(caps)} video | model: {args.model}")
+
+    # Ứng viên "nhiễu" lấy từ cache ranked_hits của experiment_phu_quet_luoi —
+    # đúng danh sách đường sản xuất sinh ra, không phải danh sách dựng riêng cho
+    # phép đo. Video xếp SAU video đúng: đó chính là thứ sản xuất sẽ đưa vào
+    # cùng lúc mà không biết cái nào đúng.
+    nhieu_theo_cau = None
+    uv = data / "cache_phu_quet_luoi" / "ung_vien.json"
+    if uv.is_file():
+        raw = json.loads(uv.read_text(encoding="utf-8"))
+        nhieu_theo_cau = {}
+        for qi, (q_cands, q_gt) in enumerate(zip(raw["cands"], raw["gt"])):
+            khac, thay = [], set()
+            for v, fi, _s, _lf in q_cands:
+                if v == q_gt["video_id"] or v in thay:
+                    continue
+                thay.add(v)
+                khac.append((v, int(fi)))
+                if len(khac) >= 4:
+                    break
+            nhieu_theo_cau[qi] = khac
+    print(f"{len(gt)} câu Q&A ground truth | lời thoại: {len(caps)} video | "
+          f"ứng viên nhiễu: {'có' if nhieu_theo_cau else 'không có cache'} | model: {args.model}")
 
     i_tune = [i for i in range(len(gt)) if i % 2 == 0]
     i_test = [i for i in range(len(gt)) if i % 2 == 1]
@@ -402,7 +450,8 @@ def main() -> int:
     for bien in tens:
         t0 = time.time()
         print(f"chạy biến thể {bien} ...", flush=True)
-        ket = chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, args.model, args)
+        ket = chay_bien_the(bien, gt, judge, caps, meta_by_key, kf_theo_video,
+                            cache_dir, args.model, args, nhieu_theo_cau)
         ket_qua[bien] = ket
         print(f"  xong sau {time.time()-t0:.0f}s  ({sum(1 for k in ket if k.get('dung'))}/{len(gt)} đúng tổng)")
 

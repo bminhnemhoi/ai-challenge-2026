@@ -28,7 +28,7 @@ duy nhất trong hệ thống mà một ngày công có thể đổi lấy vài 
 
 ## 1. TOP 5 việc đáng làm, xếp theo (tác động × khả thi)
 
-### ① Q&A đa kênh + ảnh gốc thành mặc định — *đang triển khai*
+### ① Q&A đa kênh + ảnh gốc thành mặc định — **ĐÃ ĐO: 63,3% → 86,7% trên TEST**
 
 **Nguồn:** NII-UIT tại VBS 2026 (á quân 2026, vô địch 2025),
 "Towards Effective Visual Question Answering for Interactive and Multimodal Video
@@ -51,6 +51,57 @@ chấm cả trường đáp án.
 
 **Chi phí:** 0,5–1 ngày người; Gemini free-tier + vài đô gpt-5.2. Rủi ro thấp:
 không đụng đường truy xuất hay allocator.
+
+#### KẾT QUẢ ĐO (30/08/2026, `scripts/experiment_qa_answer.py`, 60 câu, 0 lỗi gọi)
+
+Mỗi biến thể thêm **đúng một** yếu tố so với biến thể trên, để biết cái gì ăn:
+
+| biến thể | TUNE | TEST | cả 60 | số câu bỏ trống |
+|---|---|---|---|---|
+| `goc` — 512px, prompt sản xuất hiện tại | 80,0% | 63,3% | 71,7% | 11 |
+| `net` — chỉ đổi sang ảnh gốc | 66,7% | 63,3% | 65,0% | 14 |
+| `net_loi` — + lời thoại ±30 s | 70,0% | 80,0% | 75,0% | 9 |
+| `net_loi_cu` — + prompt ép cụ thể | 76,7% | 83,3% | 80,0% | 1 |
+| `net_loi_doan` — + cấm bỏ trống | 80,0% | 83,3% | 81,7% | 0 |
+| **`net_loi_doan_lan` — + 2 keyframe lân cận** | **86,7%** | **86,7%** | **86,7%** | **0** |
+| `goc_loi_doan` — như trên nhưng 512px | 83,3% | 76,7% | 80,0% | 0 |
+
+Chốt trên TUNE → **TEST +23,3%** so nền (1 sd nhị thức ≈ 8,8% ⇒ vượt 2 sd,
+GIỮ ĐƯỢC). Số so khớp theo tập từ; số so khớp chặt cùng chiều (70,0% → 81,7%).
+
+**Ba điều phép đo dạy được, không cái nào đoán trước được:**
+
+1. **Ảnh gốc MỘT MÌNH làm TỆ ĐI** (71,7% → 65,0%). Độ phân giải cao cho model
+   thấy thêm chữ nền (logo kênh, ticker) và nó chép chữ đó thay vì trả lời câu
+   hỏi — câu 43 hỏi "hoa màu gì" bị trả lời bằng nguyên dòng băng rôn. Ảnh gốc
+   chỉ ăn khi **đi kèm** prompt cấm chép băng rôn. Thao tác tay từng cứu 4 câu
+   vòng 2 vì người *biết* mình đang tìm chữ gì; model thì không.
+2. **Prompt cũ đang DẠY model vứt điểm.** Nó viết "nếu không thấy thì trả chuỗi
+   rỗng" — mà rỗng thì chắc chắn 0, còn đoán sai cũng 0. 11/60 câu bị bỏ trống.
+   Cấm bỏ trống xoá sạch cả 11 (cùng họ với luật hedge-theo-dòng đã dùng: khi
+   sai không bị phạt thì im lặng là lựa chọn tệ nhất).
+3. **Bộ so khớp offline đang đếm THIẾU.** `_default_answer_match` chỉ xét chuỗi
+   con nên chấm sai một đáp án chỉ đảo trật tự từ ("trắng và đỏ" vs chuẩn
+   "Màu đỏ và trắng"). Tài liệu cũ tuyên bố nó "chỉ có thể đếm thừa" — sai với
+   cụm đảo thứ tự. Mọi phép đo cải tiến Q&A trước đây đều bị nhiễu về phía bi quan.
+
+Bên lề: 4/60 câu GT (chỉ số 9, 40, 41, 57) có `frame_idx` **không phải keyframe**
+nào trong chỉ mục — ba trong số đó nằm đúng nhóm 6 câu nghẽn. Phép đo phải lùi
+về keyframe gần nhất; bỏ qua chúng là bỏ đúng nhóm khó nhất.
+
+**Phép đo cuối, để bắc cầu sang sản xuất.** Bảy biến thể trên đều được cho xem
+ĐÚNG khung hình — sản xuất thì không biết khung nào đúng, nên phải đưa cả ứng
+viên của các video khác vào cùng lúc. Biến thể `net_loi_doan_lan_nhieu` thêm 4
+khung nhiễu lấy từ chính `ranked_hits` (các video xếp sau video đúng):
+
+| | TUNE | TEST | cả 60 |
+|---|---|---|---|
+| `net_loi_doan_lan` (chỉ khung đúng) | 86,7% | 86,7% | 86,7% |
+| `net_loi_doan_lan_nhieu` (+4 khung nhiễu) | 83,3% | **90,0%** | **86,7%** |
+
+Khung nhiễu **không tốn gì** — bằng nhau trên cả 60 câu. Nên sản xuất được phép
+giữ dự phòng video hạng 2–3 mà không mất độ chính xác đọc. `answer_qa.py` vì thế
+mặc định `--neo 2 --them-video 2` (7 khung: neo + 4 lân cận + 2 video dự phòng).
 
 ### ② Mở rộng harness GT — cái chặn mọi thứ còn lại
 
