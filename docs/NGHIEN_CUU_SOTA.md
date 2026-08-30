@@ -54,20 +54,45 @@ không đụng đường truy xuất hay allocator.
 
 #### KẾT QUẢ ĐO (30/08/2026, `scripts/experiment_qa_answer.py`, 60 câu, 0 lỗi gọi)
 
+Số dưới đây chấm bằng **trọng tài LLM** (`--trong-tai`) — proxy sát bộ chấm ngữ
+nghĩa của BTC nhất. Hai bộ so khớp offline đều sai theo hai kiểu khác nhau và
+kiểu thứ hai bóp méo mọi so sánh giữa model (xem "ba điều phép đo dạy được").
+Trọng tài chỉ được hỏi ở các cặp mà so khớp offline đã trượt, và phán quyết
+cache theo cặp — không gọi lại model trả lời lần nào.
+
 Mỗi biến thể thêm **đúng một** yếu tố so với biến thể trên, để biết cái gì ăn:
 
 | biến thể | TUNE | TEST | cả 60 | số câu bỏ trống |
 |---|---|---|---|---|
-| `goc` — 512px, prompt sản xuất hiện tại | 80,0% | 63,3% | 71,7% | 11 |
-| `net` — chỉ đổi sang ảnh gốc | 66,7% | 63,3% | 65,0% | 14 |
-| `net_loi` — + lời thoại ±30 s | 70,0% | 80,0% | 75,0% | 9 |
-| `net_loi_cu` — + prompt ép cụ thể | 76,7% | 83,3% | 80,0% | 1 |
-| `net_loi_doan` — + cấm bỏ trống | 80,0% | 83,3% | 81,7% | 0 |
-| **`net_loi_doan_lan` — + 2 keyframe lân cận** | **86,7%** | **86,7%** | **86,7%** | **0** |
-| `goc_loi_doan` — như trên nhưng 512px | 83,3% | 76,7% | 80,0% | 0 |
+| `goc` — 512px, prompt sản xuất cũ | 80,0% | 70,0% | 75,0% | 11 |
+| `net` — chỉ đổi sang ảnh gốc | 70,0% | 83,3% | 76,7% | 14 |
+| `net_loi` — + lời thoại ±30 s | 73,3% | 86,7% | 80,0% | 9 |
+| `net_loi_cu` — + prompt ép cụ thể | 86,7% | 93,3% | 90,0% | 1 |
+| `net_loi_doan` — + cấm bỏ trống | 93,3% | 96,7% | 95,0% | 0 |
+| `net_loi_doan_lan` — + 2 keyframe lân cận | 93,3% | 93,3% | 93,3% | 0 |
+| `goc_loi_doan` — như trên nhưng 512px | 93,3% | 90,0% | 91,7% | 0 |
+| **`net_loi_doan_lan_nhieu` — + khung video dự phòng** | **96,7%** | **93,3%** | **95,0%** | **0** |
 
-Chốt trên TUNE → **TEST +23,3%** so nền (1 sd nhị thức ≈ 8,8% ⇒ vượt 2 sd,
-GIỮ ĐƯỢC). Số so khớp theo tập từ; số so khớp chặt cùng chiều (70,0% → 81,7%).
+Chốt trên TUNE là **`net_loi_doan_lan_nhieu`** — đúng cấu hình sản xuất đang
+chạy (`--neo 2 --them-video 2`), tức phép đo không phải một cấu hình lý tưởng
+hoá. **TEST 70,0% → 93,3% (+23,3%)**, 1 sd nhị thức ≈ 8,4% ⇒ vượt 2 sd,
+GIỮ ĐƯỢC. Số so khớp chặt cùng chiều (70,0% → 76,7%).
+
+#### gpt-5.2 trả phí có đáng không? — **KHÔNG, cho bước này**
+
+Cùng cấu hình, cùng trọng tài, cùng 60 câu:
+
+| model | TUNE | TEST | cả 60 | chi phí |
+|---|---|---|---|---|
+| **gemini-3.5-flash-lite** (free tier) | **96,7%** | 93,3% | **95,0%** | **0 đ** |
+| gpt-5.2 | 83,3% | 93,3% | 88,3% | $0,011/câu ≈ **$0,32/vòng** |
+
+Gemini free **thắng** ở tổng thể (95,0% vs 88,3%) và hoà trên TEST. Hồ sơ lỗi
+của gpt-5.2 cho thấy vì sao: nó hay trả lời `nguồn: "nghe thấy"` cho câu hỏi
+thuần thị giác (hỏi *màu xe* mà trả lời theo lời thoại) — lời thoại lấn át hình
+ảnh. Kết luận vận hành: **giữ Gemini free cho toàn bộ bước trả lời**; chỉ dùng
+gpt-5.2 đúng chỗ nó đã được chứng minh — `read_answer.py` đọc chữ/số nhỏ trên
+một khung đã chốt, và làm ý kiến thứ hai khi Gemini tự mâu thuẫn.
 
 **Ba điều phép đo dạy được, không cái nào đoán trước được:**
 
@@ -80,10 +105,15 @@ GIỮ ĐƯỢC). Số so khớp theo tập từ; số so khớp chặt cùng chi
    rỗng" — mà rỗng thì chắc chắn 0, còn đoán sai cũng 0. 11/60 câu bị bỏ trống.
    Cấm bỏ trống xoá sạch cả 11 (cùng họ với luật hedge-theo-dòng đã dùng: khi
    sai không bị phạt thì im lặng là lựa chọn tệ nhất).
-3. **Bộ so khớp offline đang đếm THIẾU.** `_default_answer_match` chỉ xét chuỗi
-   con nên chấm sai một đáp án chỉ đảo trật tự từ ("trắng và đỏ" vs chuẩn
-   "Màu đỏ và trắng"). Tài liệu cũ tuyên bố nó "chỉ có thể đếm thừa" — sai với
-   cụm đảo thứ tự. Mọi phép đo cải tiến Q&A trước đây đều bị nhiễu về phía bi quan.
+3. **Bộ so khớp offline đang đếm THIẾU — theo hai kiểu khác nhau.**
+   `_default_answer_match` chỉ xét chuỗi con nên chấm sai đáp án chỉ đảo trật tự
+   từ ("trắng và đỏ" vs chuẩn "Màu đỏ và trắng"). Thay bằng so tập từ thì lộ ra
+   kiểu thứ hai: đáp án ĐÚNG nhưng DÀI HƠN chuẩn cũng trượt ("nồi hấp 2 tầng"
+   vs "Nồi hấp inox hai tầng"). Kiểu thứ hai nguy hiểm hơn vì nó phạt đúng
+   những model trả lời chi tiết — tức nó **bóp méo mọi phép so sánh giữa các
+   model**, thứ mà quyết định chi tiền trong trận lại dựa vào. Tài liệu cũ tuyên
+   bố bộ so khớp ấy "chỉ có thể đếm thừa, không đếm thiếu" — sai cả hai lần.
+   Từ nay mọi kết luận Q&A chấm bằng `--trong-tai`.
 
 Bên lề: 4/60 câu GT (chỉ số 9, 40, 41, 57) có `frame_idx` **không phải keyframe**
 nào trong chỉ mục — ba trong số đó nằm đúng nhóm 6 câu nghẽn. Phép đo phải lùi

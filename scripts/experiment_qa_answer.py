@@ -188,6 +188,57 @@ def _khoa(bien: str, g: dict, model: str) -> str:
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:20]
 
 
+#: token đã tiêu ở nhánh trả phí — quyết định "có đáng chi trong trận không"
+#: phải dựa trên hoá đơn thật, không phải cảm giác
+TIEN = {"goi": 0, "vao": 0, "ra": 0}
+
+
+def hoi_openai(model: str, blobs, prompt: str, max_tokens: int = 2000) -> dict:
+    """Một lượt hỏi gpt-5.x qua REST, nhiều ảnh trong cùng một tin nhắn.
+
+    Hai cái bẫy đã trả giá để biết: ``max_completion_tokens`` dưới ~2000 trả về
+    CHUỖI RỖNG chứ không phải câu ngắn (gpt-5.x tiêu phần lớn ngân sách vào
+    phần suy nghĩ trước chữ đầu tiên), và ảnh phải đi bằng data-URL base64 —
+    không có đường nào nhận bytes thô.
+    """
+    import base64
+    import os
+    import urllib.request as _rq
+
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("khong co OPENAI_API_KEY trong .env")
+    noi_dung = [
+        {"type": "image_url",
+         "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(b).decode()}}
+        for b in blobs
+    ]
+    noi_dung.append({"type": "text", "text": prompt})
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": noi_dung}],
+        "max_completion_tokens": max(max_tokens, 2000),
+    }).encode()
+    r = json.load(_rq.urlopen(_rq.Request(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        data=body), timeout=180))
+    u = r.get("usage") or {}
+    TIEN["goi"] += 1
+    TIEN["vao"] += int(u.get("prompt_tokens") or 0)
+    TIEN["ra"] += int(u.get("completion_tokens") or 0)
+    txt = (r.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+    mm = re.search(r"\{.*\}", txt, re.S)
+    if not mm:
+        return {"answer": "", "raw": txt[:200], "model": model}
+    try:
+        j = json.loads(mm.group(0))
+        j["model"] = model
+        return j
+    except Exception:  # noqa: BLE001
+        return {"answer": "", "raw": mm.group(0)[:200], "model": model}
+
+
 def hoi(judge, model, blobs, prompt):
     """Một lượt hỏi, dùng ĐÚNG cơ chế chống 429 của VLMJudge.
 
@@ -318,7 +369,10 @@ def chay_bien_the(bien, gt, judge, caps, meta_by_key, kf_theo_video, cache_dir, 
             )
 
         try:
-            j = hoi(judge, model, blobs, prompt)
+            if args.provider == "openai":
+                j = hoi_openai(args.openai_model, blobs, prompt)
+            else:
+                j = hoi(judge, model, blobs, prompt)
         except Exception as exc:  # noqa: BLE001
             print(f"    ! {g['video_id']}:{g['frame_idx']} {type(exc).__name__}: {str(exc)[:80]}")
             time.sleep(2)
@@ -376,11 +430,77 @@ def khop_rong(pred: str, chuan: str) -> bool:
     return a <= b or b <= a
 
 
-def do_chinh_xac(ket, idx, rong=False):
+PROMPT_TRONG_TAI = """Bạn là trọng tài chấm đáp án cho một cuộc thi truy vấn video tiếng Việt.
+
+Câu hỏi: {cau_hoi}
+Đáp án chuẩn của ban tổ chức: "{chuan}"
+Đáp án thí sinh: "{du_doan}"
+
+Ban tổ chức chấm theo NGỮ NGHĨA, không so chuỗi. Hãy trả lời: đáp án thí sinh có
+được tính là ĐÚNG không?
+
+- ĐÚNG nếu nó chỉ cùng một sự vật/thuộc tính, kể cả khi diễn đạt khác, dài hơn,
+  hay dùng từ đồng nghĩa ("nồi hấp 2 tầng" vs "Nồi hấp inox hai tầng" → đúng;
+  "trắng và đỏ" vs "Màu đỏ và trắng" → đúng).
+- SAI nếu nó chỉ một sự vật/thuộc tính KHÁC ("cọc tre" vs "Cọc gỗ" → sai;
+  "rừng tràm" vs "Rừng cây" → loại cụ thể hơn nhưng KHÁC loại chung, vẫn tính
+  đúng nếu tràm là rừng cây — hãy dùng phán đoán thông thường của người Việt).
+- SAI nếu nó bỏ trống hoặc chỉ nói chung chung tới mức không xác định được.
+
+Trả về DUY NHẤT JSON: {{"dung": true|false, "ly_do": "một câu ngắn"}}"""
+
+
+def cham_bang_llm(ket_qua, gt, judge, cache_dir, model):
+    """Chấm lại các đáp án ĐÃ CÓ bằng một trọng tài LLM, không hỏi lại model trả lời.
+
+    Vì sao cần: bộ so khớp offline đã sai theo HAI cách khác nhau, và cả hai chỉ
+    lộ ra khi đọc từng câu. So chuỗi con trượt khi đảo trật tự từ; so tập từ
+    trượt khi đáp án đúng nhưng DÀI HƠN đáp án chuẩn ("nồi hấp 2 tầng" vs "Nồi
+    hấp inox hai tầng"). Cái sai thứ hai phạt đúng những model trả lời chi tiết,
+    nên nó bóp méo mọi phép so sánh giữa các model — thứ mà quyết định chi tiền
+    trong trận lại dựa vào.
+
+    Trọng tài chấm cặp (đáp án, chuẩn) đã nằm trong cache nên không gọi lại model
+    trả lời lần nào; phán quyết cũng được cache theo cặp.
+    """
+    d = cache_dir / "trong_tai"
+    d.mkdir(parents=True, exist_ok=True)
+    for bien, ket in ket_qua.items():
+        for i, r in enumerate(ket):
+            pred, chuan = (r.get("dap_an") or "").strip(), (r.get("chuan") or "").strip()
+            if not chuan:
+                r["dung_llm"] = bool(r.get("dung_rong"))
+                continue
+            if not pred:
+                r["dung_llm"] = False  # bỏ trống thì chắc chắn 0, khỏi hỏi
+                continue
+            if r.get("dung_rong"):
+                r["dung_llm"] = True  # đã khớp chặt/tập từ thì trọng tài chỉ tốn quota
+                continue
+            h = hashlib.sha1(f"{chuan}|{pred}".encode("utf-8")).hexdigest()[:20]
+            f = d / f"{h}.json"
+            if f.is_file():
+                r["dung_llm"] = bool(json.loads(f.read_text(encoding="utf-8")).get("dung"))
+                continue
+            prompt = PROMPT_TRONG_TAI.format(
+                cau_hoi=gt[i]["vqa_question"], chuan=chuan, du_doan=pred)
+            try:
+                j = hoi(judge, model, [], prompt)
+            except Exception:  # noqa: BLE001
+                r["dung_llm"] = bool(r.get("dung_rong"))
+                continue
+            v = bool(j.get("dung"))
+            f.write_text(json.dumps({"dung": v, "ly_do": j.get("ly_do", "")},
+                                    ensure_ascii=False), encoding="utf-8")
+            r["dung_llm"] = v
+
+
+def do_chinh_xac(ket, idx, che_do="chat"):
+    """``che_do``: chat = so chuỗi con | rong = so tập từ | llm = trọng tài LLM."""
     n = len(idx)
     if not n:
         return 0.0
-    khoa = "dung_rong" if rong else "dung"
+    khoa = {"chat": "dung", "rong": "dung_rong", "llm": "dung_llm"}[che_do]
     return sum(1 for i in idx if ket[i].get(khoa)) / n
 
 
@@ -391,6 +511,15 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--max-side", type=int, default=1900)
     ap.add_argument("--bien-the", default=",".join(BIEN_THE))
+    ap.add_argument("--provider", choices=("gemini", "openai"), default="gemini",
+                    help="openai = gpt-5.x trả phí. Phép đo này quyết định có "
+                    "đáng chi tiền trong trận không, nên phải chạy cùng cấu hình "
+                    "biến thể với gemini để so được")
+    ap.add_argument("--openai-model", default="gpt-5.2")
+    ap.add_argument("--trong-tai", action="store_true",
+                    help="chấm lại bằng trọng tài LLM (sát bộ chấm ngữ nghĩa của "
+                    "BTC nhất). Chỉ hỏi các cặp mà so khớp offline đã trượt, và "
+                    "cache theo cặp — không gọi lại model trả lời lần nào")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--refresh", action="store_true")
     args = ap.parse_args()
@@ -450,14 +579,27 @@ def main() -> int:
     for bien in tens:
         t0 = time.time()
         print(f"chạy biến thể {bien} ...", flush=True)
+        # khoá cache mang tên model THẬT sẽ gọi, nếu không kết quả của hai nhà
+        # cung cấp ghi đè lên nhau và bảng so sánh trở thành so chính nó
+        ten_model = args.openai_model if args.provider == "openai" else args.model
         ket = chay_bien_the(bien, gt, judge, caps, meta_by_key, kf_theo_video,
-                            cache_dir, args.model, args, nhieu_theo_cau)
+                            cache_dir, ten_model, args, nhieu_theo_cau)
         ket_qua[bien] = ket
         print(f"  xong sau {time.time()-t0:.0f}s  ({sum(1 for k in ket if k.get('dung'))}/{len(gt)} đúng tổng)")
 
+    # Chế độ chấm dùng để QUYẾT ĐỊNH. Trọng tài LLM sát bộ chấm ngữ nghĩa của
+    # BTC nhất: hai bộ so khớp offline đều đã sai theo hai kiểu khác nhau (đảo
+    # trật tự từ, và đáp án đúng nhưng dài hơn chuẩn) — kiểu thứ hai phạt đúng
+    # những model trả lời chi tiết, nên nó bóp méo mọi phép SO SÁNH GIỮA MODEL.
+    CD = "rong"
+    if args.trong_tai:
+        cham_bang_llm(ket_qua, gt, judge, cache_dir, args.model)
+        CD = "llm"
+
+    nhan = {"rong": "so khớp tập từ (~)", "llm": "trọng tài LLM (~)"}[CD]
     print(f"\n{'biến thể':<17}{'TUNE':>8}{'TEST':>8}{'cả 60':>8} | "
           f"{'TUNE~':>7}{'TEST~':>7}{'cả 60~':>8}{'rỗng':>6}{'lỗi':>5}")
-    print(f"{'':17}{'so khớp chặt':^24} | {'so khớp tập từ (~)':^22}")
+    print(f"{'':17}{'so khớp chặt':^24} | {nhan:^22}")
     print("-" * 78)
     hong = {}
     for bien in tens:
@@ -466,22 +608,22 @@ def main() -> int:
         rong = sum(1 for r in k if not r.get("loi") and not (r.get("dap_an") or "").strip())
         print(f"{bien:<17}{do_chinh_xac(k, i_tune):8.1%}{do_chinh_xac(k, i_test):8.1%}"
               f"{do_chinh_xac(k, range(len(gt))):8.1%} | "
-              f"{do_chinh_xac(k, i_tune, True):7.1%}{do_chinh_xac(k, i_test, True):7.1%}"
-              f"{do_chinh_xac(k, range(len(gt)), True):8.1%}{rong:6d}{hong[bien]:5d}")
+              f"{do_chinh_xac(k, i_tune, CD):7.1%}{do_chinh_xac(k, i_test, CD):7.1%}"
+              f"{do_chinh_xac(k, range(len(gt)), CD):8.1%}{rong:6d}{hong[bien]:5d}")
     if any(hong.values()):
         print("\n! CÓ LỖI GỌI API — các câu hỏng bị tính là SAI, nên các con số trên là")
         print("  CẬN DƯỚI, chưa kết luận được. Chạy lại (câu đã xong nằm trong cache).")
 
     # chọn trên TUNE bằng số so-khớp-tập-từ (proxy sát bộ chấm BTC hơn)
-    chot = max(tens, key=lambda b: do_chinh_xac(ket_qua[b], i_tune, True))
+    chot = max(tens, key=lambda b: do_chinh_xac(ket_qua[b], i_tune, CD))
     goc = tens[0]
     print(f"\nCHỐT trên TUNE (theo số ~): {chot}")
-    d_tune = do_chinh_xac(ket_qua[chot], i_tune, True) - do_chinh_xac(ket_qua[goc], i_tune, True)
-    d_test = do_chinh_xac(ket_qua[chot], i_test, True) - do_chinh_xac(ket_qua[goc], i_test, True)
+    d_tune = do_chinh_xac(ket_qua[chot], i_tune, CD) - do_chinh_xac(ket_qua[goc], i_tune, CD)
+    d_test = do_chinh_xac(ket_qua[chot], i_test, CD) - do_chinh_xac(ket_qua[goc], i_test, CD)
     print(f"  so với {goc}:  TUNE {d_tune:+.1%}   TEST {d_test:+.1%}")
     n_test = len(i_test)
     # sai số nhị thức thô cho tỷ lệ trên n_test câu
-    p = do_chinh_xac(ket_qua[goc], i_test, True)
+    p = do_chinh_xac(ket_qua[goc], i_test, CD)
     se = (p * (1 - p) / max(1, n_test)) ** 0.5
     print(f"  1 sd nhị thức trên TEST ({n_test} câu) ≈ {se:.1%}; "
           f"{'GIỮ ĐƯỢC' if d_test > 2 * se else 'CHƯA VƯỢT 2 sd — coi như hoà'}")
@@ -489,12 +631,21 @@ def main() -> int:
     print("\n--- các câu biến thể chốt vẫn SAI (nơi còn điểm để lấy) ---")
     for i, g in enumerate(gt):
         r = ket_qua[chot][i]
-        if not r.get("dung_rong"):
+        if not r.get({"rong": "dung_rong", "llm": "dung_llm"}[CD]):
             phia = "TUNE" if i % 2 == 0 else "TEST"
             print(f"  [{i:2d} {phia}] hỏi: {g['vqa_question'][:60]}")
             print(f"        chuẩn: {r.get('chuan','')!r}   máy: {r.get('dap_an','')!r}"
                   f"   ({r.get('nguon','')} {r.get('tin_cay','')}%)")
-    print(f"\n{judge.cost_note()}")
+    if args.provider == "openai":
+        # gpt-5.2: $1,25/1M token vào, $10/1M token ra (bảng giá 2026-08)
+        gia = TIEN["vao"] / 1e6 * 1.25 + TIEN["ra"] / 1e6 * 10.0
+        print(f"\n{TIEN['goi']} lần gọi {args.openai_model}, {TIEN['vao']:,} token vào, "
+              f"{TIEN['ra']:,} token ra  ≈ ${gia:.2f}")
+        if TIEN["goi"]:
+            print(f"  ≈ ${gia/TIEN['goi']:.3f}/câu → một vòng 30 câu ≈ "
+                  f"${gia/TIEN['goi']*30:.2f}")
+    else:
+        print(f"\n{judge.cost_note()}")
     return 0
 
 
