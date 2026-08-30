@@ -187,7 +187,11 @@ def cmd_de(args) -> int:
     from scripts.make_submission import decode_text
 
     kh = _khach(args)
-    out_dir = ROOT / "data" / "cache_cap_thoi_gian" / "nhan_de"
+    # Mặc định là thư mục nhãn ĐỀ THẬT — chính là bằng chứng cho con số 28/55.
+    # Bất cứ ai đem câu TỰ SINH vào đây cũng làm hỏng con số đó cho mọi lane
+    # khác, nên câu tự sinh phải được kiểm ở thư mục riêng qua --de-out.
+    out_dir = Path(args.de_out) if getattr(args, "de_out", None) else (
+        ROOT / "data" / "cache_cap_thoi_gian" / "nhan_de")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     files = []
@@ -248,6 +252,9 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--de", nargs="+", default=None,
                     help="thư mục đề thật của BTC -> chỉ đếm tỉ lệ, không chấm")
+    ap.add_argument("--de-out", default=None,
+                    help="thư mục cache nhãn cho --de; BẮT BUỘC đặt khi gán nhãn "
+                         "câu TỰ SINH, để không trộn vào nhãn đề thật")
     args = ap.parse_args()
 
     if args.de:
