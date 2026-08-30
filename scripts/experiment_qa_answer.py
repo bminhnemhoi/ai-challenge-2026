@@ -91,13 +91,42 @@ Quy tắc:
 Trả về DUY NHẤT JSON:
 {{"answer": "...", "nguon": "nhìn thấy|nghe thấy|đọc thấy", "frame": <số khung hình, hoặc 0>, "confidence": 0-100, "seen": "chữ/chi tiết bạn căn cứ"}}"""
 
+#: Không bao giờ bỏ trống. Đây không phải mẹo vặt mà là hệ quả trực tiếp của
+#: luật chấm: đáp án rỗng CHẮC CHẮN 0 điểm, đáp án đoán sai cũng 0 điểm — nên
+#: đoán là trội tuyệt đối. Phép đo lần đầu cho thấy 9/20 câu sai là máy tự bỏ
+#: trống, tức prompt cũ đang DẠY model vứt điểm. Cùng họ với luật "hedge theo
+#: dòng" đã dùng: khi sai không bị phạt, im lặng là lựa chọn tệ nhất.
+PROMPT_DOAN = """Bạn đang trả lời một câu hỏi về một đoạn video tiếng Việt.
+
+{cau_hoi}
+{loi_thoai}
+Dưới đây là {n} khung hình lấy từ video, đánh số 1..{n}.
+
+Quy tắc:
+- TRẢ LỜI ĐÚNG CÂU HỎI ĐƯỢC HỎI. Chữ trên màn hình chỉ dùng khi nó trả lời câu
+  hỏi đó; đừng chép tiêu đề/băng rôn nếu câu hỏi hỏi về màu sắc, vật thể hay
+  hành động.
+- Trả DANH TỪ CỤ THỂ NHẤT thấy được: tên riêng, tên loài, nhãn hiệu, con số
+  chính xác (đọc kỹ dấu thập phân), màu cụ thể. TRÁNH từ hạng mục chung.
+- Ngắn gọn: một cụm từ, giữ nguyên dấu tiếng Việt. Không giải thích.
+- **LUÔN LUÔN đưa ra đáp án.** Nếu không chắc, vẫn đoán phương án hợp lý nhất
+  và hạ "confidence" xuống. Bỏ trống chắc chắn bị 0 điểm, còn đoán thì vẫn có
+  cơ hội đúng — không bao giờ trả chuỗi rỗng.
+
+Trả về DUY NHẤT JSON:
+{{"answer": "...", "nguon": "nhìn thấy|nghe thấy|đọc thấy", "frame": <số khung hình, hoặc 0>, "confidence": 0-100, "seen": "chữ/chi tiết bạn căn cứ"}}"""
+
 BIEN_THE = {
-    #  tên            net    lời thoại  prompt cụ thể  số khung lân cận
-    "goc": dict(net=False, loi=False, cu_the=False, lan_can=0),
-    "net": dict(net=True, loi=False, cu_the=False, lan_can=0),
-    "net_loi": dict(net=True, loi=True, cu_the=False, lan_can=0),
-    "net_loi_cu": dict(net=True, loi=True, cu_the=True, lan_can=0),
-    "net_loi_cu_lan": dict(net=True, loi=True, cu_the=True, lan_can=2),
+    #  tên            net    lời thoại  prompt        số khung lân cận
+    "goc": dict(net=False, loi=False, prompt="goc", lan_can=0),
+    "net": dict(net=True, loi=False, prompt="goc", lan_can=0),
+    "net_loi": dict(net=True, loi=True, prompt="goc", lan_can=0),
+    "net_loi_cu": dict(net=True, loi=True, prompt="cu_the", lan_can=0),
+    "net_loi_cu_lan": dict(net=True, loi=True, prompt="cu_the", lan_can=2),
+    # biến thể sinh ra từ chính phép đo trên: cấm bỏ trống + cấm chép băng rôn
+    "net_loi_doan": dict(net=True, loi=True, prompt="doan", lan_can=0),
+    "net_loi_doan_lan": dict(net=True, loi=True, prompt="doan", lan_can=2),
+    "goc_loi_doan": dict(net=False, loi=True, prompt="doan", lan_can=0),
 }
 
 # --------------------------------------------------------------------------- ảnh
@@ -217,7 +246,12 @@ def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
     for g in gt:
         f = cache_dir / f"{bien}_{_khoa(bien, g, model)}.json"
         if f.is_file() and not args.refresh:
-            ket.append(json.loads(f.read_text(encoding="utf-8")))
+            # chấm lại tại chỗ đọc: hai cờ khớp là hàm thuần của (đáp án, chuẩn)
+            # nên đổi bộ so khớp không phải gọi lại API lần nào
+            rec = json.loads(f.read_text(encoding="utf-8"))
+            rec["dung"] = bool(_default_answer_match(rec.get("dap_an", ""), rec.get("chuan", "")))
+            rec["dung_rong"] = bool(khop_rong(rec.get("dap_an", ""), rec.get("chuan", "")))
+            ket.append(rec)
             continue
 
         # --- khung hình: khung GT, cộng lân cận nếu biến thể yêu cầu
@@ -243,19 +277,21 @@ def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
             continue
 
         cau_hoi = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
-        if cfg["cu_the"]:
-            lt = loi_thoai_quanh(caps, g["video_id"], float(g["pts_time"])) if cfg["loi"] else ""
-            prompt = PROMPT_CU_THE.format(
-                cau_hoi=cau_hoi, n=len(blobs),
-                loi_thoai=(f"\nLời thoại quanh khoảnh khắc này:\n\"{lt}\"\n" if lt else ""),
-            )
-        else:
+        kieu = cfg["prompt"]
+        if kieu == "goc":
             ch = cau_hoi
             if cfg["loi"]:
                 lt = loi_thoai_quanh(caps, g["video_id"], float(g["pts_time"]))
                 if lt:
                     ch += f'\nLời thoại quanh khoảnh khắc này: "{lt}"'
             prompt = PROMPT_GOC.format(cau_hoi=ch, n=len(blobs))
+        else:
+            lt = loi_thoai_quanh(caps, g["video_id"], float(g["pts_time"])) if cfg["loi"] else ""
+            mau = PROMPT_CU_THE if kieu == "cu_the" else PROMPT_DOAN
+            prompt = mau.format(
+                cau_hoi=cau_hoi, n=len(blobs),
+                loi_thoai=(f"\nLời thoại quanh khoảnh khắc này:\n\"{lt}\"\n" if lt else ""),
+            )
 
         try:
             j = hoi(judge, model, blobs, prompt)
@@ -274,15 +310,54 @@ def chay_bien_the(bien, gt, judge, caps, meta_by_key, cache_dir, model, args):
             "n_anh": len(blobs),
         }
         rec["dung"] = bool(_default_answer_match(rec["dap_an"], rec["chuan"]))
+        rec["dung_rong"] = bool(khop_rong(rec["dap_an"], rec["chuan"]))
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(json.dumps(rec, ensure_ascii=False), encoding="utf-8")
         ket.append(rec)
     return ket
 
 
-def do_chinh_xac(ket, idx):
+#: từ chức năng tiếng Việt trong câu trả lời ngắn — bỏ đi thì "Màu đỏ và trắng"
+#: và "trắng và đỏ" mới so được với nhau
+_BO = {"màu", "và", "có", "là", "của", "một", "cái", "chiếc", "loại", "kiểu",
+       "bằng", "với", "ở", "the", "a", "of"}
+
+
+def _tu(s: str):
+    import unicodedata
+
+    s = unicodedata.normalize("NFC", (s or "").lower())
+    s = re.sub(r"[.,;:!?\"'()\-/]", " ", s)
+    return {t for t in s.split() if t and t not in _BO}
+
+
+def khop_rong(pred: str, chuan: str) -> bool:
+    """Proxy SÁT hơn với bộ chấm ngữ nghĩa của BTC so với so-chuỗi-con.
+
+    ``_default_answer_match`` của sản xuất chỉ xét chuỗi con, nên nó chấm SAI
+    một đáp án chỉ đảo trật tự từ: "trắng và đỏ" vs đáp án chuẩn "Màu đỏ và
+    trắng" (câu 35 trong phép đo đầu). Tài liệu cũ tuyên bố bộ so khớp ấy "chỉ
+    có thể đếm thừa, không đếm thiếu" — điều đó KHÔNG đúng với các cụm đảo thứ
+    tự, và nó làm mọi phép đo cải tiến bị nhiễu về phía bi quan.
+
+    Ở đây so theo TẬP TỪ nội dung: khớp khi một bên là tập con của bên kia.
+    Vẫn là proxy, nhưng sai lệch của nó đối xứng hơn và được báo cáo song song
+    với số chặt để đọc được cả hai phía.
+    """
+    if _default_answer_match(pred, chuan):
+        return True
+    a, b = _tu(pred), _tu(chuan)
+    if not a or not b:
+        return False
+    return a <= b or b <= a
+
+
+def do_chinh_xac(ket, idx, rong=False):
     n = len(idx)
-    return (sum(1 for i in idx if ket[i].get("dung")) / n) if n else 0.0
+    if not n:
+        return 0.0
+    khoa = "dung_rong" if rong else "dung"
+    return sum(1 for i in idx if ket[i].get(khoa)) / n
 
 
 def main() -> int:
@@ -331,27 +406,33 @@ def main() -> int:
         ket_qua[bien] = ket
         print(f"  xong sau {time.time()-t0:.0f}s  ({sum(1 for k in ket if k.get('dung'))}/{len(gt)} đúng tổng)")
 
-    print(f"\n{'biến thể':<16}{'TUNE':>9}{'TEST':>9}{'cả 60':>9}{'lỗi gọi':>9}   (độ chính xác đáp án)")
-    print("-" * 64)
+    print(f"\n{'biến thể':<17}{'TUNE':>8}{'TEST':>8}{'cả 60':>8} | "
+          f"{'TUNE~':>7}{'TEST~':>7}{'cả 60~':>8}{'rỗng':>6}{'lỗi':>5}")
+    print(f"{'':17}{'so khớp chặt':^24} | {'so khớp tập từ (~)':^22}")
+    print("-" * 78)
     hong = {}
     for bien in tens:
         k = ket_qua[bien]
         hong[bien] = sum(1 for r in k if r.get("loi"))
-        print(f"{bien:<16}{do_chinh_xac(k, i_tune):9.1%}{do_chinh_xac(k, i_test):9.1%}"
-              f"{do_chinh_xac(k, range(len(gt))):9.1%}{hong[bien]:9d}")
+        rong = sum(1 for r in k if not r.get("loi") and not (r.get("dap_an") or "").strip())
+        print(f"{bien:<17}{do_chinh_xac(k, i_tune):8.1%}{do_chinh_xac(k, i_test):8.1%}"
+              f"{do_chinh_xac(k, range(len(gt))):8.1%} | "
+              f"{do_chinh_xac(k, i_tune, True):7.1%}{do_chinh_xac(k, i_test, True):7.1%}"
+              f"{do_chinh_xac(k, range(len(gt)), True):8.1%}{rong:6d}{hong[bien]:5d}")
     if any(hong.values()):
         print("\n! CÓ LỖI GỌI API — các câu hỏng bị tính là SAI, nên các con số trên là")
         print("  CẬN DƯỚI, chưa kết luận được. Chạy lại (câu đã xong nằm trong cache).")
 
-    chot = max(tens, key=lambda b: do_chinh_xac(ket_qua[b], i_tune))
+    # chọn trên TUNE bằng số so-khớp-tập-từ (proxy sát bộ chấm BTC hơn)
+    chot = max(tens, key=lambda b: do_chinh_xac(ket_qua[b], i_tune, True))
     goc = tens[0]
-    print(f"\nCHỐT trên TUNE: {chot}")
-    d_tune = do_chinh_xac(ket_qua[chot], i_tune) - do_chinh_xac(ket_qua[goc], i_tune)
-    d_test = do_chinh_xac(ket_qua[chot], i_test) - do_chinh_xac(ket_qua[goc], i_test)
+    print(f"\nCHỐT trên TUNE (theo số ~): {chot}")
+    d_tune = do_chinh_xac(ket_qua[chot], i_tune, True) - do_chinh_xac(ket_qua[goc], i_tune, True)
+    d_test = do_chinh_xac(ket_qua[chot], i_test, True) - do_chinh_xac(ket_qua[goc], i_test, True)
     print(f"  so với {goc}:  TUNE {d_tune:+.1%}   TEST {d_test:+.1%}")
     n_test = len(i_test)
     # sai số nhị thức thô cho tỷ lệ trên n_test câu
-    p = do_chinh_xac(ket_qua[goc], i_test)
+    p = do_chinh_xac(ket_qua[goc], i_test, True)
     se = (p * (1 - p) / max(1, n_test)) ** 0.5
     print(f"  1 sd nhị thức trên TEST ({n_test} câu) ≈ {se:.1%}; "
           f"{'GIỮ ĐƯỢC' if d_test > 2 * se else 'CHƯA VƯỢT 2 sd — coi như hoà'}")
@@ -359,7 +440,7 @@ def main() -> int:
     print("\n--- các câu biến thể chốt vẫn SAI (nơi còn điểm để lấy) ---")
     for i, g in enumerate(gt):
         r = ket_qua[chot][i]
-        if not r.get("dung"):
+        if not r.get("dung_rong"):
             phia = "TUNE" if i % 2 == 0 else "TEST"
             print(f"  [{i:2d} {phia}] hỏi: {g['vqa_question'][:60]}")
             print(f"        chuẩn: {r.get('chuan','')!r}   máy: {r.get('dap_an','')!r}"
