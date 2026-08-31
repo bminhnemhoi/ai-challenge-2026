@@ -90,6 +90,10 @@ khi điểm thi giảm**. Đã gặp hai lần, với hai tín hiệu khác nhau
 | ↳ chỉ đổi sang ảnh gốc, giữ prompt cũ | đáp án | 75,0% → **76,7%** cả 60 — gần như không đổi; một mình nó không ăn, model chép băng rôn | ❌ |
 | ↳ cấm bỏ trống (11/60 câu đang tự bỏ) | đáp án | 90,0% → **95,0%** cả 60 — yếu tố đơn lẻ mạnh nhất | ✅ ship |
 | **gpt-5.2 thay Gemini free ở bước trả lời** | đáp án | **88,3% vs 95,0%** cả 60 — Gemini free THẮNG, còn tốn $0,32/vòng | ❌ |
+| **truy vấn CẶP THỜI GIAN** (W=2, gộp tích, λ=0,5) — đo trên bộ đo KHỚP PHÂN BỐ | truy vấn | TEST **+11,5%**, nhưng khoảng tin cậy theo câu **chứa 0** (14% khả năng hoà, n=12 câu qua cổng) | ⏸ chưa ship |
+| ↳ đối chứng `chiA` (bỏ hẳn cảnh B) | truy vấn | âm ở MỌI ô (−6% → −10%) — phần đóng góp đúng là từ cảnh B | 🔬 |
+| **câu HAI cảnh vs MỘT cảnh** (bộ đo mới, chất lượng mô tả hai nhóm y hệt) | chẩn đoán | 0,1213 vs 0,2158 = **−43,8%**, vượt 2σ — điểm mù đã lượng hoá được | 🔬 |
+| **bộ đo 60 câu cũ so với bộ khớp phân bố** | chẩn đoán | 0,4004 vs 0,1690 — bộ cũ **thổi phồng năng lực ~2 lần** | ⚠ |
 
 ---
 
