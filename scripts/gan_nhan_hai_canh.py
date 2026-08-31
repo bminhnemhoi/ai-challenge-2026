@@ -313,3 +313,42 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def nhan_mot_cau(text: str, khoa: str, cache_dir: Path | None = None,
+                 kh=None) -> dict | None:
+    """Gắn nhãn hai cảnh cho MỘT câu, dùng được từ đường sản xuất.
+
+    Trả ``{"co_2_canh", "canh_A_vi", "canh_A_en", "canh_B_vi", "canh_B_en", ...}``
+    hoặc ``None`` khi không gọi được model. Cache theo ``khoa`` nên chạy lại
+    trong trận không tốn thêm lượt gọi nào.
+
+    Tách riêng khỏi ``main()`` vì make_submission cần đúng một câu một lần, còn
+    ``main()`` quét cả thư mục và in bảng.
+    """
+    d = Path(cache_dir) if cache_dir else (ROOT / "data" / "cache_cap_thoi_gian" / "nhan_sx")
+    d.mkdir(parents=True, exist_ok=True)
+    f = d / f"{khoa}.json"
+    if f.exists():
+        try:
+            rec = json.loads(f.read_text(encoding="utf-8"))
+            if rec.get("prompt_version") == PROMPT_VERSION:
+                return rec
+        except Exception:  # noqa: BLE001
+            pass
+    if kh is None:
+        import argparse as _ap
+
+        kh = _khach(_ap.Namespace())
+    if kh is None:
+        return None
+    prompt = _PROMPT.format(vi=(text or "").strip()[:1200], en="(không có)")
+    try:
+        raw, model = _goi(kh[0], kh[1], kh[2], prompt)
+    except Exception:  # noqa: BLE001
+        return None
+    rec = _chuan_hoa(raw)
+    rec.update({"stem": khoa, "model": model, "prompt_version": PROMPT_VERSION,
+                "query": (text or "")[:1200]})
+    f.write_text(json.dumps(rec, ensure_ascii=False, indent=1), encoding="utf-8")
+    return rec

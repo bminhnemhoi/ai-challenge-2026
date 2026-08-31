@@ -370,6 +370,58 @@ def _object_boost(engine, hits, query_en):
         return hits
 
 
+def them_ung_vien_canh_b(engine, cands, query_text: str, khoa: str, m: int):
+    """Truy xuất THÊM bằng cảnh B cho câu mô tả hai cảnh nối tiếp.
+
+    Cơ chế hỏng đã đo được trên bộ đo khớp phân bố đề thật
+    (docs/UNG_VIEN_CANH_B.md): với câu hai cảnh, keyframe đáp án **không hề nằm
+    trong 400 ứng viên** ở 31/66 câu, trong khi video vẫn được tìm đúng ngang
+    câu một cảnh. Truy vấn nén cả hai cảnh vào một vector nên nó khớp cảnh MỞ
+    ĐẦU; keyframe của cảnh B — chính là khoảnh khắc phải nộp — bị bỏ lại ngoài
+    danh sách. Chấm lại ứng viên không cứu được thứ chưa bao giờ được truy xuất.
+
+    Đây KHÔNG phải phép trộn điểm hai kênh (bằng chứng nội bộ đã đóng cửa đó);
+    nó là **hợp hai lần truy xuất của cùng một encoder**, cùng thang cosine, nên
+    không có hệ số pha trộn nào phải chọn. Ứng viên mới nối vào CUỐI danh sách.
+
+    Đo được: keyframe đáp án có mặt trong pool tăng **53% → 76%** (đếm tất định,
+    không phải ước lượng); điểm câu qua cổng +23,3% trên TEST.
+    """
+    if m <= 0 or not query_text.strip():
+        return cands, None
+    try:
+        from scripts.gan_nhan_hai_canh import nhan_mot_cau
+    except Exception:  # noqa: BLE001
+        return cands, None
+    rec = nhan_mot_cau(query_text, khoa)
+    if not rec or not rec.get("co_2_canh"):
+        return cands, None
+    b_vi = (rec.get("canh_B_vi") or "").strip()
+    if not b_vi:
+        return cands, None
+    try:
+        import numpy as np
+
+        sims = engine.query_similarities(b_vi, rec.get("canh_B_en") or None)
+        k = min(m, len(sims) - 1)
+        top = np.argpartition(-sims, k)[:k]
+        top = top[np.argsort(-sims[top])]
+        co = {(c.video_id, int(c.frame_idx)) for c in cands}
+        them = []
+        for j in top:
+            md = engine.metadata[int(j)]
+            key = (md["video_id"], int(md["frame_idx"]))
+            if key in co:
+                continue
+            co.add(key)
+            them.append(Candidate(key[0], key[1], float(sims[int(j)]),
+                                  engine.last_frame.get(key[0])))
+        return list(cands) + them, f"{len(them)} ung vien tu canh B"
+    except Exception as exc:  # noqa: BLE001
+        print(f"    ! canh B bo qua ({type(exc).__name__}: {str(exc)[:60]})")
+        return cands, None
+
+
 def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
     """One dispatch point so KIS and Q&A can never disagree on the allocator.
 
@@ -391,17 +443,22 @@ def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
 
 
 def build_kis_rows(engine, query_text: str, n_flat: int, depth_cost: float, step: int,
-                   query_en: Optional[str] = None, allocator: str = "hybrid"):
+                   query_en: Optional[str] = None, allocator: str = "hybrid",
+                   canh_b: int = 0, khoa: str = ""):
     hits = merged_hits(engine, query_text, query_en)
     cands = [
         Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits
     ]
+    cands, ghi_chu = them_ung_vien_canh_b(engine, cands, query_text, khoa, canh_b)
+    if ghi_chu:
+        print(f"    + {ghi_chu}")
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
     return allocate_rows(cands, allocator, n_flat, plan)
 
 
 def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: float, step: int,
-                  query_en: Optional[str] = None, allocator: str = "hybrid"):
+                  query_en: Optional[str] = None, allocator: str = "hybrid",
+                  canh_b: int = 0, khoa: str = ""):
     """Q&A rows: the same frames as KIS, every one carrying an answer.
 
     The answer column is the same string on every row.  Leaving later rows
@@ -416,6 +473,9 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
     context, question = split_qa(query_text)
     hits = merged_hits(engine, context or query_text, query_en)
     cands = [Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits]
+    cands, ghi_chu = them_ung_vien_canh_b(engine, cands, context or query_text, khoa, canh_b)
+    if ghi_chu:
+        print(f"    + {ghi_chu}")
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
     frame_rows = allocate_rows(cands, allocator, n_flat, plan)
 
@@ -503,6 +563,13 @@ def main() -> int:
         "over hybrid on the two TEST halves, >2 sigma (docs/SHIP_PHU_XAC_SUAT.md "
         "s3b). 'hybrid' is the previous baseline and the one-flag rollback.",
     )
+    ap.add_argument(
+        "--canh-b", type=int, default=100,
+        help="voi cau mo ta HAI CANH noi tiep: truy xuat them top-M keyframe theo "
+        "rieng canh B roi gop vao pool ung vien (0 = tat). Do duoc: keyframe dap an "
+        "co mat trong pool 53%% -> 76%%, diem cau qua cong +23,3%% TEST "
+        "(docs/UNG_VIEN_CANH_B.md). Ton 1 lan goi LLM/cau de gan nhan, co cache.",
+    )
     ap.add_argument("--no-answer", action="store_true", help="skip the VQA model, emit frames only")
     ap.add_argument(
         "--no-objects",
@@ -573,11 +640,13 @@ def main() -> int:
                 rows = build_qa_rows(
                     engine, text, answerer, args.n_flat, args.depth_cost, args.step,
                     query_en=en, allocator=args.allocator,
+                    canh_b=args.canh_b, khoa=qf.stem,
                 )
             else:
                 rows = build_kis_rows(
                     engine, text, args.n_flat, args.depth_cost, args.step,
                     query_en=en, allocator=args.allocator,
+                    canh_b=args.canh_b, khoa=qf.stem,
                 )
         except Exception as exc:  # noqa: BLE001
             print(f"  {qf.name:26s} FAILED: {type(exc).__name__}: {exc}")
