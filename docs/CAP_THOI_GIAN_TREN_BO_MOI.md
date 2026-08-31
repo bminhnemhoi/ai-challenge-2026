@@ -73,3 +73,44 @@ bootstrap theo câu; con số 2σ hạt giống chỉ được ghi kèm để đ
 2. Câu do máy sinh có thể có cấu trúc hai cảnh "sạch" hơn đề người viết
    (chuyển cảnh dứt khoát), khiến lever này ăn hơn thực tế.
 3. Chưa đo trên allocator `hybrid` (đối chứng) — script có sẵn cờ.
+
+---
+
+## 6. LẦN ĐO THỨ HAI (01/09/2026) — mẫu gấp 2,75 lần, hiệu ứng CO LẠI
+
+Đã sinh thêm 84 mục (shard e/f/g), xác minh neo bằng một-ảnh-một-request
+(**72 xác nhận / 12 dời neo / 0 nghi ngờ**, $0,64 — tỷ lệ neo lệch 14%, khớp
+12,5% của lượt trước). Bộ sạch: **132 mục, 66 câu hai cảnh**.
+
+| | n TEST | qua cổng | TEST | khoảng tin cậy theo câu | P(hoà) |
+|---|---|---|---|---|---|
+| lần 1 | 24 | 12 | **+11,5%** | [−0,0138, +0,0751] | 14% |
+| **lần 2** | **66** | **33** | **+6,7%** | [−0,0135, +0,0496] | **17%** |
+
+**Hiệu ứng giảm gần một nửa khi có thêm dữ liệu**, và cấu hình thắng trên TUNE
+cũng đổi (W=2, λ=0,5 → W=3, λ=1,0). Cả hai đều là dấu hiệu của **ước lượng bị
+thổi phồng do mẫu nhỏ**, không phải của một hiệu ứng vững.
+
+Cỡ mẫu cần để chốt tăng từ 81 lên **259 mục TEST** (phải sinh thêm ~386 mục) —
+tức càng đo càng xa đích. **Kết luận vận hành: dừng đầu tư vào lever này.**
+Nó có vẻ là một khoản dương nhỏ (~+5–7%), nhưng chi phí xác nhận đã vượt xa giá
+trị kỳ vọng, trong khi cùng công sức đó đổ vào hướng khác đáng giá hơn.
+
+### Chẩn đoán sắc hơn, và nó chỉ sang hướng khác
+
+Trên bộ 132 mục, câu hai cảnh đạt 0,1036 so với 0,2767 của câu một cảnh
+(**−62,5%**, n=66 mỗi nhóm). Nhưng:
+
+| | video đúng trong 100 dòng |
+|---|---|
+| câu MỘT cảnh | 51/66 = 77% |
+| câu HAI cảnh | **53/66 = 80%** |
+
+**Hệ thống tìm đúng video NGANG NHAU ở cả hai nhóm.** Toàn bộ khoảng cách nằm ở
+**định vị khoảnh khắc TRONG video** — không phải ở việc chọn video. Lever ③ tấn
+công đúng chỗ đó nhưng chỉ mua được ~+7%, nên vấn đề không nằm ở phía truy vấn.
+
+Hướng có bằng chứng tốt hơn cho cùng nghẽn: **encoder mạnh hơn cho định vị
+nội-video** (lever ④ — PE-Core + hợp nhất RRF hai tầng). Bảng tín hiệu cũ đã
+đóng mọi tín hiệu RẺ cho định vị nội-video (làm mượt thời gian, CLIP-blend,
+OCR keyword), nên đây là hướng còn lại chưa thử.
