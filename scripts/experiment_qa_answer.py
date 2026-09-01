@@ -511,6 +511,11 @@ def do_chinh_xac(ket, idx, che_do="chat"):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", default=str(ROOT / "data"))
+    ap.add_argument("--gt", default=None,
+                    help="file ground truth khac (vi du data/ground_truth_moi.json — "
+                    "bo do khop phan bo de that). Mac dinh: data/ground_truth.json")
+    ap.add_argument("--chi-sach", action="store_true",
+                    help="chi lay muc khong co co lan_truc (bo do moi)")
     ap.add_argument("--cache", default=str(ROOT / "data" / "cache_qa_answer"))
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--max-side", type=int, default=1900)
@@ -529,8 +534,12 @@ def main() -> int:
     args = ap.parse_args()
 
     data = Path(args.data)
-    gt = json.loads((data / "ground_truth.json").read_text(encoding="utf-8"))
+    gt_path = Path(args.gt) if args.gt else (data / "ground_truth.json")
+    gt = json.loads(gt_path.read_text(encoding="utf-8"))
     gt = [g for g in gt if g.get("vqa_question") and g.get("vqa_answer")]
+    if args.chi_sach:
+        gt = [g for g in gt if not g.get("lan_truc")]
+    print(f"bo do: {gt_path.name} ({len(gt)} muc co cap hoi/dap)")
     if args.limit:
         gt = gt[: args.limit]
 
