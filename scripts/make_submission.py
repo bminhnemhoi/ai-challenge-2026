@@ -602,8 +602,35 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
             # đều sửa `cands`, nên đọc `hits` là đọc thứ tự TRƯỚC mọi cải tiến.
             from scripts.answer_qa import tra_loi_tu_ung_vien
 
+            # DOC DAP AN TU CHINH DONG SE NOP, khong phai tu dau danh sach ung vien.
+            #
+            # Do duoc bang phep dem tat dinh: voi 66 cau hai canh, khung neo doi
+            # o 0/66 cau khi chon theo THU TU DANH SACH, nhung 60/66 khi chon
+            # theo DIEM. Ly do: hai lever da ship (canh B, hoan vi noi-video)
+            # the hien qua DIEM — canh B noi ung vien vao CUOI danh sach, hoan vi
+            # doi diem chu khong doi vi tri — nen duong sinh dap an doc theo thu
+            # tu danh sach hoan toan MU voi ca hai. Ket qua do: ba tap NEN /
+            # CANH_B / HOAN_VI cho dap an giong het nhau, 48,5% o ca ba.
+            #
+            # Dung `frame_rows` (dau ra cua allocator) thi kenh dap an doc dung
+            # thu ma bo cham se cham, va moi cai tien dinh vi tu dong chay sang
+            # kenh nay. Day cung la thu answer_qa.py chay doc lap van lam — no
+            # doc khung tu CSV — nen sua nay xoa mot cho lech nua giua hai duong.
+            ung_vien_doc = []
+            da_co = set()
+            for v, f in frame_rows:
+                key = (v, int(f))
+                if key in answerer.meta and key not in da_co:
+                    da_co.add(key)
+                    ung_vien_doc.append(Candidate(v, int(f), 0.0,
+                                                  engine.last_frame.get(v)))
+                if len(ung_vien_doc) >= 24:
+                    break
+            if not ung_vien_doc:
+                ung_vien_doc = cands
+
             answer, ghi = tra_loi_tu_ung_vien(
-                answerer.judge, answerer.model, cands, answerer.meta,
+                answerer.judge, answerer.model, ung_vien_doc, answerer.meta,
                 answerer.by_n, answerer.caps, query_text)
             if ghi:
                 print(f"    doc dap an: {ghi}")
