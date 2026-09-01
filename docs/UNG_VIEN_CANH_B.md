@@ -84,3 +84,38 @@ Ba lý do, và cả ba đều phải đúng cùng lúc:
 câu BTC nhưng chưa ai kiểm từng câu). Cổng bật nhầm ở câu một cảnh sẽ thêm ứng
 viên không liên quan vào cuối danh sách — theo luật chấm thì gần như vô hại,
 nhưng chưa đo.
+
+---
+
+## 4. Diff cấu trúc trên ĐỀ THẬT — và một rủi ro phải nói rõ
+
+`scripts/diff_canh_b_de_that.py` (đọc nhãn từ cache, **0 lần gọi LLM**) chạy trên
+55 câu đề thật của hai vòng. Cổng bật **28/55 = 51%**.
+
+| | trung vị | min | max |
+|---|---|---|---|
+| ứng viên MỚI mỗi câu | 57 | 7 | 100 |
+| số dòng đổi trong 100 dòng | 20 | 0 | 100 |
+
+**Video dòng 1 đổi ở 7/28 câu (25%).** Đây là con số **rủi ro**, không phải con
+số tốt: R@1 đáng 1,0 — số hạng đắt nhất trong công thức chấm — nên đổi video
+dòng 1 là một canh bạc lớn hơn nhiều so với vẻ ngoài của phép đo trên harness.
+Phép đo trên bộ đo mới không lộ ra điều này vì câu ở đó do máy sinh, cấu trúc
+hai cảnh dứt khoát hơn đề người viết.
+
+### Kiểm 7 câu ấy bằng đáp án đã biết
+
+| câu | độ tin của nhãn | kết quả |
+|---|---|---|
+| p1-19-kis | **người kiểm chứng** | **cảnh B đổi ĐÚNG sang video đúng** |
+| p1-18-kis, p1-2-kis, p1-6-kis, p2-19-qa, p2-30-qa | chỉ `suy_ra` | GT khác **cả** neo cũ lẫn neo mới ⇒ pipeline sai cả trước lẫn sau, không mất gì |
+| p2-15-kis | không có nhãn | chưa biết |
+
+Trong đúng một ca kiểm chứng được, cảnh B **sửa đúng**. Ở năm ca còn lại nó
+không làm hỏng thứ gì đang đúng. Bằng chứng này yếu (n=1 ca chắc chắn) nhưng
+**cùng chiều** với phép đo trên harness, và quan trọng hơn: nó cho thấy 25% đổi
+video **không phải** là phá hỏng những câu vốn đã đúng.
+
+**Việc phải làm trước ngày thi:** chạy lại diff này trên đề của vòng mới và soi
+bằng mắt các câu bị đổi video dòng 1 — đó là danh sách ngắn (khoảng 7/28) và
+mỗi câu trong đó đáng 1 điểm R@1. Lệnh rút lui nếu thấy sai: `--canh-b 0`.
