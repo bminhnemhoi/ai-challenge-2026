@@ -120,6 +120,14 @@ hợp: **`docs/KE_HOACH_DINH_VI.md`**.
 | tín hiệu | tầng | kết quả | có dùng? |
 |---|---|---|---|
 | **hoán vị ĐIỂM nội-video theo `sim(cảnh B)`** (α=0,5; w=1,0; top-3 video × top-12 khung) | **frame** | TEST 33 câu **+80,5%**, KTC [+0,0337, +0,1604], P(≤0)=0,0%; **cả 66 câu, hạt độc lập: +57,6%**, KTC [+0,0369, +0,1261]; bỏ 3 câu đắt nhất vẫn +38,2% | ✅ **ship** |
+| ↳ **kiểm độ bền dưới mô hình bốc SAU_NEO** (hạt 771000, cả 66 câu) | frame | cảnh B +33,4%/+33,3%; hoán vị **+110,1%/+117,9%** — mạnh HƠN dưới mô hình đúng hơn. Cộng dồn hai lever: **0,1049 → 0,2205, hơn gấp đôi** | 🔬 xác nhận |
+| ↳ trục sigma dưới cùng phép kiểm ấy | dòng | +20,2% (bốc ĐỀU) → **+5,5%** (SAU_NEO) — **teo 4 lần**: phần lớn "lợi ích" của sigma lớn là ảo ảnh của giả định bốc sai (nó rải khối lượng sang cảnh A, vùng khoảnh khắc thật không bao giờ rơi vào) | ❌ đóng chặt hơn |
+| **điểm CẮT tương đối-trong-video → xếp hạng nội-video** (nhóm MỘT cảnh) | frame | chẩn đoán CÓ tín hiệu (phân vị đáp án 0,564 vs ngẫu nhiên 0,505) nhưng TUNE +4,5% → **TEST −3,0% (ĐỀU) / −4,3% (SAU_NEO)**, P(≤0)=77%/88%; đường TUNE **không đơn điệu** = chữ ký nhiễu | ❌ |
+| **hai lever đã ship có chạm được kênh ĐÁP ÁN không** | đáp án | **KHÔNG** — ba tập NEN/CANH_B/HOAN_VI cho đáp án **giống hệt** (48,5% cả ba). Đếm tất định: khung neo đổi **0/66** câu khi chọn theo THỨ TỰ DANH SÁCH, **60/66** khi chọn theo ĐIỂM | 🔬 lỗ hổng |
+| ↳ vá: chọn khung đọc đáp án theo ĐIỂM | đáp án | đang đo lại | ⏸ |
+| ↳ vá SAI đã thử: đọc từ `frame_rows` | đáp án | **tệ hơn** — `coverage` sinh ĐIỂM LƯỚI, chỉ 8–20/100 dòng là keyframe thật nên "dòng đầu là keyframe" là ứng viên yếu; smoke test 0% ở cả ba tập | ❌ đừng thử lại |
+| **đường sinh đáp án của `make_submission` ≠ `answer_qa.py`** | đáp án | trên 8 câu đề thật đã kiểm chứng: **1/8 đúng, 4/8 RỖNG** (và 2/3 câu "sai" là model từ chối). Sau khi hợp nhất: **2/8 đúng, 0/8 rỗng** | ✅ đã vá |
+| ↳ đo lại cải tiến Q&A trên bộ đo KHỚP PHÂN BỐ | đáp án | **77,3% → 84,1%** = +8,8% tương đối (TEST +4,5 điểm, chưa vượt 2 sd). Con số **+23,3%** cũ là của bộ đo cũ và **thổi phồng**; phần chắc chắn là 11 câu bỏ trống → 0 | ⚠ hiệu chỉnh |
 | ↳ cổng độ bền: **4 mô hình bốc** (đều / tam giác / Gauss / sau-neo) | | +57,6% / +55,8% / +50,6% / **+62,8%** — cùng dấu, cùng độ lớn, KTC tách khỏi 0 ở cả bốn | 🔬 |
 | ↳ đối chứng khoá **ngẫu nhiên** / **đảo dấu** / **cảnh A** | frame | −0,5%→−8,1% / −32%→−36,7% / −11%→−35,2% — **không đối chứng nào dương** | 🔬 |
 | ↳ mục tiêu xác minh **trước** khi nhìn điểm | chẩn đoán | neo trùng khít khung cảnh-B đầu tiên **39/61 = 64%**, trung vị lệch 0 | 🔬 |
