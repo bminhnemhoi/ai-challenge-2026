@@ -46,7 +46,12 @@ from scripts.answer_qa import nap_loi_thoai, tra_loi_tu_ung_vien  # noqa: E402
 from scripts.do_cap_thoi_gian_moi import canh_cua  # noqa: E402
 from scripts.experiment_cap_thoi_gian import KhoSims  # noqa: E402
 from scripts.experiment_qa_answer import khop_rong  # noqa: E402
-from scripts.make_submission import hoan_vi_theo_canh_b  # noqa: E402
+from scripts.experiment_cap_thoi_gian import _plan  # noqa: E402
+from scripts.make_submission import (  # noqa: E402
+    DEFAULT_N_FLAT,
+    allocate_rows,
+    hoan_vi_theo_canh_b,
+)
 from src.core.submission import Candidate, _default_answer_match  # noqa: E402
 from src.core.vlm import DEFAULT_MODEL, VLMJudge  # noqa: E402
 
@@ -126,9 +131,23 @@ def main() -> int:
             ra.append(cc2)
         return ra
 
+    def khung_de_doc(cands_q, last_of_):
+        """DUNG duong san xuat: chon khung doc dap an THEO DIEM.
+
+        Hai lever da ship the hien qua DIEM (canh B noi ung vien vao CUOI danh
+        sach; hoan vi doi diem chu khong doi vi tri), nen doc theo thu tu danh
+        sach thi ca ba tap cho dap an giong het nhau — do chinh la ket qua lan
+        do truoc (48,5% o ca ba, neo doi 0/66 cau).
+
+        Da thu mot phuong an khac — doc tu dau ra allocator (frame_rows) — va no
+        TE HON: bo phu xac suat sinh DIEM LUOI, chi 8-20/100 dong la keyframe
+        that, nen "dong dau la keyframe" thuong la ung vien yeu hon han.
+        """
+        return sorted(cands_q, key=lambda c: -float(c.score))
+
     ket = {}
     for ten in TAP:
-        cl = dung_tap(ten)
+        cl = [khung_de_doc(c, last_of) for c in dung_tap(ten)]
         dung = []
         for i, g in enumerate(sach):
             cau = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
