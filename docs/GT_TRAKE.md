@@ -137,3 +137,50 @@ kết luận** — sau trục sigma (đổi chiều theo mô hình bốc) và b�
 
 > **Mọi phép đo TRAKE phải báo cáo theo TỪNG cửa sổ, và cột quyết định là ±6.**
 > Con số trung bình chỉ được ghi kèm để đối chiếu.
+
+---
+
+## 6. Hedge VIDEO cho TRAKE — **ĐÓNG, và đóng bằng một sự thật cấu trúc**
+
+`scripts/do_hedge_video_trake.py`, 0 API.
+
+33% khoảng cách của TRAKE nằm ở chọn sai video, và luật chấm cho **0 tuyệt đối**
+khi sai video. Nên câu hỏi "chia bớt dòng cho video hạng 2" nghe như một canh bạc
+đáng cân nhắc: mất một ít thang bù trừ ở 10/12 mục đang đúng, để cứu 2/12 mục
+đang 0 điểm.
+
+**Nhưng nó không phải canh bạc — nó bất khả thi:**
+
+| | số mục |
+|---|---|
+| video đúng ở **hạng 1** | **10/12** |
+| video đúng trong **top-3** | **10/12** |
+
+Hai con số **bằng nhau**. Bộ căn chỉnh hoặc đặt video đúng ở hạng 1, hoặc không
+có nó trong top-3 chút nào. Không có mục nào mà video đúng nằm ở hạng 2–3, nên
+mọi dòng chia cho hạng 2–3 là **mất trắng theo định nghĩa**.
+
+Đúng như vậy trong số đo, ở cột quyết định ±6:
+
+| chia dòng | ±6 (quyết định) | ±10 | ±20 |
+|---|---|---|---|
+| **không hedge (100/0/0)** | **0,1717** | 0,2029 | 0,2715 |
+| 85/15/0 | 0,1709 | 0,2025 | 0,2714 |
+| 75/25/0 | 0,1707 | 0,2024 | 0,2712 |
+| 60/40/0 | 0,1701 | 0,2020 | 0,2708 |
+| 70/20/10 | 0,1707 | 0,2023 | 0,2712 |
+| 50/30/20 | 0,1692 | 0,2012 | 0,2705 |
+
+Đơn điệu giảm theo mức chia, ở **cả ba cửa sổ**. Không có ô nào dương.
+
+**Hệ quả cho hướng đi:** 33% khoảng cách thuộc khâu chọn video **không lấy lại
+được bằng cách chia lại dòng**. Nó đòi một **tín hiệu xếp hạng video khác** —
+thứ đưa được video đúng vào top-3 ở 2 mục hiện đang trượt hẳn. Chia lại ngân sách
+trong top-3 của chính bộ căn chỉnh hiện tại là vô nghĩa.
+
+**Ghi chú về một lỗi của phép đo, đã sửa:** lần chạy đầu tôi dựng văn bản sự kiện
+bằng cách ghép `bối_cảnh + sự_kiện` cho từng sự kiện, và chỉ được **5/12** video
+đúng — trong khi đường sản xuất dùng `split_events` trên đề đầy đủ và được
+**10/12**. Số của lần ấy (0,0693) không so được với sản xuất. Kết luận về hedge
+không đổi, nhưng bài học thì đổi: **phép đo phải dựng đầu vào y hệt sản xuất**,
+kể cả ở những chỗ trông như chi tiết vụn.
