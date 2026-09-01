@@ -113,7 +113,19 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 | `reserve_tail_rows` | vá lỗ hổng mất p1-19/p1-22 | — |
 | truy xuất thêm cảnh B | +23,3% nhóm qua cổng; pool 53%→76% | `--canh-b 0` |
 
-**Nghẽn đang nhắm:** định vị nội-video, trần oracle +126% (câu hai cảnh +306%).
+**Nghẽn đang nhắm:** định vị nội-video. Trần oracle **+139,7%** trên bộ mới sạch
+(câu hai cảnh +337,5%), đã **phân rã thành ba tầng rời nhau**
+(`scripts/phan_ra_tran.py`, 01/09):
+
+| tầng | phần của trần | ai đang nhắm |
+|---|---|---|
+| 1. SINH ứng viên (keyframe đáp án có lọt vào 400 không) | **17%** | cảnh B đã ship (+23,3% nhóm qua cổng) |
+| 2. XẾP HẠNG nội-video (đã lọt thì có được hạng-1 không) | **40%** | encoder mạnh hơn / tín hiệu nội-video / VLM xếp lại |
+| 3. PHÂN BỔ dòng (đã hạng-1 thì 100 dòng có dồn quanh nó không) | **43%** | **thuần phân bổ — không cần model mới** |
+
+Hệ quả quan trọng nhất: **83% của trần nằm ở tầng 2 và 3**, không phải ở khâu
+sinh ứng viên. Và tầng 3 — chiếm 43%, lớn nhất — **không cần model mới**, chỉ cần
+tiêu 100 dòng khôn hơn. Đó là khoản rẻ nhất còn lại.
 
 **Cửa đã đóng trên bộ đo MỚI (đáng tin):** cặp thời gian (+6,7%, KTC chứa 0,
 hiệu ứng co lại khi thêm dữ liệu — dừng đầu tư).
