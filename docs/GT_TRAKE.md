@@ -81,3 +81,59 @@ TRAKE **khác hẳn** KIS — và giờ mới kiểm chứng được bằng s�
   hưởng của N lớn hơn (mà theo (b), N càng lớn thì trần càng thấp).
 - Mốc do máy định vị, đã kiểm mắt 4/36 sự kiện. Sai sót còn lại chưa đo được.
 - Bộ sinh dừng ở 12/20 vì **hết quota cả 5 model**. Sinh tiếp khi quota hồi.
+
+---
+
+## 5. Lưới bù trừ: hai giả thuyết, cả hai ÂM — và một suýt-sai của phép đo
+
+`scripts/do_luoi_trake.py`, 0 API.
+
+### 5.1 Giả thuyết cấu trúc: tích Descartes đầy đủ — **SAI**
+
+Điểm một dòng là `(1/N)·Σ_j I(t_j ∈ f_j ± w)` và `R@k` là **max trên tiền tố**.
+Nếu tập dòng là **tích đầy đủ** `S_1 × … × S_N` thì trong đó **có sẵn** dòng chọn
+offset tốt nhất cho *mọi* trục cùng lúc, nên max **phân rã theo từng trục**. Với
+tập không đầy đủ, đẳng thức thành `≤`.
+
+Đếm được: allocator hiện tại sắp theo tổng độ dời — một **quả cầu L1** — phủ
+offset {−2..2} cả ba trục nhưng chỉ chứa **100/125** điểm tích, thiếu đúng 25
+điểm góc.
+
+**Nhưng tích đầy đủ THUA ở mọi bước** (−1,6% → −2,0%). Lý do: 100 dòng với N=3
+chỉ cho tích 5×5×4, tức một trục **hẹp đi** (4 offset thay vì 5). Cái mất do hẹp
+lớn hơn cái được do đầy đủ. Giả thuyết đúng về mặt cấu trúc, **sai về mặt số học**.
+
+### 5.2 Bước thang rộng hơn: thắng đậm — rồi hoá ra là **ảo ảnh của phép đo**
+
+Trung bình trên cửa sổ {6,10,20}, `step=20` thắng `step=10` rõ rệt:
+**+11,3%** trên bài toán tâm-oracle và **+16,2%** trên đường sản xuất
+(0,2154 → 0,2503), bootstrap theo câu KTC [+0,0374, +0,0822], P(≤0) = 0,0%.
+
+Đủ sức thuyết phục để ship. **Nhưng tách theo từng cửa sổ thì đảo dấu:**
+
+| cửa sổ chấm | step=10 | step=20 |
+|---|---|---|
+| **±6** | **0,4250** | 0,4197 (**−1,2%**) |
+| ±10 | 0,5073 | 0,6126 (+20,8%) |
+| ±20 | 0,6727 | 0,7546 (+12,2%) |
+
+Quy định của BTC ghi cửa sổ TRAKE *"thường rất ngắn, thông thường là **dưới 10
+frame**"* — tức bề rộng tổng dưới 10, xấp xỉ **±5**. Cột gần nhất với thực tế là
+**±6**, và ở đó `step=20` **thua**. Toàn bộ mức thắng đến từ hai cột cửa sổ
+**rộng hơn quy định**, và chúng chiếm 2/3 trong phép lấy trung bình.
+
+**Kết luận: KHÔNG đổi `--step`. Giữ 10.**
+
+### 5.3 Bài học phương pháp — sửa ngay, không chỉ ghi lại
+
+Bộ cửa sổ {6,10,20} được chọn cho **KIS** (nơi ví dụ của BTC dùng cửa sổ 11
+frame). Dùng nguyên bộ đó cho **TRAKE** là sai: quy định nói cửa sổ TRAKE hẹp
+hơn hẳn. Lấy trung bình trên một bộ cửa sổ quá rộng đã **suýt** đẩy một thay đổi
+âm vào sản xuất, với khoảng tin cậy đẹp và P(≤0) = 0,0%.
+
+Đây là ca thứ ba trong hai ngày mà **giả định của thiết bị đo quyết định dấu của
+kết luận** — sau trục sigma (đổi chiều theo mô hình bốc) và bộ so khớp đáp án
+(đếm thiếu theo hai kiểu). Quy tắc bổ sung:
+
+> **Mọi phép đo TRAKE phải báo cáo theo TỪNG cửa sổ, và cột quyết định là ±6.**
+> Con số trung bình chỉ được ghi kèm để đối chiếu.
