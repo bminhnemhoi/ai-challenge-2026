@@ -70,3 +70,67 @@ tỷ lệ video đúng. **Đó là lý do định vị vẫn là hướng chính
   quota Gemini free trong ngày. Chạy lại khi quota hồi.
 - Chưa đo biến thể "cho model đọc khung SAU hoán vị so với TRƯỚC hoán vị" một
   cách có đối chứng — đó mới là câu hỏi §4.1 đặt ra.
+
+---
+
+## 6. ĐO LẠI TRÊN BỘ ĐO KHỚP PHÂN BỐ (02/09) — cảnh B **ăn điểm hai lần**
+
+Sau khi vá đường sinh đáp án (chọn khung theo **ĐIỂM**, xem §7), chạy lại đủ
+132 câu × 3 tập qua `scripts/do_nhan_tu_qa_bo_moi.py`:
+
+| tập | TUNE | TEST | cả bộ | **HAI cảnh (TEST)** | MỘT cảnh (TEST) | video đúng |
+|---|---|---|---|---|---|---|
+| NEN | 45,5% | 54,5% | 50,0% | **45,5%** | 63,6% | 45,5% |
+| + ứng viên cảnh B | 47,0% | 60,6% | 53,8% | **57,6%** | 63,6% | 48,5% |
+| + hoán vị nội-video | 54,5% | 59,1% | 56,8% | **54,5%** | 63,6% | 48,5% |
+
+Bootstrap theo câu, **riêng nhóm HAI cảnh** của TEST (n=33):
+
+| lever | chênh | KTC 95% | P(≤0) |
+|---|---|---|---|
+| **ứng viên cảnh B** | **+12,1 điểm** | **[+0,030, +0,242]** | **1,4%** |
+| + hoán vị nội-video | +9,1 điểm | [−0,061, +0,242] | 15,8% |
+
+**Bất biến đạt:** nhóm MỘT cảnh đứng yên ở **63,6% cho cả ba tập** — hai lever
+không đụng nhóm này, và phép đo xác nhận đúng như vậy.
+
+### Đọc kết quả
+
+**Lever cảnh B ăn điểm HAI LẦN.** Nó vừa cải thiện định vị (+23,3% đã đo), vừa
+mở khoá kênh đáp án (**+12,1 điểm**, khoảng tin cậy **tách khỏi 0**). Đây chính
+là "kênh thứ hai chưa ai tính vào giá trị của nó" mà `KE_HOACH_DINH_VI.md` §1
+nêu ra — nay đã đo được. Với luật chấm `điểm = định vị × 1[đáp án đúng]`, hai
+hiệu ứng này **nhân với nhau**, không cộng.
+
+**Lever hoán vị thì KHÔNG — nói thẳng.** +9,1 điểm nhưng khoảng tin cậy chứa 0
+(P(hoà) = 15,8%), và trên nửa TEST nó còn **thấp hơn** cảnh B đơn thuần
+(54,5% vs 57,6%). Nó vẫn giữ nguyên giá trị đã đo ở kênh **định vị** (+57,6%);
+chỉ là nó không mang thêm gì cho kênh đáp án. Không có lý do rút nó ra, cũng
+không được tính thêm điểm cho nó ở đây.
+
+### Giới hạn
+
+- n = 33 ở nhóm hai cảnh của TEST. Đủ để khoảng tin cậy của cảnh B tách khỏi 0,
+  **không** đủ để phân xử chênh lệch giữa hai lever.
+- TUNE/TEST ở đây dùng để **báo cáo**, không phải để chọn — không có tham số nào
+  được chọn trên TUNE. Nên hai nửa là hai phép đo độc lập của cùng một thứ, và
+  chúng cùng chiều.
+- Bộ so khớp là `_default_answer_match` ∪ `khop_rong`, không phải trọng tài LLM
+  (tiết kiệm quota). Số tuyệt đối vì thế là **cận dưới**; số **chênh lệch** giữa
+  ba tập không bị ảnh hưởng vì cả ba chấm bằng cùng một bộ.
+
+## 7. Bản vá đúng, và bản vá SAI đã thử
+
+Đường sinh đáp án chọn khung theo **thứ tự danh sách ứng viên**, còn hai lever
+thể hiện qua **điểm** — cảnh B nối ứng viên vào *cuối* danh sách, hoán vị đổi
+*điểm* chứ không đổi vị trí. Phép đếm tất định: khung neo đổi ở **0/66** câu khi
+chọn theo thứ tự danh sách, **60/66** khi chọn theo điểm.
+
+**Bản vá đúng:** sắp ứng viên theo điểm rồi lấy đầu danh sách.
+
+**Bản vá SAI đã thử — đọc từ `frame_rows` (dòng sẽ nộp):** nghe hợp lý nhưng
+**tệ hơn hẳn**, smoke test 0% ở cả ba tập. Lý do: bộ phân bổ phủ xác suất sinh
+ra **điểm lưới**, chỉ **8–20 trên 100 dòng** là keyframe thật, nên "dòng đầu
+tiên là keyframe" thường là một ứng viên yếu hơn nhiều. Ghi lại để không ai thử
+lại — và nó cũng cảnh báo rằng `answer_qa.py` chạy độc lập (vốn đọc khung từ CSV)
+đang chịu đúng vấn đề này kể từ khi allocator đổi sang `coverage`.
