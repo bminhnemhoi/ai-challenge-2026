@@ -184,3 +184,49 @@ bằng cách ghép `bối_cảnh + sự_kiện` cho từng sự kiện, và ch�
 **10/12**. Số của lần ấy (0,0693) không so được với sản xuất. Kết luận về hedge
 không đổi, nhưng bài học thì đổi: **phép đo phải dựng đầu vào y hệt sản xuất**,
 kể cả ở những chỗ trông như chi tiết vụn.
+
+---
+
+## 7. Chế độ căn chỉnh — giả thuyết "giải bài toán khó hơn cần thiết" là **SAI**
+
+`scripts/do_che_do_can_chinh.py`, 0 API.
+
+### Giả thuyết
+
+Luật chấm TRAKE chấm **từng sự kiện độc lập**, **không** đòi thứ tự, **không**
+đòi khoảng cách tối thiểu. Nhưng `align_sequence` chạy `align_mode="ordered"` với
+`min_gap=2` — áp hai ràng buộc mà bộ chấm không hề đòi. Nghe như đang tự trói tay:
+nếu mô tả bị viết lệch thứ tự, ràng buộc ấy **ép** bỏ mốc tốt nhất của một sự kiện
+để giữ tính đơn điệu.
+
+### Kết quả — ràng buộc thứ tự GIÚP, không hại
+
+| chế độ | min_gap | video đúng | **±6 (quyết định)** | ±10 | ±20 |
+|---|---|---|---|---|---|
+| **ordered** (sản xuất) | **2** | **10/12** | **0,1717** | 0,2029 | 0,2715 |
+| ordered | 0 / 1 | 9/12 | 0,1363 | 0,1609 | 0,2084 |
+| **unordered** | bất kỳ | 9/12 | **0,1385** | 0,1613 | 0,2082 |
+| soft_order | 0 / 1 | 9/12 | 0,1427 | 0,1689 | 0,2195 |
+| soft_order | 2 | 10/12 | **0,1781** | 0,2110 | 0,2826 |
+
+**`unordered` THUA rõ** (0,1385 vs 0,1717 = −19,3%). Giả thuyết sai: thứ tự
+không phải ràng buộc nhân tạo mà là **thông tin tiên nghiệm thật** — sự kiện được
+kể theo trình tự thì thường cũng xảy ra theo trình tự, và bộ căn chỉnh dùng đúng
+quy luật đó để loại các phương án vô lý. Bỏ nó đi là vứt thông tin.
+
+**`min_gap` cũng quan trọng hơn vẻ ngoài:** gap 0 hoặc 1 làm tụt video đúng từ
+10/12 xuống 9/12 và mất ~20% điểm. Ràng buộc "hai mốc phải cách nhau ≥2 keyframe"
+chặn nghiệm suy biến kiểu ba sự kiện dồn vào một chỗ.
+
+### Manh mối nhỏ: `soft_order`
+
+`soft_order/gap=2` cho **+3,7%** so sản xuất ở cột ±6, và dương ở **cả ba** cửa sổ.
+Bootstrap theo câu: chênh +0,0063, KTC [+0,0000, +0,0190], P(≤0) = 35,2%.
+
+Đọc con số này cho đúng: KTC **chạm 0 ở cận dưới** và P(≤0) lớn — nhưng đó là vì
+với n=12, phần lớn mẫu bootstrap cho chênh **đúng bằng 0** (chỉ 1–2 mục thật sự
+đổi). Hiệu ứng **không bao giờ âm** trong mẫu này; nó chỉ bằng 0 hoặc dương.
+
+**Chưa ship.** Đây là manh mối đúng hướng với hồ sơ rủi ro tốt (không hại ai),
+nhưng n=12 quá nhỏ để chốt. Việc cần làm trước: sinh thêm mục TRAKE cho đủ 20+,
+rồi đo lại. Nếu giữ được dấu, đây là một cờ đổi mặc định rẻ (`align_mode`).
