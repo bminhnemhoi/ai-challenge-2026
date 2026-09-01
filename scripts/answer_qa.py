@@ -358,3 +358,121 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def tra_loi_tu_ung_vien(judge, model, ung_vien, meta, by_n, caps, cau_hoi_day_du,
+                        neo: int = 2, them_video: int = 2, max_side: int = 1900,
+                        cua_so_loi: float = 30.0):
+    """Sinh đáp án theo ĐÚNG cấu hình đã đo, dùng được từ make_submission.
+
+    Tồn tại vì một lỗ hổng đắt: ``make_submission.build_qa_rows`` có đường sinh
+    đáp án RIÊNG (``_make_answerer`` → ``gemini_engine.answer_single_frame``),
+    hoàn toàn tách khỏi file này. Mọi cải tiến đo được ở đây — ảnh gốc, lời thoại,
+    prompt cấm bỏ trống — **chưa bao giờ tới được công cụ ngày thi**.
+
+    Đo trên 8 câu Q&A đề thật đã người kiểm chứng đáp án, đường cũ của
+    make_submission cho **1/8 đúng, 4/8 RỖNG**; và 2 trong 3 câu "sai" thực chất
+    là model từ chối ("Không xác định được từ hình"). Tức 6/8 câu model không trả
+    lời — mà đáp án rỗng là 0 điểm bảo đảm theo luật 2.1.2, dù khung hình đúng.
+
+    Ba lỗi của đường cũ, mỗi lỗi đủ để hỏng một mình:
+      * ``max_output_tokens=25`` — quá chặt, model trả rỗng thay vì câu ngắn;
+      * prompt KHÔNG cấm bỏ trống, còn cho phép nói "không xác định";
+      * biểu quyết đa số trên 5 khung — khi 4/5 khung là cảnh A thì phiếu của
+        khung đúng bị **chủ động loại bỏ**.
+
+    ``ung_vien``: danh sách Candidate đã xếp hạng (dùng ngay thứ tự đó).
+    Trả về ``(đáp_án, ghi_chú)``.
+    """
+    from google.genai import types
+
+    chon = []
+    for c in ung_vien:
+        key = (c.video_id, int(c.frame_idx))
+        if key in meta:
+            chon.append((c.video_id, int(c.frame_idx), meta[key]["frame_filename"]))
+        if len(chon) >= 24:
+            break
+    if not chon:
+        return "", "khong co ung vien nao la keyframe"
+
+    neo_v, neo_f, neo_fn = chon[0]
+    khung = [(neo_v, neo_f, neo_fn)]
+    neo_n = int(meta[(neo_v, neo_f)]["n"])
+    for d in range(1, neo + 1):
+        for nn in (neo_n - d, neo_n + d):
+            m = by_n.get((neo_v, nn))
+            if m:
+                khung.append((neo_v, int(m["frame_idx"]), m["frame_filename"]))
+    da_co = {neo_v}
+    for v, f, fn in chon[1:]:
+        if len(da_co) > them_video:
+            break
+        if v not in da_co:
+            da_co.add(v)
+            khung.append((v, f, fn))
+
+    blobs, kept = [], []
+    for v, f, fn in khung:
+        b = full_frame(v, fn, max_side)
+        if b:
+            blobs.append(b)
+            kept.append((v, f))
+    if not blobs:
+        return "", "khong tai duoc khung hinh nao"
+
+    lt = ""
+    if cua_so_loi > 0 and kept:
+        m0 = meta.get(kept[0])
+        if m0:
+            lt = loi_thoai_quanh(caps, kept[0][0], float(m0.get("pts_time") or 0.0), cua_so_loi)
+    prompt = PROMPT.format(
+        question=(cau_hoi_day_du or "").strip()[:1200], n=len(blobs),
+        loi_thoai=(f'\nLời thoại quanh khoảnh khắc này: "{lt}"\n' if lt else ""),
+    )
+    # XOAY VONG MODEL, khong goi mot model co dinh. Free tier do theo PHUT va
+    # theo NGAY tren TUNG model; hoi mai mot model thi ca vong thi ngoi trong
+    # backoff trong khi cac model khac con nguyen cua so. Da tra gia hai lan cho
+    # dung loi nay (experiment_qa_answer, va chinh ham nay o lan nap dau).
+    import time as _t
+
+    from src.core.vlm import RETRY_WAIT, _is_daily_quota
+
+    client = judge._get_client()
+    parts = [types.Part.from_bytes(data=b, mime_type="image/jpeg") for b in blobs]
+    loi_cuoi = None
+    for mo in judge._model_order():
+        if mo in judge.exhausted:
+            continue
+        for lan in range(3):
+            try:
+                r = client.models.generate_content(
+                    model=mo, contents=[*parts, prompt],
+                    config=types.GenerateContentConfig(temperature=0.0,
+                                                       max_output_tokens=1200),
+                )
+                u = getattr(r, "usage_metadata", None)
+                if u:
+                    judge.calls += 1
+                    judge.tokens_in += u.prompt_token_count or 0
+                    judge.tokens_out += u.candidates_token_count or 0
+                m = re.search(r"\{.*\}", r.text or "", re.S)
+                if not m:
+                    return "", f"{mo} khong tra ve JSON"
+                j = json.loads(m.group(0))
+                return sanitise_field(j.get("answer", "")), (
+                    f"{len(blobs)} khung, {j.get('nguon','')} {j.get('confidence','')}% [{mo}]")
+            except Exception as exc:  # noqa: BLE001
+                loi_cuoi = exc
+                msg = str(exc)
+                if _is_daily_quota(msg):
+                    judge.exhausted.add(mo)
+                    break
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    _t.sleep(RETRY_WAIT[min(lan, len(RETRY_WAIT) - 1)])
+                    continue
+                if "503" in msg or "UNAVAILABLE" in msg:
+                    _t.sleep(2.0 * (lan + 1))
+                    continue
+                break
+    return "", f"het model kha dung ({type(loi_cuoi).__name__ if loi_cuoi else '?'})"

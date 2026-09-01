@@ -582,9 +582,31 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
     frame_rows = allocate_rows(cands, allocator, n_flat, plan)
 
     answer = ""
-    if answerer is not None and hits:
+    if answerer is not None and cands:
         try:
-            answer = answerer(hits[:5], context, question) or ""
+            # ĐƯỜNG ĐÃ ĐO, không phải đường riêng của file này.
+            #
+            # Trước đây chỗ này gọi `answerer(hits[:5], ...)` — một đường sinh
+            # đáp án RIÊNG (gemini_engine.answer_single_frame + biểu quyết đa số)
+            # tách hẳn khỏi answer_qa.py, nên MỌI cải tiến đã đo ở đó chưa bao
+            # giờ tới được công cụ ngày thi. Đo trên 8 câu Q&A đề thật đã người
+            # kiểm chứng: đường cũ cho **1/8 đúng, 4/8 RỖNG**, và 2 trong 3 câu
+            # "sai" thực chất là model từ chối trả lời.
+            #
+            # Ba lỗi của đường cũ: max_output_tokens=25 (model trả rỗng thay vì
+            # câu ngắn); prompt cho phép nói "không xác định"; và biểu quyết đa
+            # số trên 5 khung **chủ động loại bỏ** phiếu của khung đúng khi 4/5
+            # khung là cảnh A — đúng hồ sơ của câu hai cảnh.
+            #
+            # Dùng `cands` chứ không phải `hits`: lever cảnh B và lever hoán vị
+            # đều sửa `cands`, nên đọc `hits` là đọc thứ tự TRƯỚC mọi cải tiến.
+            from scripts.answer_qa import tra_loi_tu_ung_vien
+
+            answer, ghi = tra_loi_tu_ung_vien(
+                answerer.judge, answerer.model, cands, answerer.meta,
+                answerer.by_n, answerer.caps, query_text)
+            if ghi:
+                print(f"    doc dap an: {ghi}")
         except Exception as exc:  # noqa: BLE001 - never lose the frames over this
             print(f"    ! answering failed ({type(exc).__name__}: {exc})")
     answer = re.sub(r"[,\r\n\"]+", " ", str(answer)).strip()
@@ -732,7 +754,7 @@ def main() -> int:
 
     answerer = None
     if not args.no_answer:
-        answerer = _make_answerer()
+        answerer = _make_answerer(engine, args.data)
 
     counts = {"kis": 0, "qa": 0, "trake": 0}
     failed: List[str] = []
@@ -811,56 +833,48 @@ def main() -> int:
     return 0
 
 
-def _make_answerer():
-    """Gemini answerer, or None with a loud warning if it is not usable.
+class _DocDapAn:
+    """Gói mọi thứ đường sinh đáp án ĐÃ ĐO cần, dựng một lần cho cả vòng.
 
-    Task 2 rows are worthless without an answer, so a missing key must be
-    visible now rather than discovered in the scoreboard.
+    Thay cho ``_make_answerer`` cũ (gemini_engine + biểu quyết đa số). Lý do
+    thay nằm ở comment tại chỗ gọi trong ``build_qa_rows``: đường cũ đo được
+    **1/8 đúng, 4/8 rỗng** trên câu Q&A đề thật đã người kiểm chứng.
     """
+
+    def __init__(self, engine, data_dir: str, model: str, cua_so_loi: float = 30.0):
+        from src.core.vlm import VLMJudge
+
+        self.judge = VLMJudge(data_dir, model=model)
+        self.model = model
+        self.meta = {(m["video_id"], m["frame_idx"]): m for m in engine.metadata}
+        self.by_n = {(m["video_id"], int(m["n"])): m for m in engine.metadata}
+        from scripts.answer_qa import nap_loi_thoai
+
+        self.caps = nap_loi_thoai(Path(data_dir)) if cua_so_loi > 0 else {}
+
+    @property
+    def ready(self) -> bool:
+        return bool(self.judge.ready)
+
+
+def _make_answerer(engine=None, data_dir: str = "data", model: str = None):
+    """Đường sinh đáp án, hoặc None kèm cảnh báo to nếu không dùng được.
+
+    Dòng Q&A không có đáp án là vô giá trị, nên thiếu key phải lộ ra NGAY chứ
+    không phải phát hiện trên bảng điểm.
+    """
+    from src.core.vlm import DEFAULT_MODEL
+
     try:
-        from src.core.gemini_engine import GeminiAIOptimizer
+        d = _DocDapAn(engine, data_dir, model or DEFAULT_MODEL)
     except Exception as exc:  # noqa: BLE001
-        print(f"  ! VQA disabled: cannot import the Gemini engine ({exc})")
+        print(f"  ! VQA tat: khong dung duoc duong sinh dap an ({exc})")
         return None
-
-    g = GeminiAIOptimizer()
-    if not getattr(g, "is_ready", False):
-        print("  ! VQA disabled: no GEMINI_API_KEY. Q&A rows will carry an empty answer.")
-        print("    Set the key, or answer those queries by hand and re-run with --no-answer.")
+    if not d.ready:
+        print("  ! VQA tat: khong co GEMINI_API_KEY. Dong Q&A se mang dap an rong.")
+        print("    Dat key, hoac tra loi tay roi chay lai voi --no-answer.")
         return None
-
-    from src.core.gemini_engine import fetch_single_image
-
-    def answer(top_hits, context: str, question: str) -> str:
-        """Ask the VLM about the top frames and take the majority answer.
-
-        ``top_hits`` are retrieval Hit objects: ``fetch_single_image`` keys on
-        the keyframe ordinal ``n``, not on ``frame_idx`` (a raw video frame
-        number that names no file).
-        """
-        from collections import Counter
-
-        votes = []
-        first_error = None
-        for h in top_hits:
-            try:
-                img = fetch_single_image({"video_id": h.video_id, "n": h.n})
-                if img is None:
-                    continue
-                a = g.answer_single_frame(img, question, context)
-            except Exception as exc:  # noqa: BLE001
-                first_error = first_error or f"{type(exc).__name__}: {exc}"
-                continue
-            if a and str(a).strip():
-                votes.append(str(a).strip())
-        if not votes:
-            # a silent empty answer is a guaranteed zero; say why
-            print(f"    ! no answer from the VLM ({first_error or 'all frames returned empty'})")
-            return ""
-        # the answer the top frames agree on beats the single top frame's answer
-        return Counter(votes).most_common(1)[0][0]
-
-    return answer
+    return d
 
 
 if __name__ == "__main__":
