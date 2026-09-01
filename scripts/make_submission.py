@@ -388,17 +388,17 @@ def them_ung_vien_canh_b(engine, cands, query_text: str, khoa: str, m: int):
     không phải ước lượng); điểm câu qua cổng +23,3% trên TEST.
     """
     if m <= 0 or not query_text.strip():
-        return cands, None
+        return cands, None, None
     try:
         from scripts.gan_nhan_hai_canh import nhan_mot_cau
     except Exception:  # noqa: BLE001
-        return cands, None
+        return cands, None, None
     rec = nhan_mot_cau(query_text, khoa)
     if not rec or not rec.get("co_2_canh"):
-        return cands, None
+        return cands, None, None
     b_vi = (rec.get("canh_B_vi") or "").strip()
     if not b_vi:
-        return cands, None
+        return cands, None, None
     try:
         import numpy as np
 
@@ -416,10 +416,105 @@ def them_ung_vien_canh_b(engine, cands, query_text: str, khoa: str, m: int):
             co.add(key)
             them.append(Candidate(key[0], key[1], float(sims[int(j)]),
                                   engine.last_frame.get(key[0])))
-        return list(cands) + them, f"{len(them)} ung vien tu canh B"
+        return list(cands) + them, f"{len(them)} ung vien tu canh B", sims
     except Exception as exc:  # noqa: BLE001
         print(f"    ! canh B bo qua ({type(exc).__name__}: {str(exc)[:60]})")
-        return cands, None
+        return cands, None, None
+
+
+_HANG_CACHE: dict = {}
+
+
+def _hang_of(engine):
+    """{(video_id, frame_idx): hang trong ma tran} — dung MOT lan cho ca vong."""
+    k = id(engine)
+    if k not in _HANG_CACHE:
+        _HANG_CACHE[k] = {(m["video_id"], int(m["frame_idx"])): i
+                          for i, m in enumerate(engine.metadata)}
+    return _HANG_CACHE[k]
+
+
+def hoan_vi_theo_canh_b(cands, simsB, hang_of, w: float = 1.0, alpha: float = 0.5,
+                        so_video: int = 3, so_khung: int = 12):
+    """Hoán vị ĐIỂM trong từng video theo độ tương đồng với cảnh B.
+
+    Không thêm, không bớt, không đổi video nào: với mỗi video, **đa tập điểm giữ
+    nguyên**, chỉ đổi xem điểm nào thuộc khung nào. Vì tổng khối lượng softmax
+    của mỗi video không đổi theo xây dựng, bề rộng phủ video **không thể** bị
+    phá — chỉ hình dạng khối lượng *bên trong* video dịch đi. Đó đúng là thứ cần:
+    chẩn đoán cho thấy sai số của câu hai cảnh là sai số **một ô keyframe**
+    (~56 frame), không phải sai số chọn video.
+
+    Điểm định vị, không phải điểm phân loại:
+
+        loc(f) = B(f) · (1 − α · B(khung được chấm liền trước cùng video))
+
+    α = 0 là "khung này có phải cảnh B không"; α = 0,5 nghiêng về "khung ĐẦU
+    TIÊN của cảnh B" — mà với câu hai cảnh, khoảnh khắc phải nộp *được định
+    nghĩa* là chỗ cảnh B bắt đầu. Trục thời gian lấy từ ``frame_idx``, không hỏi
+    model, nên không có chỗ nào để nhầm số thứ tự ảnh.
+
+    Vector ``simsB`` đã được ``them_ung_vien_canh_b`` tính sẵn và trước đây bị
+    vứt sau khi lấy top-M — lever này không thêm một phép nhân ma trận nào.
+
+    Đo được (docs/KE_HOACH_DINH_VI.md §1): **+57,6%** trên 66 câu hai cảnh của bộ
+    đo khớp phân bố, KTC theo câu tách khỏi 0, và giữ nguyên dấu lẫn độ lớn dưới
+    **bốn** mô hình bốc khoảnh khắc khác nhau (+50,6% → +62,8%) — chữ ký của phép
+    chọn Ô, ngược hẳn trục sigma của allocator vốn đổi chiều theo giả định bốc.
+    Bốn đối chứng đều đi đúng chiều: khoá ngẫu nhiên −0,5→−8,1%, đảo dấu cảnh B
+    −32→−37%, dùng cảnh A −11→−35%, và VLM trả phí hỏi bằng cảnh B *thua* tín
+    hiệu 0 đồng này.
+    """
+    if simsB is None or w <= 0 or len(cands) < 2:
+        return cands
+
+    # --- chọn khung được chấm: top-N video theo thứ tự hạng, mỗi video top-K
+    # ứng viên ĐIỂM CAO NHẤT (hoán vị chỉ dịch được khối lượng nó chạm tới)
+    thu_tu, theo_video = [], {}
+    for i, c in enumerate(cands):
+        if c.video_id not in theo_video:
+            thu_tu.append(c.video_id)
+            theo_video[c.video_id] = []
+        theo_video[c.video_id].append(i)
+
+    key_of: dict = {}
+    for vid in thu_tu[:so_video]:
+        pos = sorted(theo_video[vid], key=lambda i: -float(cands[i].score))[:so_khung]
+        if len(pos) < 2:
+            continue
+        gia = []
+        for i in pos:
+            r = hang_of.get((cands[i].video_id, int(cands[i].frame_idx)))
+            gia.append(float(simsB[r]) if r is not None else 0.0)
+        lo, hi = min(gia), max(gia)
+        chuan = [(g - lo) / (hi - lo) for g in gia] if hi > lo else [0.0] * len(gia)
+
+        # loc theo trục thời gian: sắp theo frame_idx rồi trừ phần "khung trước
+        # đã là cảnh B rồi", để thưởng cho chỗ BẮT ĐẦU chứ không thưởng cả vùng
+        thu = sorted(range(len(pos)), key=lambda k: int(cands[pos[k]].frame_idx))
+        truoc = 0.0
+        for k in thu:
+            b = chuan[k]
+            # khoá đánh theo CHỈ SỐ ứng viên, không theo cặp (video, khung):
+            # pool sản xuất có khung TRÙNG (cùng keyframe, hai điểm khác nhau),
+            # đánh khoá theo cặp làm vỡ bất biến w=0
+            key_of[pos[k]] = float(cands[pos[k]].score) + w * b * (1.0 - alpha * truoc)
+            truoc = b
+
+    if len(key_of) < 2:
+        return cands
+
+    # --- hoán vị điểm trong từng video, giữ nguyên đa tập điểm
+    diem_moi = [float(c.score) for c in cands]
+    for _vid, pos in theo_video.items():
+        co = [i for i in pos if i in key_of]
+        if len(co) < 2:
+            continue
+        cac_diem = sorted((float(cands[i].score) for i in co), reverse=True)
+        for i, d in zip(sorted(co, key=lambda i: (-key_of[i], i)), cac_diem):
+            diem_moi[i] = d
+    return [Candidate(c.video_id, c.frame_idx, diem_moi[i], c.video_last_frame)
+            for i, c in enumerate(cands)]
 
 
 def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
@@ -444,21 +539,24 @@ def allocate_rows(cands, allocator: str, n_flat: int, plan: AllocationPlan):
 
 def build_kis_rows(engine, query_text: str, n_flat: int, depth_cost: float, step: int,
                    query_en: Optional[str] = None, allocator: str = "hybrid",
-                   canh_b: int = 0, khoa: str = ""):
+                   canh_b: int = 0, khoa: str = "", hoan_vi: bool = False):
     hits = merged_hits(engine, query_text, query_en)
     cands = [
         Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits
     ]
-    cands, ghi_chu = them_ung_vien_canh_b(engine, cands, query_text, khoa, canh_b)
+    cands, ghi_chu, simsB = them_ung_vien_canh_b(engine, cands, query_text, khoa, canh_b)
     if ghi_chu:
         print(f"    + {ghi_chu}")
+    if hoan_vi and simsB is not None:
+        cands = hoan_vi_theo_canh_b(cands, simsB, _hang_of(engine))
+        print("    + hoan vi diem noi-video theo canh B")
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
     return allocate_rows(cands, allocator, n_flat, plan)
 
 
 def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: float, step: int,
                   query_en: Optional[str] = None, allocator: str = "hybrid",
-                  canh_b: int = 0, khoa: str = ""):
+                  canh_b: int = 0, khoa: str = "", hoan_vi: bool = False):
     """Q&A rows: the same frames as KIS, every one carrying an answer.
 
     The answer column is the same string on every row.  Leaving later rows
@@ -473,9 +571,13 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
     context, question = split_qa(query_text)
     hits = merged_hits(engine, context or query_text, query_en)
     cands = [Candidate(h.video_id, h.frame_idx, h.score, h.video_last_frame) for h in hits]
-    cands, ghi_chu = them_ung_vien_canh_b(engine, cands, context or query_text, khoa, canh_b)
+    cands, ghi_chu, simsB = them_ung_vien_canh_b(engine, cands, context or query_text,
+                                                 khoa, canh_b)
     if ghi_chu:
         print(f"    + {ghi_chu}")
+    if hoan_vi and simsB is not None:
+        cands = hoan_vi_theo_canh_b(cands, simsB, _hang_of(engine))
+        print("    + hoan vi diem noi-video theo canh B")
     plan = AllocationPlan(breadth_cost=1.0, depth_cost=depth_cost, step=step)
     frame_rows = allocate_rows(cands, allocator, n_flat, plan)
 
@@ -570,6 +672,14 @@ def main() -> int:
         "co mat trong pool 53%% -> 76%%, diem cau qua cong +23,3%% TEST "
         "(docs/UNG_VIEN_CANH_B.md). Ton 1 lan goi LLM/cau de gan nhan, co cache.",
     )
+    ap.add_argument(
+        "--hoan-vi-canh-b", type=int, choices=(0, 1), default=1,
+        help="hoan vi DIEM noi-video theo sim(canh B) cho cau qua cong hai canh "
+        "(0 = tat, ra dong y het duong san xuat truoc do). Do duoc +57,6%% tren "
+        "66 cau hai canh, giu dau va do lon duoi 4 mo hinh boc — "
+        "docs/KE_HOACH_DINH_VI.md §1. Doc lap voi --canh-b, nhung --canh-b 0 "
+        "cung tu tat lever nay.",
+    )
     ap.add_argument("--no-answer", action="store_true", help="skip the VQA model, emit frames only")
     ap.add_argument(
         "--no-objects",
@@ -641,12 +751,14 @@ def main() -> int:
                     engine, text, answerer, args.n_flat, args.depth_cost, args.step,
                     query_en=en, allocator=args.allocator,
                     canh_b=args.canh_b, khoa=qf.stem,
+                    hoan_vi=bool(args.hoan_vi_canh_b),
                 )
             else:
                 rows = build_kis_rows(
                     engine, text, args.n_flat, args.depth_cost, args.step,
                     query_en=en, allocator=args.allocator,
                     canh_b=args.canh_b, khoa=qf.stem,
+                    hoan_vi=bool(args.hoan_vi_canh_b),
                 )
         except Exception as exc:  # noqa: BLE001
             print(f"  {qf.name:26s} FAILED: {type(exc).__name__}: {exc}")
