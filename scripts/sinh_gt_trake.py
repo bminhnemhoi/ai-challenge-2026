@@ -25,6 +25,16 @@ nhận, 8 dời neo, và hai ca biên độ lớn nhất đã mở ảnh kiểm 
 đúng). Không có danh sách thì không có chỗ để nhầm chỉ số.
 
     python -u scripts/sinh_gt_trake.py --so 20
+    python -u scripts/sinh_gt_trake.py --so 20 --muc-tieu 24 --provider openai
+    # GIỮ --so 20: nó quyết định chuỗi rng nên đổi là cache cũ trượt hết;
+    # --muc-tieu chỉ đổi điều kiện dừng, không tiêu một lần bốc rng nào.
+
+`--provider openai` dùng gpt-5.2 cho CẢ bước sinh (nhiều ảnh, vẫn thuần văn bản
+không số thứ tự) lẫn bước chấm (một ảnh một request — đúng cơ chế đã kiểm chứng
+56/64 trong `kiem_neo_don_anh.py`). Cache giữ NGUYÊN định dạng và khoá cũ, nên
+các mục đã sinh bằng Gemini replay miễn phí; chỉ mục mới mới tốn tiền. Giá
+$1.25/1M token vào + $10/1M token ra, in tổng tiền khi kết thúc, dừng khi vượt
+`--ngan-sach` (mặc định $3).
 """
 
 from __future__ import annotations
@@ -124,10 +134,72 @@ def hoi(judge, blobs, prompt, max_tokens=900):
     raise cuoi or RuntimeError("het model kha dung")
 
 
+def hoi_openai(model: str, blobs, prompt: str, tien: dict, max_tokens: int = 2000):
+    """Cùng hai câu hỏi, qua gpt-5.x REST — mẫu từ `kiem_neo_don_anh.hoi_openai`.
+
+    Nhận NHIỀU ảnh (bước sinh) hoặc một ảnh (bước chấm). Bước sinh vẫn an toàn
+    trước lỗi đánh-sai-số-thứ-tự vì prompt chỉ đòi mô tả thuần văn bản; bước
+    chấm thì mỗi request đúng một ảnh nên không có chỉ số nào để nhầm.
+    """
+    import base64
+    import os
+    import urllib.request as _rq
+
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("khong co OPENAI_API_KEY trong .env")
+    content = [{"type": "image_url", "image_url": {
+        "url": "data:image/jpeg;base64," + base64.b64encode(b).decode()}} for b in blobs]
+    content.append({"type": "text", "text": prompt})
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": content}],
+        "max_completion_tokens": max(2000, max_tokens),
+    }).encode()
+    cuoi = None
+    for lan in range(3):
+        try:
+            r = json.load(_rq.urlopen(_rq.Request(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {key}",
+                         "Content-Type": "application/json"},
+                data=body), timeout=240))
+            break
+        except Exception as exc:  # noqa: BLE001
+            cuoi = exc
+            time.sleep(3.0 * (lan + 1))
+    else:
+        raise cuoi or RuntimeError("openai khong tra loi")
+    u = r.get("usage") or {}
+    tien["goi"] += 1
+    tien["vao"] += int(u.get("prompt_tokens") or 0)
+    tien["ra"] += int(u.get("completion_tokens") or 0)
+    txt = (r.get("choices") or [{}])[0].get("message", {}).get("content") or ""
+    m = re.search(r"\{.*\}", txt, re.S)
+    if not m:
+        return None
+    return json.loads(m.group(0))
+
+
+def gia_usd(tien: dict) -> float:
+    """$1.25/1M token vào + $10/1M token ra (gpt-5.2, kiểm chứng 01/09)."""
+    return tien["vao"] / 1e6 * 1.25 + tien["ra"] / 1e6 * 10.0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", default=str(ROOT / "data"))
     ap.add_argument("--so", type=int, default=20, help="so muc TRAKE can sinh")
+    ap.add_argument("--muc-tieu", type=int, default=0,
+                    help="dung khi dat so muc nay (0 = bang --so). Dung cai nay de sinh "
+                         "THEM muc ma van replay duoc cache cu: --so quyet dinh CHUOI rng "
+                         "(so lan boc ung vien = so*3, roi moi video boc mot diem bat dau), "
+                         "nen DOI --so la lech toan bo diem bat dau va cache truot het. "
+                         "Da tra gia: chay --so 24 lam L21_V005 sinh lai doan khac han.")
+    ap.add_argument("--provider", choices=("gemini", "openai"), default="gemini")
+    ap.add_argument("--openai-model", default="gpt-5.2")
+    ap.add_argument("--ngan-sach", type=float, default=3.0,
+                    help="tran USD cho provider openai; vuot la dung va ghi phan da co")
     ap.add_argument("--k", type=int, default=3, help="so su kien moi muc")
     ap.add_argument("--doan", type=int, default=14, help="so keyframe moi doan")
     ap.add_argument("--nguong", type=int, default=70, help="diem toi thieu de nhan mot su kien")
@@ -140,9 +212,15 @@ def main() -> int:
     cache = Path(args.cache)
     cache.mkdir(parents=True, exist_ok=True)
     judge = VLMJudge(args.data, model=DEFAULT_MODEL)
-    if not judge.ready:
+    if args.provider == "gemini" and not judge.ready:
         print("khong co GEMINI_API_KEY")
         return 2
+    tien = {"goi": 0, "vao": 0, "ra": 0}
+
+    def goi(blobs, prompt, max_tokens=900):
+        if args.provider == "openai":
+            return hoi_openai(args.openai_model, blobs, prompt, tien, max_tokens)
+        return hoi(judge, blobs, prompt, max_tokens)
 
     meta = json.loads((data / "metadata.json").read_text(encoding="utf-8"))
     theo_video: dict = {}
@@ -164,9 +242,14 @@ def main() -> int:
             ung.append(cs[int(rng.integers(0, len(cs)))])
     ung = list(dict.fromkeys(ung))[: args.so * 2]
 
+    muc_tieu = args.muc_tieu or args.so
     ra, bo_qua = [], []
     for vid in ung:
-        if len(ra) >= args.so:
+        if len(ra) >= muc_tieu:
+            break
+        if args.provider == "openai" and gia_usd(tien) >= args.ngan_sach:
+            print(f"!! cham tran ngan sach ${args.ngan_sach:.2f} — dung, "
+                  f"ghi {len(ra)} muc da co")
             break
         ks = theo_video[vid]
         b = int(rng.integers(0, max(1, len(ks) - args.doan)))
@@ -188,7 +271,7 @@ def main() -> int:
             de = json.loads(f.read_text(encoding="utf-8"))
         else:
             try:
-                de = hoi(judge, blobs, PROMPT_SINH.format(n=len(blobs), k=args.k))
+                de = goi(blobs, PROMPT_SINH.format(n=len(blobs), k=args.k))
             except Exception as exc:  # noqa: BLE001
                 print(f"  {vid}: LOI sinh {type(exc).__name__}")
                 break
@@ -208,10 +291,11 @@ def main() -> int:
                     d = json.loads(fc.read_text(encoding="utf-8"))
                 else:
                     try:
-                        d = hoi(judge, [bl], PROMPT_CHAM.format(mo_ta=sk[:500]), 400) or {}
+                        d = goi([bl], PROMPT_CHAM.format(mo_ta=sk[:500]), 400) or {}
                     except Exception:  # noqa: BLE001
                         d = {}
-                    fc.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+                    if d:  # loi tam thoi thi KHONG ghi cache — ghi {} la dau doc replay
+                        fc.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
                 v = int(d.get("diem", -1) or -1)
                 if v > best:
                     best, best_m = v, m
@@ -247,7 +331,11 @@ def main() -> int:
     print(f"bo qua {len(bo_qua)} video:")
     for v, ly in bo_qua[:8]:
         print(f"  {v}: {ly}")
-    print(f"\n{judge.cost_note()}")
+    if args.provider == "openai":
+        print(f"\n{tien['goi']} lan goi {args.openai_model}, {tien['vao']:,} token vao, "
+              f"{tien['ra']:,} token ra  ~ ${gia_usd(tien):.2f}")
+    else:
+        print(f"\n{judge.cost_note()}")
     print("\nBUOC BAT BUOC TIEP THEO: mo anh kiem bang mat vai muc — buoc 2 chi noi")
     print("'khung nay khop mo ta nhat trong doan', KHONG noi 'mo ta nay dung'.")
     return 0
