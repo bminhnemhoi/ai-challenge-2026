@@ -414,3 +414,30 @@ Ghi chú trung thực về mức đọc: các dòng NNN, QB-Norm, DBSN, GQE, MTA
 EEIoT_newbie, NegBench, RF-CLIP là **đọc nội dung** (bản html/pdf/README, có số
 và công thức trích ở trên); VISIONE, anchor-shot, NeighborRetr, hai bài PRF là
 **đọc mức tóm tắt/abstract** đủ cho vai trò phụ trợ của chúng trong tài liệu.
+
+---
+
+## KẾT QUẢ CỔNG TẤT ĐỊNH cho đề xuất ① (NNN) — **ÂM, ĐÓNG** (02/09)
+
+`scripts/dem_bias_hub.py`, 0 API, bank 141 câu (không giao bộ đo 132 mục).
+
+Phép đếm đã công bố ngưỡng trước khi chạy (>55% mới đi tiếp), trên 68 mục mà
+keyframe đáp án có mặt trong pool nhưng không đứng hạng-1 nội-video:
+
+| nhóm | khung-trên có bias-bank CAO hơn đáp án | chênh bias trung vị |
+|---|---|---|
+| MỘT cảnh | 17/34 = **50%** | −0,0001 |
+| HAI cảnh | 18/34 = **53%** | +0,0010 |
+| **TỔNG** | **35/68 = 51%** | ≈ 0 |
+
+**Kết luận: khung đứng trên đáp án KHÔNG phải hub** — tỷ lệ 51% là tung đồng xu,
+chênh bias trung vị bằng 0 tới ba chữ số. NNN không có mục tiêu để sửa trên kho
+này. Cửa đóng ở trạm gác rẻ nhất, không tiêu lần đọc TEST nào.
+
+Vì sao kết quả COCO (+3,1 điểm) không chuyển miền được: kho COCO có gallery đa
+dạng chủ đề nên hub (ảnh "chung chung") nổi rõ; kho của ta khi xét NỘI-VIDEO thì
+mọi khung cùng video đã cùng chủ đề — độ "khớp với mọi câu hỏi" gần như đồng đều
+trong video, nên trừ nó đi không đổi thứ hạng nội-video.
+
+→ Đề xuất kế tiếp trong bảng xếp hạng của tài liệu này: ② GQE (LLM query
+expansion, ~$0,3/132 câu — hai đội đối thủ của chính giải này đã dùng tại trận).
