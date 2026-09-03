@@ -867,3 +867,41 @@ text tower context ≥64 token (PE-Core NO_GO vì 32 token — xem
 `PRETEST_ENCODER.md` §5); (b) tín hiệu NGOÀI-SigLIP cho thứ tự dòng
 (VLM/OCR/lời thoại — các đường đã có hạ tầng); (c) sức đo: sinh thêm GT
 (`KE_HOACH_DINH_VI.md` §4.2b) vì nửa TEST của bộ 132 đã đọc ≥5 lần.
+
+---
+
+## PHÉP ĐẾM VLM TRẬN TAY ĐÔI — ÂM 53%, VÀ TRỤC XẾP-LẠI MỘT CẢNH KHÉP HẲN (03/09 chiều)
+
+`scripts/dem_vlm_tran_tay_doi.py`, bộ sạch mở rộng 158, n=19 trận, 38 lượt
+Gemini free (log `round2/vlm_tran.log`).
+
+| kết quả | số |
+|---|---|
+| đáp án thắng | 10/19 = **53%** |
+| hoà điểm (không tính thắng — luật bảo thủ đăng ký trước) | 6/19 = 32% |
+| thua | 3/19 = 16% |
+
+53% < 62% ⇒ **ÂM theo ngưỡng công bố trước — cửa đóng.**
+
+Chẩn đoán ghi lại minh bạch, KHÔNG dùng để đổi phán quyết: trong 13 trận
+VLM phân định được, đáp án thắng 10/3 (77%); 6 trận hoà là VLM chấm hai khung
+gần nhau CÙNG điểm — đúng dạng "hai khung giống nhau về ngữ nghĩa, khác chi
+tiết thị giác nhỏ" mà mọi tín hiệu trước cũng bó tay. Ai muốn mở lại cửa này
+trong tương lai phải sửa được chuyện HOÀ (prompt so sánh cặp? nhưng so-cặp
+vi phạm giao thức một-ảnh — rủi ro chỉ số ảnh đã có tiền sử đảo dấu harness),
+và phải mang giả thuyết mới, không phải chạy lại phép đếm này.
+
+### Tổng kết trục xếp-lại nội-video MỘT cảnh — KHÉP TOÀN BỘ, sáu đường kèm số
+
+| đường | số chốt |
+|---|---|
+| ① NNN khử-hub | V1 51% / V2 57%→TEST −1,7% |
+| ③ PRF Rocchio | 31% |
+| ② GQE paraphrase | 12% |
+| §4.5 cut-score | 44%/56% |
+| encoder PE-Core | NO_GO (45%<47%, 11,5>6,8) |
+| VLM một-ảnh | 53% (10T/6H/3B) |
+
+Đầu tư còn lại của bài toán định vị: tầng SINH ứng viên (17% trần), tầng
+PHÂN BỔ dòng (43% trần — cơ chế cũ đã đóng, cần cơ chế mới), kênh Q&A
+(nhân tử 0/1), và TRAKE (72,8% khoảng cách ở định vị sự kiện).
