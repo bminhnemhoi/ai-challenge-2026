@@ -137,3 +137,14 @@ chỉ 6,4; nửa TEST bộ 132 đã bị đọc ≥5 lần — cần GT mới tr
 
 **Kỷ luật đọc:** các mục mới CHƯA từng bị lane nào đọc — dành nửa TEST mới
 cho các lever tiếp theo; mọi phép đo cũ muốn so số phải chạy lại trên bộ 158.
+
+### Số nền trên bộ 158 (cache ứng viên dựng lại 03/09 chiều)
+
+- pool đáp án: 160/174 mục có keyframe đáp án trong pool sản xuất.
+- nền coverage (4 họ × 48 bốc): bộ sạch 158 = **0,2048 ± 0,0011**;
+  MỘT cảnh 0,2873 / HAI cảnh 0,1233 (−57,1%, > 2σ) — bức tranh cũ tái lập
+  với n gấp rưỡi. Video đúng trong 100 dòng: 127/158 (63/79 vs 64/79 —
+  tìm-video ngang nhau giữa hai nhóm, đúng như bộ 132).
+- bão hoà nội-video (bộ mới): MỘT cảnh hạng-1 trong ±20 = 34% (n=85),
+  đáp án trung vị hạng 2, ≤3 ở 62%; HAI cảnh 9% (n=70), lệch trung vị 480
+  frame. **Hình dạng trận-tay-đôi tái lập.**
