@@ -453,6 +453,8 @@ PySceneDetect nào — sai sót ấy suýt hạ chi phí ước tính đi gần 
 nội-video cho nhóm **MỘT cảnh** — nhóm duy nhất chưa có tín hiệu nào và có
 deficit thứ tự lớn nhất (0,2040).
 
+**[CẬP NHẬT 03/09] Nửa cửa còn lại ĐÃ ĐÓNG bằng số:** `scripts/dem_cat_tran_tay_doi.py`, thước trận-tay-đôi hạng-1↔đáp-án (16 trận), giả thuyết một-chiều đăng ký trước 44% / chiều ngược 56% — cả hai < 62%. Không mua TransNetV2, không dùng cut-score làm đặc trưng.
+
 ### 4.6 — ĐỪNG làm
 
 - **Đừng** quét lại tham số `CoveragePlan` (nhiệt / sigma / nửa cửa sổ / lưới).

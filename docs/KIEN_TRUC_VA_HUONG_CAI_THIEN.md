@@ -158,6 +158,7 @@ hợp: **`docs/KE_HOACH_DINH_VI.md`**.
 | **③ PRF Rocchio ảnh-với-ảnh** (SuperGlobal/WeiMoCIR; leave-one-video-out) | frame | phép-đếm-trước thước trận-tay-đôi (16 trận hạng-1↔đáp-án, một cảnh hạng 2–3): tốt nhất λ=1/m=10 chỉ **31%** ≪ ngưỡng ≥62% công bố trước; đối chứng λ=0 = 0% ✓; 0 API 0 GPU 0 lần đọc TEST | ❌ |
 | **PE-Core-L làm encoder xếp-lại nội-video** (lever ④ tầng xếp hạng) | frame | cổng tiền-đăng-ký NO_GO: trung vị HAI cảnh 11,5 (cần ≤6,8); hạng-1 MỘT cảnh 45,0% (cần ≥47,0%), KTC Δ chứa 0; vi_thuần sập (trung vị 64, text tower 32 token BPE Anh — 40/40 câu vi bị cắt). GPU KHOÁ. Encoder tương lai cần context ≥64 token rồi đo lại đúng cổng này | ❌ |
 | **② GQE paraphrase-ensemble** (arXiv:2408.07249; 3 đội đối thủ 2025 dùng) | frame | phép-đếm-trước thước trận-tay-đôi: THƯỚC CHÍNH k=2 **12%** ≪ 62%; từng paraphrase 19%; paraphrase soi tay ĐẠT (không phải lỗi sinh) — từ vựng mới không đổi phán quyết cặp khung cùng video. **§10d kích hoạt: trục nội-video một cảnh training-free CẠN theo văn liệu** | ❌ |
+| **điểm-cắt tương đối trong video** làm tín hiệu một cảnh (nửa cửa §4.5) | frame | thước trận-tay-đôi, giả thuyết một-chiều đăng ký trước (đáp án gần cú cắt hơn): **44%**; chiều ngược cũng chỉ 56% — cả hai < 62%. Tín hiệu cắt có thật ở mức phân bố (0,24 vs 0,44) nhưng không phân xử trận. **Đóng nốt §4.5; trục nội-video một cảnh: 4 cơ chế cùng chết trên 1 thước** | ❌ |
 ### Ba dòng ⚠60 đã được MỞ LẠI bằng số
 
 | câu đã đóng cửa (bộ cũ) | sự thật trên bộ mới |
