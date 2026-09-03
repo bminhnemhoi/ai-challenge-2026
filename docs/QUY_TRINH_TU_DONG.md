@@ -130,11 +130,11 @@ tay đôi hạng 1↔2**, và mọi phép-đếm-trước từ nay đo theo thư
 thắng ≥62% số trận). Nhóm HAI cảnh trượt hệ thống (lệch 752 frame — text khớp
 cảnh A): encoder mới không tự sửa nhóm này.
 
-**PE-Core (encoder thứ hai): cổng pre-test ĐANG DỞ — GPU Colab bị KHOÁ** cho
-tới khi `docs/PRETEST_ENCODER.md` §5 có số (ngưỡng đã tiền-đăng-ký ở §2b,
-không đổi sau khi nhìn số). Encode 3/~40 video, resumable:
-`python -u scripts/pretest_pe_core.py --giai-doan encode` rồi `--giai-doan cham`.
-Quyết định + lý do: `docs/QUYET_DINH_ENCODER_TRAKE.md`.
+**PE-Core (encoder thứ hai): NO_GO — cửa đóng kèm số, GPU vẫn KHOÁ**
+(`PRETEST_ENCODER.md` §5, 03/09 trưa): trung vị HAI cảnh 11,5 (cần ≤6,8);
+hạng-1 MỘT cảnh 45,0% (cần ≥47,0%), KTC chứa 0. Text tower 32 token BPE Anh
+cắt 40/40 câu vi — encoder ứng viên tương lai cần context ≥64 token rồi đo
+lại đúng cổng này. Quyết định + lý do: `docs/QUYET_DINH_ENCODER_TRAKE.md`.
 
 **TRAKE: đã có bộ đo n=24** (`data/gt_trake.json`, `docs/GT_TRAKE.md`): nền
 0,2275, ORACLE-MỐC +107,8%, ORACLE-VIDEO +148,1%, video dòng 1 đúng 21/24;
@@ -148,6 +148,12 @@ phân rã: định vị sự kiện 72,8% / sai video 27,2%. Sản xuất giữ
 - 12 cửa phân bổ/quy tắc dòng (`KE_HOACH_DINH_VI.md` §2.1);
 - **toàn trục khử-hub NNN/QB-Norm** (paper ①): V1 cổng đếm 51%; V2 qua cổng
   57% sát nút rồi đo đầy đủ **TEST −1,7%, P(≤0)=77,7%** (03/09);
+- **TRỤC NỘI-VIDEO MỘT CẢNH QUÉT SẠCH 03/09 — 4 cơ chế chết trên cùng thước
+  trận-tay-đôi**: ① NNN (trên); ③ PRF Rocchio 31%; ② GQE paraphrase 12%
+  (paraphrase soi tay đạt — lỗi ở cơ chế, không phải ở sinh); cut-score
+  tương đối 44%/56%. Kết luận §10d PAPER_XEP_HANG_NOI_VIDEO.md: training-free
+  trên cặp sim SigLIP nội-video ĐÃ CẠN; đầu tư tiếp = ngoài-SigLIP
+  (VLM/OCR/lời thoại) hoặc encoder context ≥64 token;
 - **TRAKE, có TEST đứng sau:** soft_order (TEST +0,0000, 0/12 mục đổi điểm);
   đóng lần hai trên n=24: unordered (−24,7%), min_gap 0–1 (−9,7%), hedge video
   (hạng-1 = top-3 = 21/24 ⇒ bất khả thi cấu trúc). Lưu ý:
@@ -160,10 +166,14 @@ pha CLIP-B32. Tất cả đều đóng vì bộ cũ *không còn headroom nội-
 kiện đó đã thay đổi. (Riêng làm mượt và chuẩn hoá video đã ÂM lại cả trên bộ
 mới — xem §2.1 kế hoạch định vị.)
 
-**Việc xếp hàng kế tiếp** (thứ tự trong `docs/QUYET_DINH_ENCODER_TRAKE.md`):
-1) chạy nốt pre-test PE (~2,5 h CPU); 2) phép-đếm-trước ② GQE paraphrase
-(~$0,3) và ③ PRF Rocchio (0 đồng, song song); 3) đợt sinh thêm GT
-(`KE_HOACH_DINH_VI.md` §4.2b) **trước** mọi lần đọc TEST mới — nửa TEST bộ 132
+**Việc xếp hàng kế tiếp** (cập nhật 03/09 trưa — mục 1-2 của quyết định D đã
+XONG, đều âm kèm số): 1) hoàn tất đợt sinh GT shard h (L28,L29) + i (L30,L25),
+16+16 mục, $0,021 — đang kiểm nhãn hai cảnh độc lập + kiểm neo một-ảnh; sau đó
+gộp (`gop_bo_do_moi.py --shard a..i`) và dựng cache ứng viên; 2) với n lớn
+hơn: đo lại các "hoà" ở §2.1 kế hoạch định vị (hoà = chưa chứng minh được);
+3) tín hiệu ngoài-SigLIP theo giá trị: VLM mở rộng tầm nhìn (§4.1 KIEN_TRUC),
+OCR toàn kho (§4.2), lời thoại nguồn ứng viên (§4.3). Bộ test: 223/223 xanh
+(03/09 trưa). Ghi chú cũ: nửa TEST bộ 132
 đã bị đọc ≥5 lần.
 
 **Việc treo cần người:** cookie YouTube cho 490 video còn thiếu lời thoại;
