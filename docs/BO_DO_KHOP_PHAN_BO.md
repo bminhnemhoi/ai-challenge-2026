@@ -116,3 +116,24 @@ Sự thật nằm giữa; nhưng **bộ cũ đang thổi phồng năng lực h�
 3. Chưa có câu TRAKE nào. Nhánh TRAKE vẫn bị chặn y như trước.
 4. Neo đã dời được kiểm bằng gpt-5.2 + mắt cho 2/8 ca; 6 ca còn lại tin vào
    biên độ điểm (≥15) chứ chưa mở ảnh từng cái.
+
+---
+
+## ĐỢT MỞ RỘNG 03/09 — shard h (L28,L29) + i (L30,L25): 132 → 158 mục sạch
+
+Lý do (`KE_HOACH_DINH_VI.md` §4.2b): n hiệu dụng Kish của nửa TUNE hai cảnh
+chỉ 6,4; nửa TEST bộ 132 đã bị đọc ≥5 lần — cần GT mới trước mọi lần đọc TEST.
+
+- Sinh: 27 mục dùng được (h: 11, i: 16; chỉ tiêu 50/50 giao trước khi nhìn
+  video), $0,021 + kiểm $0,021.
+- Kiểm neo một-ảnh-một-request: 19 xác nhận / 7 dời neo (áp dụng, ghi vết) /
+  1 nghi ngờ → cách ly `gt_moi_can_soat.json`, KHÔNG chấm.
+- Nhãn hai cảnh: bộ gắn nhãn độc lập (`gan_nhan_hai_canh.py`), tách A/B.
+- Bộ sau ghép: **174 mục dùng được, 87 hai cảnh = 50%** (đề thật 51%);
+  bộ SẠCH loại shard c: **158 mục, 79 hai cảnh**; 153 video khác nhau;
+  dải: L21 22, L22 22, L23 16, L24 15, L25 21, L26 22, L27 22, L28 10,
+  L29 6, L30 18.
+- Cache ứng viên đang dựng lại cho mục mới (`do_bo_do_moi.py`).
+
+**Kỷ luật đọc:** các mục mới CHƯA từng bị lane nào đọc — dành nửa TEST mới
+cho các lever tiếp theo; mọi phép đo cũ muốn so số phải chạy lại trên bộ 158.
