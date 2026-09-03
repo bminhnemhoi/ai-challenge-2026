@@ -149,6 +149,7 @@ hợp: **`docs/KE_HOACH_DINH_VI.md`**.
 | mở **ngân sách dòng** giữa các video | dòng | ORACLE-VIDEO (biết trước video + dồn 100 dòng) chỉ **0,4114** / trần tuyệt đối 0,9848 ⇒ **vẫn mất 58% quãng đường** | ❌ |
 | "σ thích nghi theo bề rộng khe keyframe" | dòng | ba phân bố bề rộng khe **gần trùng nhau** (trung vị 66/74/72 khung) ⇒ hình học khe không giải thích nghịch lý σ | ❌ |
 | chùm keyframe làm **bảng ranh giới shot** | tiền xử lý | 15.200 chùm/873 video = một chùm mỗi 21,5 s; 18/873 video không có chùm nào; đo trên **66 cú cắt CÓ NHÃN**: tỷ lệ neo nằm trong chùm **thấp hơn nền** | ❌ |
+| **NNN khử bias-hub (EMNLP 2024) — TOÀN TRỤC ①** | dòng | V1 nội-video: cổng tất định **51% ≤ 55%** (bias gần hằng số trong video). V2 liên-video: cổng QUA sát nút (57%>55%, n=17) → đo đầy đủ sắp-lại-100-dòng (khoá r+k·z(bias), một cảnh, tập dòng bất biến): TUNE đỉnh chỉ **+1,2% phẳng không đơn điệu** → TEST k=1 **−1,7%**, P(≤0)=77,7%. Hub CÓ THẬT nhưng không quy đổi thành điểm | ❌ |
 | ↳ *nhưng* cosine SigLIP liền kề trên thang **tương đối trong video** | tiền xử lý | cú cắt thật ở phân vị **0,24**, đối chứng một cảnh **0,44** — **có tín hiệu, yếu**. Kết luận "cosine không đo được cú cắt" được chứng minh bằng một **ngưỡng tuyệt đối sai** (0,5 nằm dưới trung vị cặp ngẫu nhiên khác video) | ⏸ mở một nửa |
 
 ### Ba dòng ⚠60 đã được MỞ LẠI bằng số

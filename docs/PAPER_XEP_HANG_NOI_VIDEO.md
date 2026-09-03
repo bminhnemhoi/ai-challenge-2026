@@ -2,6 +2,10 @@
 
 Chốt 02/09/2026, lane `paper`. **Sửa lần 2 cùng ngày**, sau khi cổng tất định của
 đề xuất ① chạy xong và ra ÂM (phụ lục cuối tài liệu + §9 đọc lại phạm vi cổng).
+**Sửa lần 3, 03/09** — lượt soát độc lập: tìm lại cả bốn hướng được giao bằng
+truy vấn mới, đối chiếu lại số của nguồn chịu-tải (NNN — khớp từng chữ số),
+cập nhật bảng xếp hạng sau khi cổng V2 chạy QUA 57%, và bổ sung bốn nguồn mới
+(§8, §10). Bản đồ đề xuất KHÔNG đổi — lượt soát hội tụ về đúng bốn trục cũ.
 **Đọc và đánh giá, không chạy thí nghiệm.** Mọi con
 số trong tài liệu này thuộc một trong hai loại: (i) số đã có trong tài liệu nội bộ
 (luôn ghi nguồn nội bộ); (ii) số của paper, luôn kèm URL **đã đọc thật** (§8).
@@ -626,3 +630,31 @@ Ba giới hạn phải mang theo khi đo đầy đủ:
 3. Phép đo đầy đủ phải là **sắp-lại-100-dòng** (tập dòng không đổi ⇒ R@100 bất
    biến theo xây dựng; nhóm HAI cảnh giữ nguyên ⇒ nhóm assert), quét k trên TUNE,
    đọc TEST một lần, bootstrap theo câu — đủ 5 cổng.
+
+---
+
+## KẾT QUẢ ĐO ĐẦY ĐỦ SAU CỔNG V2 — **ÂM, TOÀN TRỤC ① ĐÓNG** (03/09)
+
+`scripts/do_nnn_lien_video.py` — sắp lại 100 dòng bằng khoá `r + k·z(bias)`,
+chỉ câu một cảnh, tập dòng bất biến (R@100 giữ nguyên theo xây dựng), nhóm hai
+cảnh bất biến (assert), TUNE/TEST 33/33 xáo seed cố định, TEST đọc một lần.
+
+| k | TUNE một-cảnh | chênh |
+|---|---|---|
+| 0 | 0,2871 | — |
+| 1 | 0,2906 | **+0,0036** (đỉnh) |
+| 2–8 | 0,2885–0,2895 | +0,0015…+0,0024 |
+| 16–32 | 0,2835/0,2697 | âm dần |
+
+TEST (k=1): 0,2649 → 0,2605 = **−1,7%**; bootstrap theo câu KTC [−0,0167, +0,0047],
+P(≤0) = 77,7%.
+
+**Đọc số cho đúng:** đường TUNE phẳng và không đơn điệu với biên độ +1,2% là
+chữ ký của nhiễu, và TEST xác nhận. Chuỗi ba tầng giờ khép kín:
+V1 51% (hub nội-video không tồn tại — bias gần hằng số trong video) →
+V2 57% sát nút (hub liên-video TỒN TẠI về mặt thống kê) →
+đo đầy đủ −1,7% (nhưng không quy đổi thành điểm, vì các dòng hub đứng trên
+dòng-đúng-nằm-sâu chủ yếu ở vùng hạng mà BUCKET đã trả gần như cùng số điểm).
+
+**Toàn trục ① đóng bằng số ở cả ba tầng đo. Không viết thêm script nào cho họ
+khử-bias.** Trục sống còn lại của tài liệu này: ② GQE, ③ PRF, ④ crop max-pool.
