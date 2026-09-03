@@ -601,3 +601,28 @@ bias bằng top-k câu *giống ứng viên nhất* thay vì câu trung bình to
 là chữ "nearest neighbor" trong tên). Nếu cổng V2 (§9.3) qua, thứ để đo là NNN
 top-k; DN không thêm được gì. Ghi ở đây làm hàng rào chống
 đề-xuất-lại-dưới-tên-khác — đúng vai trò của §6.
+
+---
+
+## KẾT QUẢ CỔNG V2 (§9.3) — **QUA, sát nút** (03/09)
+
+`scripts/dem_bias_hub.py --truc v2`, 0 API, ngưỡng >55% công bố trước.
+
+Nhóm MỘT cảnh, mục có dòng-đúng ở hạng ≥2 và có dòng khác-video đứng trên (n=17):
+
+| thước | kết quả |
+|---|---|
+| theo DÒNG (gộp 441 dòng khác-video đứng trên) | **57%** có bias-bank cao hơn ứng viên của dòng đúng |
+| theo MỤC (đa số dòng-trên bias cao hơn) | 65% |
+| tỷ lệ dòng-trên CÙNG video | 53% |
+
+**QUA cổng (57% > 55%) — hub liên-video là có thật**, ngược với trục nội-video
+(51% = tung đồng xu). Đúng như §9.3 dự đoán từ chính lời giải thích chuyển-miền.
+
+Ba giới hạn phải mang theo khi đo đầy đủ:
+1. **Sát nút** — 57% với ngưỡng 55%; và n=17 mục là nhỏ.
+2. **Lát r∈[2,5] rỗng**: mọi mục đủ điều kiện đều có dòng-đúng nằm SÂU (hạng >5).
+   Tức NNN-liên-video, nếu ăn, sẽ ăn ở phần R@20/50/100 chứ khó cứu R@1/R@5.
+3. Phép đo đầy đủ phải là **sắp-lại-100-dòng** (tập dòng không đổi ⇒ R@100 bất
+   biến theo xây dựng; nhóm HAI cảnh giữ nguyên ⇒ nhóm assert), quét k trên TUNE,
+   đọc TEST một lần, bootstrap theo câu — đủ 5 cổng.

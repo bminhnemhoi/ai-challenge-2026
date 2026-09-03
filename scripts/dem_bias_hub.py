@@ -68,6 +68,8 @@ def main() -> int:
     ap.add_argument("--data", default=str(ROOT / "data"))
     ap.add_argument("--moi", default=str(ROOT / "data" / "ground_truth_moi.json"))
     ap.add_argument("--cache-uv", default=str(ROOT / "data" / "cache_bo_do_moi"))
+    ap.add_argument("--truc", choices=("v1", "v2"), default="v1",
+                    help="v1 = noi-video (da chay, AM 51%%); v2 = thu tu DONG lien-video")
     args = ap.parse_args()
 
     data = Path(args.data)
@@ -101,6 +103,10 @@ def main() -> int:
     bias = (tong / len(bank)).astype(np.float32)
     print(f"bias-bank: mean {bias.mean():.4f}, sd {bias.std():.4f}, "
           f"p99 {np.percentile(bias, 99):.4f}")
+
+    if args.truc == "v2":
+        truc_v2(args, bias, sach, giu, moi, uv, kf, hang_of)
+        return 0
 
     # --- phép đếm: khung đứng TRÊN keyframe đáp án có bias cao hơn không?
     ket = {"mot": [], "hai": []}
@@ -154,6 +160,89 @@ def main() -> int:
         print(f"  ÂM, DỪNG: chỉ {ty:.0f}% ≤ 55% — khung đứng trên đáp án không phải hub.")
         print("  Ghi vào bảng cửa đóng, không tiêu lần đọc TEST nào cho NNN.")
     return 0
+
+
+
+
+def truc_v2(args, bias, sach, giu, moi, uv, kf, hang_of):
+    """Cổng V2 — trục THỨ TỰ DÒNG liên-video (docs/PAPER_XEP_HANG_NOI_VIDEO.md §9.3).
+
+    Cổng V1 (51%) chỉ so nội-video, nơi bias-bank gần như hằng số vì cùng chủ đề.
+    V2 so ứng viên của các DÒNG đứng trên dòng đúng — phần lớn thuộc VIDEO KHÁC,
+    nơi bias biến thiên thật, và là đúng trục mà bằng chứng COCO của NNN nằm
+    (+3,1 R@1 là xếp toàn gallery). Deficit thứ tự dòng nhóm một cảnh (0,2040)
+    cũng lớn hơn deficit đặt-frame (0,1488).
+
+    Ngưỡng công bố trước, y hệt V1: >55% mới đi tiếp.
+    """
+    from scripts.do_cap_thoi_gian_moi import canh_cua
+    from scripts.experiment_cap_thoi_gian import _plan
+    from scripts.make_submission import DEFAULT_N_FLAT, allocate_rows
+    from src.core.submission import MAX_ROWS, Candidate
+
+    def kf_gan(vid, f):
+        a = kf.get(vid)
+        if a is None or not len(a):
+            return None
+        return int(a[int(np.argmin(np.abs(a - int(f))))])
+
+    dong_hon, muc_hon, cung_video_ty_le = [], [], []
+    n_r25 = 0
+    for k, i in enumerate(giu):
+        g = moi[i]
+        if canh_cua(g):
+            continue  # V2 đo nhóm MỘT cảnh — nhóm có deficit thứ tự dòng lớn nhất
+        cands = [Candidate(v, f, s, lf) for v, f, s, lf in uv[i]]
+        rows = allocate_rows(cands, "coverage", DEFAULT_N_FLAT, _plan())[:MAX_ROWS]
+        r_dung = next((r for r, (v, f) in enumerate(rows, 1)
+                       if v == g["video_id"] and abs(int(f) - int(g["frame_idx"])) <= 20),
+                      None)
+        if r_dung is None or r_dung < 2:
+            continue
+        kf_d = kf_gan(g["video_id"], g["frame_idx"])
+        r_bias = hang_of.get((g["video_id"], kf_d)) if kf_d is not None else None
+        if r_bias is None:
+            continue
+        b_dung = bias[r_bias]
+        tren = rows[: r_dung - 1]
+        khac = []
+        for v, f in tren:
+            if v == g["video_id"]:
+                continue
+            kk = kf_gan(v, f)
+            rr = hang_of.get((v, kk)) if kk is not None else None
+            if rr is not None:
+                khac.append(bias[rr])
+        cung_video_ty_le.append(1.0 - len(khac) / max(1, len(tren)))
+        if not khac:
+            continue
+        hon = [1.0 if x > b_dung else 0.0 for x in khac]
+        dong_hon += hon
+        muc_hon.append(float(np.mean(hon)) > 0.5)
+        if 2 <= r_dung <= 5:
+            n_r25 += 1
+
+    print("\n=== CỔNG V2 — thứ tự DÒNG liên-video, nhóm MỘT cảnh ===")
+    print(f"  mục đủ điều kiện (dòng đúng ở hạng >=2, có dòng khác-video đứng trên): "
+          f"{len(muc_hon)} (trong đó r∈[2,5]: {n_r25})")
+    if not dong_hon:
+        print("  không có dữ liệu — dừng")
+        return
+    ty_dong = 100 * float(np.mean(dong_hon))
+    ty_muc = 100 * float(np.mean(muc_hon))
+    print(f"  theo DÒNG  (gộp {len(dong_hon)} dòng khác-video): "
+          f"{ty_dong:.0f}% có bias CAO hơn ứng viên của dòng đúng")
+    print(f"  theo MỤC   (đa số dòng-trên có bias cao hơn): {ty_muc:.0f}%")
+    print(f"  tỷ lệ dòng-trên CÙNG video (trung bình): "
+          f"{100*float(np.mean(cung_video_ty_le)):.0f}%")
+    print("\n=== KẾT LUẬN CỔNG V2 (ngưỡng công bố trước: >55% theo DÒNG) ===")
+    if ty_dong > 55:
+        print(f"  ĐI TIẾP: {ty_dong:.0f}% > 55% — hub liên-video là có thật.")
+        print("  Bước sau: đo NNN sắp-lại-100-dòng đầy đủ theo 5 cổng (tập dòng không")
+        print("  đổi => R@100 bất biến; nhóm hai cảnh giữ nguyên => nhóm assert).")
+    else:
+        print(f"  ÂM, ĐÓNG NỐT TOÀN TRỤC ①: {ty_dong:.0f}% <= 55%.")
+        print("  Không viết script đo nào nữa cho họ khử-bias.")
 
 
 if __name__ == "__main__":
