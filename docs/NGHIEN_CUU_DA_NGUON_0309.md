@@ -452,3 +452,12 @@ Ngưỡng ≥1 QUA. **Caveat giữ nguyên:** cả 8 ví dụ đều là đáp �
 (net ≥ +1 câu, 0 lật đúng→sai). Đang OCR đích danh các khung mà đường trả lời
 THẬT SỰ đọc (`quet_ocr_khung_doc.py` — top-4 điểm ±1 lân cận) để A/B chạy
 được ngay sáng.
+
+### PROBE R4 — QUA (01h45 04/09): 9/24 ≥ ngưỡng 8 → VOTING CÓ CỬA
+
+24 mục sai-đáp-án/đúng-video × 3 lần temp=1.0 (vá temp cục bộ tiến trình đo,
+sản xuất không đụng): **9/24 mục có ≥1 lần ra đáp án đúng**; 2 mục ra đúng cả
+3/3 — tức một phần cái "sai" trong cache là nhiễu lấy mẫu/xoay model, đúng
+chẩn đoán ASC. Bước tiếp: A/B chèn-OCR đang chạy (158 call, nhánh đối chứng
+đã có sẵn trong cache); nếu muốn vote K=3 phải đo net toàn bộ + ma trận lật
+(luật R14 — không blanket self-verification).

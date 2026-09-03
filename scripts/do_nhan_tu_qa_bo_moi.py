@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--m", type=int, default=100)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--ab-ocr", action="store_true",
+                    help="R3: A/B chen chu OCR cua khung-doc vao prompt roi dung")
     ap.add_argument("--probe-sai", type=int, default=0,
                     help="R4: chay lai N lan temp=1.0 cac muc sai-dap-an/dung-video roi dung")
     ap.add_argument("--xuat-sai", default=None,
@@ -218,6 +220,70 @@ def main() -> int:
             print(f"\nPROBE R4: {lat}/{len(muc_tieu)} mục có ≥1 lần đúng "
                   f"(ngưỡng ≥{can}) -> "
                   f"{'VOTING CÓ CỬA' if lat >= can else 'ÂM — voting không có gì để cứu'}")
+            return 0
+        if ten == "NEN" and args.ab_ocr:
+            # R3 bậc A/B — chèn chữ OCR của CHÍNH các khung model sẽ đọc vào
+            # prompt (KOCRBench: +12 điểm % Gemini). Nhánh không-OCR = cache NEN.
+            # Thước: net ≥ +1 câu VÀ 0 câu đúng lật sai; báo riêng nhóm video-đúng.
+            from src.core.ocr import OCRIndex
+            oidx = OCRIndex(args.data, langs=["vi", "en"])
+
+            def chu_ocr(cands_doc):
+                mau = []
+                for c in cands_doc[:2]:
+                    cv = oidx._video(c.video_id)
+                    a_kf = sorted(int(k) for k in cv.keys()) if cv else []
+                    gan = [f for f in a_kf if abs(f - int(c.frame_idx)) <= 150]
+                    for f in ([int(c.frame_idx)] + gan)[:3]:
+                        for x in cv.get(str(f)) or []:
+                            t = x[1] if isinstance(x, (list, tuple)) and len(x) > 1 else str(x)
+                            if t and t not in mau:
+                                mau.append(str(t))
+                return " | ".join(mau)[:500]
+
+            print(f"\n=== A/B R3: chèn OCR vào prompt, {len(sach)} mục ===", flush=True)
+            net_len, net_xuong = 0, 0
+            theo_vd = {True: [0, 0], False: [0, 0]}  # video_dung -> [len, xuong]
+            for i, g in enumerate(sach):
+                cau = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
+                ocr_t = chu_ocr(cl[i])
+                cau2 = cau + ("\nChữ đọc được trên các khung hình (OCR tự động, "
+                              "có thể sai chính tả, chỉ dùng làm gợi ý): "
+                              + ocr_t if ocr_t else "")
+                khung_key = "|".join(f"{c.video_id}:{int(c.frame_idx)}"
+                                     for c in cl[i][:24])
+                h2 = hashlib.sha1(f"{args.model}|{cau2}|{khung_key}"
+                                  .encode("utf-8")).hexdigest()[:24]
+                f2 = cache / f"{h2}.json"
+                if f2.is_file():
+                    rec2 = json.loads(f2.read_text(encoding="utf-8"))
+                else:
+                    da2, ghi2 = tra_loi_tu_ung_vien(judge, args.model, cl[i],
+                                                    meta_key, by_n, caps, cau2)
+                    rec2 = {"dap_an": da2, "ghi": ghi2, "dong1": cl[i][0].video_id}
+                    f2.write_text(json.dumps(rec2, ensure_ascii=False),
+                                  encoding="utf-8")
+                chuan = g.get("vqa_answer") or ""
+                ok2 = bool(_default_answer_match(rec2["dap_an"], chuan)
+                           or khop_rong(rec2["dap_an"], chuan))
+                ok1 = dung[i]["dung"]
+                vd = dung[i]["video_dung"]
+                if ok2 and not ok1:
+                    net_len += 1
+                    theo_vd[vd][0] += 1
+                if ok1 and not ok2:
+                    net_xuong += 1
+                    theo_vd[vd][1] += 1
+                if (i + 1) % 20 == 0:
+                    print(f"  {i+1}/{len(sach)} | lên {net_len} xuống {net_xuong}",
+                          flush=True)
+            print(f"\nA/B R3: sai→đúng {net_len} | đúng→sai {net_xuong} | "
+                  f"NET {net_len - net_xuong:+d}")
+            print(f"  nhóm video-ĐÚNG: lên {theo_vd[True][0]} xuống {theo_vd[True][1]}"
+                  f" | video-SAI: lên {theo_vd[False][0]} xuống {theo_vd[False][1]}")
+            print("NGƯỠNG: net ≥ +1 VÀ đúng→sai = 0 -> "
+                  + ("QUA" if (net_len - net_xuong >= 1 and net_xuong == 0)
+                     else "KHÔNG QUA (đọc kỹ hai chiều trước khi kết luận)"))
             return 0
         if ten == "NEN" and args.xuat_sai:
             Path(args.xuat_sai).write_text(json.dumps(
