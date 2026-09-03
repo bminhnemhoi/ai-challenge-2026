@@ -44,23 +44,25 @@ from scripts.experiment_cap_thoi_gian import KhoSims  # noqa: E402
 from scripts.make_submission import split_events  # noqa: E402
 from src.core.submission import MAX_ROWS, allocate_trake_rows  # noqa: E402
 
-LAM = (0.001, 0.003, 0.01)
+LAM = (0.001, 0.003, 0.01, 0.02, 0.05)
 B_KBEST = 8
 
 
-def dp_kbest(S: np.ndarray, lam: float, k_out: int = 100):
-    """DP đơn điệu nghiêm với phạt λ·gap; trả (chuỗi tốt nhất, k chuỗi phân biệt)."""
+def dp_kbest(S: np.ndarray, lam, k_out: int = 100):
+    """DP đơn điệu nghiêm; lam là số HOẶC list theo khe (λ của bước vào sự kiện i)."""
     N, T = S.shape
+    lam_i = [float(lam)] * N if np.isscalar(lam) else [float(x) for x in lam]
     # trạng thái [i][t] = list (điểm, đường) top-B, đường là tuple chỉ số lưới
     cur = [[(float(S[0, t]), (t,))] for t in range(T)]
     for i in range(1, N):
+        li = lam_i[i]
         moi = [[] for _ in range(T)]
         # chạy τ tăng dần, giữ "bể" ứng viên tốt nhất đã trừ phạt tới τ
         be = []  # list (điểm − λ·(t−τ) quy về gốc τ=0: điểm + λ·τ, đường)
         for t in range(T):
             if t >= 1:
                 for d, p in cur[t - 1]:
-                    be.append((d + lam * (t - 1), p))
+                    be.append((d + li * (t - 1), p))
                 if len(be) > 4 * B_KBEST:
                     be.sort(key=lambda x: -x[0])
                     del be[4 * B_KBEST:]
@@ -73,7 +75,7 @@ def dp_kbest(S: np.ndarray, lam: float, k_out: int = 100):
                 if p[-1] in thay:
                     continue
                 thay.add(p[-1])
-                them.append((float(S[i, t]) + d - lam * t, p + (t,)))
+                them.append((float(S[i, t]) + d - li * t, p + (t,)))
                 if len(them) >= B_KBEST:
                     break
             moi[t] = them
@@ -155,27 +157,54 @@ def main() -> int:
     print("-" * 62)
     print(f"{'A argmax + thang':<26}{dA[6]:>16.4f}{dA[10]:>9.4f}{dA[20]:>9.4f}")
 
-    ket = {}
-    for lam in LAM:
-        rows_B, rows_C = [], []
-        for m, S, a in zip(gt, S_of, luoi_of):
-            top1, kbest = dp_kbest(S, lam, k_out=MAX_ROWS)
-            c = [int(a[t]) for t in top1]
-            rows_B.append(allocate_trake_rows(m["video_id"], c, budget=MAX_ROWS,
-                                              step=args.step,
-                                              video_last_frame=last_of.get(m["video_id"])))
-            rows_C.append([(m["video_id"], [int(a[t]) for t in p]) for p in kbest])
-        dB, dC = diem(rows_B), diem(rows_C)
-        ket[lam] = (dB, dC, rows_B, rows_C)
-        print(f"{'B DP(λ=' + str(lam) + ') + thang':<26}{dB[6]:>16.4f}"
-              f"{dB[10]:>9.4f}{dB[20]:>9.4f}")
-        print(f"{'C DP(λ=' + str(lam) + ') k-best100':<26}{dC[6]:>16.4f}"
-              f"{dC[10]:>9.4f}{dC[20]:>9.4f}", flush=True)
+    # --- biến thể đăng ký trước, chạy cùng bảng ---
+    # DROP (Drop-DTW thích nghi): sự kiện có max(S_i) dưới phân vị 30 của toàn S
+    # là "bước không khớp được" — làm phẳng hàng đó về 0 để DP đặt nó theo
+    # khoảng cách tối ưu giữa hai láng giềng thay vì theo nhiễu.
+    # LAM_I (entropy khe): λ_i = λ · (1 − H(softmax(S_i))/H_max) — sự kiện càng
+    # bất định (entropy cao) càng được phạt gap NHẸ hơn.
+    def bien_the(S, kieu, lam):
+        if kieu == "goc":
+            return S, [lam] * S.shape[0]
+        if kieu == "drop":
+            S2 = S.copy()
+            nguong = np.percentile(S, 30)
+            for j in range(S.shape[0]):
+                if S2[j].max() < nguong:
+                    S2[j] = 0.0
+            return S2, [lam] * S.shape[0]
+        if kieu == "lam_i":
+            hs = []
+            for j in range(S.shape[0]):
+                p_ = np.exp(S[j] * 50)  # nhiệt ~ dải sim SigLIP
+                p_ /= p_.sum()
+                H = -(p_ * np.log(p_ + 1e-12)).sum() / np.log(len(p_))
+                hs.append(lam * max(0.1, 1.0 - H))
+            return S, hs
+        raise ValueError(kieu)
 
-    tot = max(ket, key=lambda k: max(ket[k][0][6], ket[k][1][6]))
-    dB, dC, rows_B, rows_C = ket[tot]
-    print(f"\nλ tốt nhất ở ±6: {tot}")
-    for ten, rows, d in (("B (DP định vị)", rows_B, dB), ("C (k-best trải)", rows_C, dC)):
+    # C (k-best trải dòng) đã ÂM dứt khoát ở lần chạy 1 (−28,6%, P=100%) — bỏ,
+    # chỉ quét B (DP làm định vị) qua ba kiểu phạt.
+    ket = {}
+    for kieu in ("goc", "drop", "lam_i"):
+        for lam in LAM:
+            rows_B = []
+            for m, S, a in zip(gt, S_of, luoi_of):
+                S2, lam_list = bien_the(S, kieu, lam)
+                top1, _kb = dp_kbest(S2, lam_list, k_out=1)
+                c = [int(a[t]) for t in top1]
+                rows_B.append(allocate_trake_rows(m["video_id"], c, budget=MAX_ROWS,
+                                                  step=args.step,
+                                                  video_last_frame=last_of.get(m["video_id"])))
+            dB = diem(rows_B)
+            ket[(kieu, lam)] = (dB, rows_B)
+            print(f"{'B ' + kieu + '(λ=' + str(lam) + ')':<26}{dB[6]:>16.4f}"
+                  f"{dB[10]:>9.4f}{dB[20]:>9.4f}", flush=True)
+
+    tot = max(ket, key=lambda k: ket[k][0][6])
+    dB, rows_B = ket[tot]
+    print(f"\ncấu hình tốt nhất ở ±6: {tot[0]}/λ={tot[1]}")
+    for ten, rows, d in (("B (DP định vị)", rows_B, dB),):
         ch = d[6] - dA[6]
         a_c, b_c = diem_cau(rows_A), diem_cau(rows)
         rng = np.random.default_rng(4242)

@@ -421,3 +421,23 @@ vòng 3** (không đáng GPU giờ chót). Caveat còn lại ghi trung thực: 3
 nên 7% là CẬN DƯỚI; nhưng khi người soát LỆCH khỏi lưới thì lệch nhỏ (≤3s,
 đa phần <1s) — kết luận BỎ vẫn đứng với dữ liệu tốt nhất hiện có. R6 (WRRF gộp
 nguồn) KHÔNG bị ảnh hưởng — vẫn chờ OCR toàn kho.
+
+### R5 bậc đếm — vòng 2 (rạng sáng 04/09): biến thể λ_i entropy (R10) dẫn đầu
+
+Quét đủ 3 kiểu phạt × λ∈{0,001..0,05} trên TUNE (C đã đóng, chỉ B):
+
+| kiểu | λ tốt nhất | ±6 | so A |
+|---|---|---|---|
+| goc (DANTE thuần) | 0,003 | 0,2308 | +18,5% |
+| drop (Drop-DTW thích nghi) | — | **trơ** (không sự kiện nào dưới phân vị 30 trên TUNE — không phân định được, không phải âm) | — |
+| **lam_i (λ_i entropy khe — ý R10 của TA)** | **0,01** | **0,2389** | **+22,7%**, P(≤0)=6,5% |
+
+λ_i là đỉnh NỘI VÙNG thật (0,02→0,2200; 0,05→0,1751 — hai bên đều tụt), và nó
+CỨU vùng λ cao (goc 0,01 sập còn 0,1673; lam_i 0,01 đứng đầu): sự kiện chắc
+chắn chịu phạt gap đầy đủ, sự kiện mù mờ được thả lỏng — đúng trực giác R10,
+văn liệu chưa ai làm ở mức từng-sự-kiện. Vẫn **+4,4 điểm < ngưỡng chặt +5**.
+
+Sáng 04/09 (đăng ký từ đêm qua, không đổi): so với đường sản xuất THẬT
+(align_sequence) trên 12 TUNE; đọc 12 mục TEST **một lần** với cấu hình đã
+chốt `lam_i/λ=0,01`; ship qua cờ `--dp-trake` chỉ khi TEST ≥ +5 điểm tuyệt
+đối ở ±6 và so-sản-xuất dương.
