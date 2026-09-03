@@ -1,6 +1,8 @@
 # Tín hiệu xếp hạng nội-video TRAINING-FREE cho câu MỘT cảnh — khảo sát có mục tiêu hẹp
 
-Chốt 02/09/2026, lane `paper`. **Đọc và đánh giá, không chạy thí nghiệm.** Mọi con
+Chốt 02/09/2026, lane `paper`. **Sửa lần 2 cùng ngày**, sau khi cổng tất định của
+đề xuất ① chạy xong và ra ÂM (phụ lục cuối tài liệu + §9 đọc lại phạm vi cổng).
+**Đọc và đánh giá, không chạy thí nghiệm.** Mọi con
 số trong tài liệu này thuộc một trong hai loại: (i) số đã có trong tài liệu nội bộ
 (luôn ghi nguồn nội bộ); (ii) số của paper, luôn kèm URL **đã đọc thật** (§8).
 
@@ -20,19 +22,22 @@ của nhóm này là **thứ tự dòng** (0,2040), lớn hơn deficit đặt-fr
 (`docs/KE_HOACH_DINH_VI.md` §3.2).
 
 Xếp theo (tác động vào tầng XẾP HẠNG 40%) × (khả thi trong ràng buộc: không huấn
-luyện, không video gốc, quota Gemini cạn) × (độ tin bằng chứng):
+luyện, không video gốc, quota Gemini cạn) × (độ tin bằng chứng). **Bảng đã cập
+nhật sau cổng tất định 02/09** (① nguyên bản đứng đầu bảng cũ, nay V1 đã ĐÓNG):
 
-| # | đề xuất | trục thông tin MỚI | chi phí | khả thi | tác động ước tính |
-|---|---|---|---|---|---|
-| ① | **Khử bias-hub theo bank câu hỏi** (NNN/QB-Norm) | thống kê theo trục **CÂU KHÁC** trên từng khung | 0 API, 0 GPU, ~phút CPU | **5,0** | **4,0** |
-| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | 4,0 | 3,0 |
-| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | 4,5 | 2,5 |
-| ④ | **Chấm dưới-khung: max-pool trên crop** | trục **DƯỚI-KHUNG** của ảnh ứng viên | ~200 lượt mã hoá ảnh/câu (GPU nhẹ) | 2,5 | 2,5 |
-| — | *(cửa đóng mới, §6: shot-pooling/cửa sổ trượt, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, các bộ rerank cần huấn luyện)* | | | | |
+| # | đề xuất | trục thông tin MỚI | chi phí | trạng thái sau cổng 02/09 |
+|---|---|---|---|---|
+| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) — §3 | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | **SỐNG — đứng đầu.** Hai đội đối thủ của chính giải đã dùng tại trận |
+| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** — §4 | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | **SỐNG — chạy độc lập**, không còn chờ ① (§9.2); thêm bằng chứng cùng họ: SuperGlobal, được một đội moment-retrieval CVPRW 2025 dùng |
+| ①′ | **Khử bias-hub — CHỈ còn trục THỨ TỰ DÒNG liên-video (V2)** — §9.3 | trục **CÂU KHÁC**, so **liên-video** | 0 API, ~15 phút | **CHỜ CỔNG ĐẾM MỚI.** V1 (nội-video) đã ĐÓNG bằng cổng 51%; cổng ấy **chưa đo** trục liên-video |
+| ④ | **Chấm dưới-khung: max-pool trên crop** — §5 | trục **DƯỚI-KHUNG** của ảnh ứng viên | ~200 lượt mã hoá ảnh/câu (GPU nhẹ) | SỐNG — cuối hàng, bằng chứng chuyển miền yếu nhất |
+| — | *(cửa đóng: ①-V1 nội-video — phụ lục; shot-pooling/cửa sổ trượt, mở rộng bằng keyframe HÀNG XÓM thời gian, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, bộ rerank cần model mới — §6)* | | | |
 
-**Một câu tóm tắt:** đề xuất đầu bảng chạy trên chính ma trận tương đồng đã có,
-không cần một byte video hay một lần gọi API nào — và nó là kỹ thuật 2024–2025 có
-số **trên đúng SigLIP** (NNN: +3,1 điểm R@1 tuyệt đối cho SigLIP trên COCO).
+**Một câu tóm tắt:** sau khi cổng đếm giết đề xuất rẻ nhất ở đúng trạm gác rẻ
+nhất, đề xuất đứng đầu còn lại là GQE — kỹ thuật có số zero-shot **+5,2 điểm R@1**
+(CLIP, MSR-VTT) và đã được **hai đội đối thủ của chính giải này** dùng tại trận
+2025; cửa duy nhất còn mở cho họ khử-bias là trục **liên-video** mà cổng 02/09
+chưa hề chạm tới (§9.3), giá một phép đếm 0 đồng nữa.
 
 ---
 
@@ -72,6 +77,11 @@ xuất ở đây vẫn áp được lên encoder mới y nguyên.
 ---
 
 ## 2. Đề xuất ① — Khử bias-hub theo bank câu hỏi (NNN / QB-Norm / DBSN)
+
+> **TRẠNG THÁI 02/09: biến thể V1 (chọn Ô nội-video) đã ĐÓNG** bằng cổng đếm tất
+> định 51% ≈ tung đồng xu (phụ lục cuối tài liệu). Phần dưới đây giữ nguyên làm
+> hồ sơ cơ chế. **Cổng ấy KHÔNG đo biến thể V2 (thứ tự dòng liên-video)** — mọi
+> phép so của nó đều nội-video. Đọc §9 trước khi trích dẫn kết luận đóng.
 
 ### 2.1 Nguồn đã đọc
 
@@ -197,6 +207,12 @@ nhóm một cảnh** nếu phép đếm bước 1 nghiêng rõ; quy ra toàn b�
   câu, 75,4 điểm sơ tuyển, vào chung kết) và
   [EEIoT_newbie, arXiv:2512.06334](https://arxiv.org/html/2512.06334v1) (Gemini
   sinh tập câu tương đương ngữ nghĩa, lấy max theo keyframe).
+- Đội đối thủ **thứ ba** (đọc thêm 02/09, lượt sửa 2):
+  [arXiv:2512.12935](https://arxiv.org/html/2512.12935v1) — 76,4/88 điểm, cũng
+  phân rã câu bằng GPT-4o, và hợp nhất hai danh sách xếp hạng bằng **SRRF**
+  (score-reflected reciprocal rank fusion). SRRF là phương án hợp nhất dự phòng
+  nếu majority-vote của GQE tỏ ra giòn ở k=2 trên câu tiếng Việt — cùng
+  training-free, chỉ đổi công thức trộn hạng.
 
 ### 3.2 Cơ chế — khác gì doc2query và cắt-khúc-câu-dài
 
@@ -245,6 +261,18 @@ nhóm một cảnh** nếu phép đếm bước 1 nghiêng rõ; quy ra toàn b�
 - [MADTempo](https://arxiv.org/html/2512.12929) làm bản thủ công của đúng ý này
   tại trận: lấy ảnh Google Search, mã hoá CLIP, trộn vào truy vấn khi văn bản
   không tả nổi khái niệm hiếm.
+- **Bằng chứng cùng họ, thêm 02/09 (lượt sửa 2):**
+  [SuperGlobal, ICCV 2023, arXiv:2308.06954](https://arxiv.org/abs/2308.06954) —
+  rerank chỉ bằng đặc trưng toàn cục: tinh chỉnh descriptor của truy vấn và của
+  top-k bằng pooling trên tập hàng xóm nhỏ, **không huấn luyện**; +3,7% two-stage
+  trên ROxford+1M-Hard với speedup 64.865× so rerank đặc trưng cục bộ (mức đọc:
+  abstract). Đáng kể vì một đội moment-retrieval ở **CVPRW 2025 IViSE**
+  (Nguyen-Nhu et al., "A Lightweight Moment Retrieval System with Global
+  Re-Ranking", openaccess.thecvf.com — PDF chặn 403, chỉ đọc được phần dẫn qua
+  kết quả tìm kiếm) dùng đúng SuperGlobal cho bài keyframe-retrieval cùng dạng
+  với ta. Tức "tinh chỉnh truy vấn/ứng viên bằng hàng xóm trong KHÔNG GIAN ẢNH"
+  đã có cả số benchmark lẫn tiền lệ dùng tại trận cùng miền — mạnh hơn hồ sơ
+  "chưa có số pseudo cho CLIP" mà mục này tự khai ở trên.
 
 ### 4.2 Cơ chế — khác gì mọi thứ đã thử
 
@@ -260,9 +288,14 @@ xếp lại khung trong mỗi video theo `cos(q', e_i)`. Hai điểm cơ chế:
    lấy từ các video ≠ V. Thiếu điều này, khung hạng-1 hiện tại của V tự bơm chính
    nó — phép đo thành vòng lặp tự xác nhận.
 
-Tương tác quan trọng: PRF **khuếch đại hub** (khung hub lọt top-m sẽ kéo `q'` về
-phía hub). Vậy thứ tự thử đúng là **① trước, ③ sau, và ③ chạy trên điểm đã khử
-bias**. Đo ③ độc lập trước ① là tự làm khó số của chính nó.
+Tương tác quan trọng — **đã đổi sau cổng 02/09**: lo ngại ban đầu là PRF
+**khuếch đại hub** (khung hub lọt top-m kéo `q'` về phía hub), nên bản gốc của
+tài liệu này xếp ③ chạy *sau* ① trên điểm đã khử bias. Cổng đếm cho thấy khung
+chặn đường **nội-video** không phải hub (51%, chênh bias ≈ 0) ⇒ với biến thể
+hoán-vị-nội-video của ③, lo ngại ấy giảm hẳn và **③ chạy độc lập được ngay**.
+Lo ngại còn lại là **drift liên-video** (top-m toàn khung của một chủ đề sai kéo
+`q'` đi) — chính là rủi ro kinh điển của cả họ PRF, xử bằng λ nhỏ và phép đếm
+trước khi nhìn điểm.
 
 ### 4.3 Đo, chi phí
 
@@ -328,6 +361,14 @@ gian: [VISIONE, ACM ICMR 2023](https://dl.acm.org/doi/10.1145/3591106.3592226);
    một video đã đúng). Còn dạng "cặp truy vấn thời gian" thì bộ đo mới đã đóng
    riêng (+6,7%, KTC chứa 0, hiệu ứng co khi thêm dữ liệu).
 
+Cùng lý do đóng luôn một biến thể nghe khác tên: **mở rộng truy vấn thị giác bằng
+keyframe HÀNG XÓM THỜI GIAN** (chấm khung `i` bằng tổ hợp `sim` của chính nó và
+các khung liền kề, hoặc trộn embedding hàng xóm vào truy vấn). Khai triển ra thì
+điểm mới của khung `i` là một tổ hợp tuyến tính của `s_q(i−w..i+w)` — **chính là
+làm-mượt-thời-gian với một nhân khác**, cửa đã ÂM trên TEST. Muốn "hàng xóm" mang
+thông tin mới thì hàng xóm phải đến từ **ngoài video** (đồng thuận kho — tức ③),
+không phải từ trục thời gian đã vắt kiệt.
+
 ### 6.2 Phủ định bằng NGÔN NGỮ trong câu truy vấn — ĐÓNG
 
 [NegBench, CVPR 2025, arXiv:2501.09425](https://arxiv.org/abs/2501.09425): các
@@ -360,6 +401,14 @@ và mọi reranker cross-attention (BLIP-ITM…): cần train hoặc cần model
 còn ghi rõ bias-correction không giúp model cross-attention. Không thuộc
 ràng buộc training-free của lane này.
 
+Ghi nhận thêm (02/09, lượt sửa 2): đội đối thủ thứ ba của chính giải
+([arXiv:2512.12935](https://arxiv.org/html/2512.12935v1), 76,4/88 điểm) rerank
+top-100 bằng **đầu ITM của BLIP-2** — tức câu trả lời chuẩn của giới cho tầng
+XẾP HẠNG là *một model thứ hai*. Điều đó không mở lại cửa này cho lane paper
+(vẫn cần model mới ~4GB), nhưng là một dữ kiện định hướng cho lane **pe-core**:
+nếu encoder thứ hai được chọn, phương án dùng nó làm reranker cross-attention
+trên top-100 có tiền lệ tại trận với điểm cao.
+
 ### 6.6 Dò khung người-dẫn kiểu cổ điển (anchor-shot detection) — ĐÓNG lối cũ, giữ lối mới
 
 Văn liệu anchor-shot detection là dòng 2005–2013 (mặt người lặp, phân cụm slice
@@ -371,17 +420,32 @@ qua bias bank cao (nó khớp vừa vừa với mọi câu) — không cần b�
 sống, một phép kiểm bằng mắt rẻ: in 50 khung bias cao nhất, xác nhận chúng là
 studio/đồ hoạ — bằng chứng cơ chế kiểu "mở ảnh xem" đã dùng cho lever cảnh B.
 
+**Cập nhật sau cổng 02/09: lối mới cũng chết cho trục NỘI-video.** Cổng đếm cho
+thấy khung đứng trên đáp án trong cùng video **không** "hấp dẫn mọi câu" hơn đáp
+án (51%, chênh bias trung vị ≈ 0) ⇒ "loại khung studio khỏi ứng viên khi câu tả
+hiện trường" không có mục tiêu để bắn **bên trong video đúng** — nếu khung chặn
+là studio thì bias bank của nó đã phải cao hơn. Toàn bộ hướng khai thác cấu trúc
+bản-tin (studio vs hiện trường) cho xếp hạng nội-video coi như đóng; phần còn
+sống duy nhất của ý tưởng là trục liên-video §9.3 (khung studio của video SAI
+chen vào giữa 100 dòng).
+
 ---
 
 ## 7. Trình tự thi hành đề nghị (cho người điều phối — lane này không chạy gì)
 
-1. **①-bước-1** (phép đếm bias, 0 đồng, ~15 phút): quyết định có tiếp không.
-2. ① đầy đủ (TUNE/TEST, V1 rồi V2) — script mới, ví dụ
-   `scripts/do_khu_hub_mot_canh.py`, theo đúng §2.5.
-3. ③ trên nền ① (cùng script, thêm một cờ) — chỉ nếu ① sống.
-4. ② phạm vi hẹp (xếp lại nội-video, cache LLM) — song song được với 2–3 vì
-   không đụng file.
-5. ④ chỉ khi 1–3 xong mà nhóm một cảnh vẫn còn ≥20% headroom xếp hạng.
+*(Cập nhật 02/09 lượt sửa 2 — trình tự cũ bắt đầu bằng ①-bước-1; bước ấy ĐÃ chạy,
+ra ÂM 51%, cửa V1 đóng ở trạm gác rẻ nhất, 0 đồng đã tiêu — đúng thiết kế.)*
+
+1. **②-phép-đếm-trước** (~$0,3 sinh paraphrase + đếm hạng, 0 lần đọc TEST):
+   hạng nội-video VÀ hạng dòng của keyframe đáp án theo majority-vote(k=2) so
+   với câu gốc, trên 132 mục. Trung vị không nhích ⇒ dừng, ghi ÂM.
+2. ② đầy đủ (TUNE/TEST phân tầng, biến thể (a) hẹp trước) theo §3.3 + 5 cổng §2.5.
+3. **③-phép-đếm-trước** (0 đồng, chạy độc lập — không còn chờ ①, §9.2): hạng
+   theo `q'` so với `q`, quét (λ, m) chỉ đọc hạng. Song song được với 1–2.
+4. **①′-V2-cổng-đếm** (0 đồng, ~15 phút, §9.3): bias-bank so **liên-video** trên
+   các dòng đứng trên dòng đúng đầu tiên. ≤55% ⇒ đóng nốt toàn trục ①, ghi vào
+   bảng cửa đóng; >55% ⇒ mới được viết script đo V2 đầy đủ.
+5. ④ chỉ khi 1–4 xong mà nhóm một cảnh vẫn còn ≥20% headroom xếp hạng.
 
 Nhắc hai điều từ kỷ luật đo: nửa TEST của bộ 132 đã bị đọc ≥4 lần — mọi số TEST
 mới của các đề xuất trên phải đọc với hiểu biết đó, và việc sinh thêm GT
@@ -410,10 +474,25 @@ mới của các đề xuất trên phải đọc với hiểu biết đó, và 
 | PRF dense (2025) | https://arxiv.org/pdf/2504.01448 · https://arxiv.org/html/2503.14887v2 |
 | NeighborRetr (CVPR 2025) | https://openaccess.thecvf.com/content/CVPR2025/papers/Lin_NeighborRetr_Balancing_Hub_Centrality_in_Cross-Modal_Retrieval_CVPR_2025_paper.pdf |
 
+Thêm ở lượt sửa 2 (WebFetch thật, 02/09/2026):
+
+| nguồn | URL |
+|---|---|
+| DN — Distribution Normalization (NeurIPS 2023) | https://arxiv.org/abs/2302.11084 · https://fengyuli-dev.github.io/dn-website/ |
+| SuperGlobal (ICCV 2023) | https://arxiv.org/abs/2308.06954 |
+| Đối thủ AIC 2025 thứ ba (SRRF + BLIP-2 ITM rerank) | https://arxiv.org/html/2512.12935v1 |
+| Moment retrieval dùng SuperGlobal (CVPRW 2025 IViSE, Nguyen-Nhu et al.) | https://openaccess.thecvf.com/content/CVPR2025W/IViSE/papers/Nguyen-Nhu_A_Lightweight_Moment_Retrieval_System_with_Global_Re-Ranking_and_Robust_CVPRW_2025_paper.pdf |
+
 Ghi chú trung thực về mức đọc: các dòng NNN, QB-Norm, DBSN, GQE, MTA, MADTempo,
 EEIoT_newbie, NegBench, RF-CLIP là **đọc nội dung** (bản html/pdf/README, có số
 và công thức trích ở trên); VISIONE, anchor-shot, NeighborRetr, hai bài PRF là
 **đọc mức tóm tắt/abstract** đủ cho vai trò phụ trợ của chúng trong tài liệu.
+Lượt sửa 2: GQE được **fetch lại và đối chiếu số** (31,2→36,4; k=2 > k=10;
+majority vote 49,6 > average-similarity 46,1 — khớp bản gốc); DN đọc **nội dung**
+(công thức và số từ trang chính thức của paper); SuperGlobal đọc **abstract**;
+2512.12935 đọc **nội dung**; bài CVPRW Nguyen-Nhu bị chặn 403, chỉ xác nhận được
+việc dùng SuperGlobal qua trích dẫn của máy tìm kiếm — ghi rõ để ai cần thì tải
+tay.
 
 ---
 
@@ -441,3 +520,84 @@ trong video, nên trừ nó đi không đổi thứ hạng nội-video.
 
 → Đề xuất kế tiếp trong bảng xếp hạng của tài liệu này: ② GQE (LLM query
 expansion, ~$0,3/132 câu — hai đội đối thủ của chính giải này đã dùng tại trận).
+
+---
+
+## 9. Đọc lại cổng ① cho đúng phạm vi — V1 đóng chắc, V2 chưa hề được đo
+
+*(Viết ở lượt sửa 2, sau khi cổng chạy. Đây không phải phản cung kết quả cổng —
+kết quả 51% đứng vững — mà là xác định chính xác nó đóng cửa NÀO.)*
+
+### 9.1 Cổng đã đo gì
+
+`scripts/dem_bias_hub.py` đếm, cho 68 mục có keyframe đáp án trong pool nhưng
+không đứng hạng-1 **nội-video**: bias-bank của các khung đứng trên đáp án **trong
+cùng video** so với bias-bank của đáp án. Kết quả 51% ≈ tung đồng xu, chênh trung
+vị ≈ 0. Ba hệ quả đóng **chắc**, đều giới hạn trong trục nội-video:
+
+1. **①-V1** (hoán vị chọn Ô nội-video theo `s_D`) — không có mục tiêu. ĐÓNG.
+2. **Bank thủ công "nền studio"** (phủ định bằng số học điểm, §2.3/§6.2) cho
+   xếp hạng nội-video — đóng theo hệ luận: nếu khung chặn nội-video là khung
+   studio "khớp vừa vừa mọi thứ" thì bias bank-141-câu của nó đã phải cao hơn
+   đáp án; nó không cao hơn. (Caveat một dòng: bank thủ công là ước lượng bias
+   *hẹp* hơn bank câu thật, nên hệ luận này là suy rộng có căn cứ chứ không phải
+   phép đo trực tiếp — nhưng không đáng một lần đo riêng khi tín hiệu gốc là 0
+   tròn trĩnh.)
+3. **Toàn bộ hướng cấu-trúc-bản-tin cho nội-video** (§6.6) — đóng cùng lý do.
+
+Và một câu hỏi mở mà cổng đặt ra nhưng không trả lời: **vậy khung đứng trên đáp
+án là AI?** Không phải hub, vậy hoặc là hàng xóm thời gian cùng cảnh (vô hại nếu
+nằm trong cửa sổ chấm — và khi đó headroom V1 thật sự nhỏ hơn +59% trên giấy),
+hoặc là khung khác-Ô thật sự sai. Phép đếm 0 đồng phân định: khoảng cách frame
+giữa khung hạng-1 nội-video và đáp án, cho 57% số câu một cảnh mà đáp án không
+đứng hạng-1. Nếu phần lớn ≤ cửa sổ chấm thì trục V1 gần bão hoà **cho mọi tín
+hiệu**, không riêng NNN — và toàn bộ cược của nhóm một cảnh dồn về trục thứ tự
+dòng. Đáng chạy trước khi viết bất kỳ script V1 nào khác.
+
+### 9.2 Hệ quả cho ③
+
+Bản gốc xếp ③ sau ① vì sợ PRF khuếch đại hub nội-video. Hub nội-video hoá ra
+không tồn tại đáng kể ⇒ ③ chạy độc lập ngay (§4.2 đã sửa). Rủi ro còn lại của ③
+là drift liên-video, xử bằng λ nhỏ + phép đếm trước.
+
+### 9.3 Trục V2 (thứ tự dòng liên-video) — cửa cổng chưa chạm tới
+
+Ba lý do nó KHÔNG bị kết quả 51% đóng:
+
+1. **Phép so của cổng toàn bộ là nội-video.** V2 so ứng viên của dòng đứng trên
+   dòng đúng với ứng viên của dòng đúng — phần lớn các dòng ấy thuộc **video
+   khác** (48% câu một cảnh có dòng đúng nhưng 32,9 điểm phần trăm kẹt ở hạng ≥6,
+   `KE_HOACH_DINH_VI.md` §3.2). Bias "khớp vừa vừa mọi câu" là tính chất **liên
+   chủ đề**: trong một video cùng chủ đề nó gần như hằng số (chính lời giải thích
+   chuyển-miền của phụ lục nói vậy!), nhưng **giữa các video** nó biến thiên thật.
+2. **Bằng chứng văn liệu của NNN nằm đúng ở trục này.** +3,1 R@1 của SigLIP trên
+   COCO là xếp hạng *toàn gallery* — bản sao của bài thứ-tự-dòng, không phải của
+   bài chọn-Ô-nội-video. Lời giải thích "COCO không chuyển miền được vì nội-video
+   cùng chủ đề" trong phụ lục là đúng, và chính nó **dự đoán trục liên-video thì
+   chuyển được**.
+3. Deficit thứ tự dòng của nhóm một cảnh (0,2040) **lớn hơn** deficit đặt-frame
+   (0,1488) — trục V2 là trục lớn hơn ngay từ đầu.
+
+**Cổng đếm V2 — công bố ngưỡng trước, như V1:** trên các câu một cảnh có dòng
+đúng đầu tiên ở hạng r ≥ 2 (lấy cả r ∈ [2,5] cho đủ n), xét r−1 dòng đứng trên:
+(a) báo cáo tách **cùng-video / khác-video**; (b) trong phần khác-video, đếm tỷ
+lệ dòng có ứng viên bias-bank **cao hơn** ứng viên của dòng đúng. **Ngưỡng đi
+tiếp: >55%**, y hệt V1. ≤55% ⇒ đóng nốt toàn trục ①, khỏi viết script đo nào
+nữa. Chi phí: sửa vài chục dòng của chính `dem_bias_hub.py`, 0 API, ~15 phút.
+Nếu qua: đo V2 đầy đủ theo 5 cổng §2.5, biến thể sắp-lại-100-dòng (tập dòng
+không đổi ⇒ R@100 bất biến; nhóm hai cảnh giữ nguyên ⇒ có nhóm assert).
+
+### 9.4 DN (NeurIPS 2023) — phân loại vào đúng họ, để không ai đề xuất lại
+
+[Distribution Normalization](https://arxiv.org/abs/2302.11084) trông như một đề
+xuất mới ("chuẩn hoá phân bố lúc test, +3,6 R@1 T→I trên MSCOCO trong stack
+TTA+DN"): `s(x,y) = (φ(x) − ½μ_x)ᵀ(ψ(y) − ½μ_y)`, μ ước lượng từ ~100 mẫu. Nhưng
+khai triển cho truy vấn cố định `q`: phần phụ thuộc ứng viên là `−½μ_text·ψ(y)` —
+tức **phạt khung thẳng hàng với CÂU HỎI TRUNG BÌNH**. Đó chính là trục CÂU KHÁC
+của ①, bản bậc-nhất với bank = toàn bộ, k = ∞, α cố định. Hệ quả: (i) cho
+nội-video, nó chết theo cổng V1 — không cần đo; (ii) cho liên-video, nó là
+trường hợp riêng của cùng phép sửa mà NNN làm có chọn lọc hơn (NNN ước lượng
+bias bằng top-k câu *giống ứng viên nhất* thay vì câu trung bình toàn cục — đó
+là chữ "nearest neighbor" trong tên). Nếu cổng V2 (§9.3) qua, thứ để đo là NNN
+top-k; DN không thêm được gì. Ghi ở đây làm hàng rào chống
+đề-xuất-lại-dưới-tên-khác — đúng vai trò của §6.
