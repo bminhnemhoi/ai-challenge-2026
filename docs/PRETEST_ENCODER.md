@@ -38,6 +38,40 @@ Ngưỡng áp cho **cấu hình văn bản tốt nhất trong hai cấu hình đ
 ở §3.4 (cả hai đều triển khai được — lớp dịch đã có sẵn trong hệ thống). Các
 biến thể chẩn đoán (vi-thuần, en-thuần) chỉ để đọc nguyên nhân, không dự thi.
 
+## 2b. Phụ lục quy ước hạng — ghi 03/09, TRƯỚC khi chấm PE
+
+*(Viết khi giai đoạn encode đang chạy — chưa tồn tại một con số PE nào.
+Đây chính là tình huống §3.2 đã dự liệu: "nếu lệch thì quy ước hạng khác
+nhau, phải ghi rõ trước khi đọc tiếp".)*
+
+Kiểm nền §3.2 đã chạy và **lệch** với số công bố ở nhóm HAI cảnh:
+
+| quy ước | MỘT cảnh (trung vị / hạng-1) | HAI cảnh (trung vị / hạng-1) |
+|---|---|---|
+| công bố (`KE_HOACH_DINH_VI.md` §2.2) — hạng **TRONG POOL 400**, chỉ đếm câu có đáp án lọt pool | 2,0 / 43% | 6,0 / 11% |
+| pre-test — hạng trên **TOÀN video** (mọi khung valid), cả 132 mục | 2,0 / 37,9% | **15,0 / 1,5%** |
+
+Nguyên nhân, đọc thẳng từ `do_tin_hieu_noi_video._chan_doan`: số công bố là
+thước "hạng trong pool" — (i) **có điều kiện** đáp án lọt pool 400 (nhóm hai
+cảnh chỉ 35/65 lọt, trước cảnh B), (ii) pool do **chính SigLIP dựng**, nên
+không so được hai encoder một cách đối xứng. Pre-test dùng thước "hạng trên
+TOÀN video" — docstring của chính script đó gọi đây là "thước sạch của định
+vị nội-video". Quy ước pre-test là quy ước ĐÚNG cho câu hỏi của cổng này;
+chỉ có *mốc số* của ngưỡng phải dịch lại.
+
+**Ngưỡng §2 dịch sang quy ước đo, giữ nguyên Ý ĐỊNH, chốt bây giờ:**
+
+1. "trung vị HAI cảnh 6→3" nghĩa là **giảm một nửa** trung vị → dịch:
+   trung vị PE (hai cảnh, 20 mục) ≤ **½ trung vị SigLIP trên CÙNG 20 mục**;
+2. "hạng-1 MỘT cảnh 43%→55%" nghĩa là **+12 điểm phần trăm** → dịch:
+   hạng-1 PE (một cảnh, 20 mục) ≥ **hạng-1 SigLIP cùng mẫu + 12pp**.
+
+**GO** nếu đạt ít nhất một trong hai (điểm ước lượng, như §2 gốc; mỗi tiêu
+chí lấy cấu hình dự thi tốt hơn trong A/B, đúng như mã đã viết trước).
+Ngưỡng tuyệt đối gốc (≤3; ≥55%) vẫn báo cáo song song — dưới quy ước
+toàn-video chúng **khắt khe hơn** ngưỡng dịch; đạt được thì ghi rõ là
+vượt cả mốc gốc.
+
 ## 3. Giao thức — chốt trước khi chạy
 
 ### 3.1 Mẫu

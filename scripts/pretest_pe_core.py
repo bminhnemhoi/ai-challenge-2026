@@ -178,12 +178,75 @@ def tim_hang_dap_an(g, meta, rows_of):
 # ---------------------------------------------------------------------------
 
 
+FP16_CKPT = Path(HF_CACHE) / "pe_core_l_fp16.safetensors"
+
+
+def _chuyen_fp16():
+    """Đổi checkpoint fp32 (2,7GB) sang fp16 (1,35GB) — một lần, cho máy 16GB RAM.
+
+    Windows: ``safe_open`` trên file 2,7GB tính TOÀN BỘ kích thước file vào
+    commit charge (copy-on-write); cộng với model fp32 2,7GB đã dựng thì vượt
+    commit còn trống (~5,8GB) → os error 1455 ổn định qua nhiều lần thử.
+    Bản fp16 hạ đỉnh bộ nhớ lúc nạp từ ~5,5GB xuống ~4,1GB.
+
+    Sai số fp16 trên TRỌNG SỐ (~5e-4 tương đối) — ghi nhận trong
+    docs/PRETEST_ENCODER.md §5; áp dụng đồng đều cho cả tháp ảnh lẫn tháp chữ.
+    """
+    from safetensors.torch import load_file, save_file
+
+    goc = sorted(Path(HF_CACHE).glob(
+        "models--timm--PE-Core-L-14-336/snapshots/*/open_clip_model.safetensors"))
+    assert goc, "khong thay checkpoint safetensors goc trong cache"
+    print(f"chuyen fp16 (mot lan): {goc[-1].name} -> {FP16_CKPT.name}", flush=True)
+    sd = load_file(str(goc[-1]))
+    sd16 = {k: (v.half() if v.dtype.is_floating_point else v) for k, v in sd.items()}
+    del sd
+    tmp = FP16_CKPT.with_suffix(".tmp.safetensors")
+    save_file(sd16, str(tmp))
+    tmp.replace(FP16_CKPT)
+    # bản .pt: torch.load stream từng tensor, không mmap cả file — cần cho máy 16GB
+    import torch
+
+    torch.save(sd16, str(FP16_CKPT.with_suffix(".pt")))
+    print(f"da ghi {FP16_CKPT} (+.pt) ({FP16_CKPT.stat().st_size/1e9:.2f} GB)", flush=True)
+
+
 def nap_model(ten):
     import open_clip
     import torch
 
     torch.set_num_threads(max(1, (torch.get_num_threads() * 3) // 2))
-    model, _, preprocess = open_clip.create_model_and_transforms(ten, cache_dir=HF_CACHE)
+    if ten == MODEL_L and not FP16_CKPT.exists():
+        # máy 16GB: nạp fp32 thẳng đã hỏng ổn định (os error 1455, có lần segfault)
+        # — đổi checkpoint sang fp16 TRƯỚC, đừng thử lại đường fp32
+        _chuyen_fp16()
+        import gc
+
+        gc.collect()
+    if ten == MODEL_L:
+        import open_clip.factory as _F
+        from safetensors.torch import load_file as _lf
+
+        _goc = _F.load_state_dict
+
+        def _vá(path, device="cpu", weights_only=True):  # noqa: ANN001
+            # giữ fp16 (1,35GB) — load_state_dict của Module tự cast vào param fp32.
+            # Dùng bản .pt (torch.load stream từng tensor, KHÔNG mmap cả file):
+            # mmap safetensors 1,34GB + model fp32 vẫn vượt commit → access violation.
+            pt = FP16_CKPT.with_suffix(".pt")
+            if pt.exists():
+                return torch.load(str(pt), map_location="cpu", weights_only=True)
+            return _lf(str(FP16_CKPT))
+
+        _F.load_state_dict = _vá
+        try:
+            model, _, preprocess = open_clip.create_model_and_transforms(
+                ten, cache_dir=HF_CACHE)
+        finally:
+            _F.load_state_dict = _goc
+        print("da nap PE-Core-L qua duong fp16 it bo nho", flush=True)
+    else:
+        model, _, preprocess = open_clip.create_model_and_transforms(ten, cache_dir=HF_CACHE)
     tokenizer = open_clip.get_tokenizer(ten, cache_dir=HF_CACHE)
     model.eval()
     return model, preprocess, tokenizer
@@ -412,16 +475,38 @@ def cmd_cham(args):
                 ket["bang"][f"crop_{c}"] = cap
 
     # ----------------------------------------------------------- GO / NO-GO
+    # Quy ước hạng của pre-test (TOÀN video) khác quy ước của số công bố
+    # (TRONG pool 400) — ngưỡng đã dịch giữ nguyên ý định, chốt TRƯỚC khi chấm
+    # trong docs/PRETEST_ENCODER.md §2b:
+    #   1. hai cảnh: PE ≤ ½ trung vị SigLIP trên CÙNG mẫu (ý "6→3" = giảm nửa)
+    #   2. một cảnh: hạng-1 PE ≥ hạng-1 SigLIP cùng mẫu + 12pp (ý "43→55")
+    # Ngưỡng tuyệt đối gốc (≤3; ≥55%) báo cáo song song — khắt khe hơn.
     tv_hai = min(ket["bang"]["A_ensemble_vi_hai"]["trung_vi"],
                  ket["bang"]["B_ensemble_en_hai"]["trung_vi"])
     h1_mot = max(ket["bang"]["A_ensemble_vi_mot"]["hang1"],
                  ket["bang"]["B_ensemble_en_mot"]["hang1"])
-    go = (tv_hai <= 3.0) or (h1_mot >= 0.55)
-    print(f"\nNGUONG (chot truoc): trung vi HAI canh <= 3 ? {tv_hai:.1f} "
+    tv_hai_sig = ket["bang"]["siglip_hai"]["trung_vi"]
+    h1_mot_sig = ket["bang"]["siglip_mot"]["hang1"]
+    go1 = tv_hai <= 0.5 * tv_hai_sig
+    go2 = h1_mot >= h1_mot_sig + 0.12
+    go = go1 or go2
+    print(f"\nNGUONG DICH (§2b, chot truoc khi cham):")
+    print(f"  1. trung vi HAI canh <= 1/2 SigLIP cung mau "
+          f"({0.5 * tv_hai_sig:.1f})? PE {tv_hai:.1f} -> {'DAT' if go1 else 'KHONG'}")
+    print(f"  2. hang-1 MOT canh >= SigLIP cung mau + 12pp "
+          f"({h1_mot_sig + 0.12:.1%})? PE {h1_mot:.1%} -> {'DAT' if go2 else 'KHONG'}")
+    print(f"NGUONG TUYET DOI GOC (khat khe hon duoi quy uoc toan-video):")
+    print(f"  trung vi HAI canh <= 3 ? {tv_hai:.1f} "
           f"-> {'DAT' if tv_hai <= 3 else 'KHONG'}")
-    print(f"                     hang-1 MOT canh >= 55%? {h1_mot:.1%} "
+    print(f"  hang-1 MOT canh >= 55%? {h1_mot:.1%} "
           f"-> {'DAT' if h1_mot >= 0.55 else 'KHONG'}")
     print(f"\n==> KET LUAN: {'GO' if go else 'NO_GO'}")
+    ket["nguong"] = {
+        "quy_uoc": "hang tren TOAN video (khong phai trong-pool)",
+        "go1_hai_dich": [tv_hai, 0.5 * tv_hai_sig, bool(go1)],
+        "go2_mot_dich": [h1_mot, h1_mot_sig + 0.12, bool(go2)],
+        "goc_tuyet_doi": [tv_hai <= 3.0, h1_mot >= 0.55],
+    }
     ket["ket_luan"] = "GO" if go else "NO_GO"
     (CACHE / "ket_qua.json").write_text(
         json.dumps(ket, ensure_ascii=False, indent=1), encoding="utf-8")

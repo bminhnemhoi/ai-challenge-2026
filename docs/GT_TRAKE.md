@@ -1,7 +1,11 @@
 # TRAKE lần đầu có bộ đo — và ba con số đổi cách nhìn nhánh này
 
-Chốt 02/09/2026. Sinh: `scripts/sinh_gt_trake.py` · Chấm: `scripts/do_trake_bo_moi.py`
-Dữ liệu: `data/gt_trake.json` (dưới `data/` nên `.gitignore` chặn sẵn).
+Chốt 02/09/2026, **mở rộng n=12 → 24 tối cùng ngày** (§1.1);
+**đo lại toàn bộ trên n=24 ngày 03/09, chốt số phận soft_order** (§8).
+Sinh: `scripts/sinh_gt_trake.py` · Chấm: `scripts/do_trake_bo_moi.py`
+Dữ liệu: `data/gt_trake.json` (dưới `data/` nên `.gitignore` chặn sẵn);
+bản 12 mục cũ giữ ở `data/gt_trake_12.json`, 12 mục mới tách riêng ở
+`data/gt_trake_test_moi.json` (vai trò TEST cho các giả thuyết chọn trên 12 cũ).
 
 > Không mã video, không đáp án trong tài liệu này.
 
@@ -32,6 +36,43 @@ phân biệt được), 1 vì sinh sai số sự kiện.
 khung đạt ≥90, 70 khung dưới 70 — phân bố hai đỉnh, đúng dấu hiệu của một bộ định
 vị chứ không phải một bộ chấm dễ dãi. Và đã **mở ảnh kiểm bằng mắt** 4 sự kiện của
 2 mục: 3 khớp hoàn hảo, 1 khớp cảnh nhưng mô tả hơi quá chi tiết.
+
+### 1.1 Mở rộng 12 → 24 mục (tối 02/09, provider OpenAI)
+
+Quota Gemini cạn nên cả hai bước chuyển sang **gpt-5.2** (`--provider openai`) —
+bước chấm dùng đúng cơ chế một-ảnh-một-request đã kiểm chứng 56/64 trong
+`kiem_neo_don_anh.py`. Giữ nguyên seed, `--so 20` và định dạng cache nên **12 mục
+cũ replay từ cache, giống hệt từng trường** (assert tự động: 12/12 khớp
+`su_kien/frames/n/boi_canh/diem_khop/sinh_tu`, đúng thứ tự).
+
+    python -u scripts/sinh_gt_trake.py --so 20 --muc-tieu 24 --provider openai
+
+Chi phí phiên này: **235 lần gọi gpt-5.2, 96.266 token vào + 12.542 ra ≈ $0,25**
+(ngân sách $3). Điểm chấm có ba nguồn, ghi rõ để khỏi đọc nhầm về sau:
+
+| mục | nguồn điểm chấm |
+|---|---|
+| 12 mục cũ | Gemini (cache phiên sáng 02/09) |
+| 7 mục kế (13–19) | Gemini, phiên chiều 02/09 — phiên chết trước khi ghi file, cache còn nguyên |
+| 4 mục cuối (21–24) | gpt-5.2, phiên này |
+| 1 mục (20) | trộn 22 điểm cache cũ + 20 điểm gpt-5.2 — đã kiểm mắt cả 3 sự kiện |
+
+Thang hai nguồn lệch nhẹ (trung vị `diem_khop`: 12 cũ = 100, 12 mới = 95 —
+gpt-5.2 chấm chặt hơn), nhưng argmax chỉ so **trong từng sự kiện** nên lệch thang
+giữa các mục không đổi mốc nào; mục duy nhất trộn nguồn trong một sự kiện đã kiểm
+bằng mắt.
+
+**Cổng loại vẫn hoạt động:** 6 video bị loại — 4 vì không khung nào đạt ngưỡng 70
+(điểm cao nhất 30/35/40/68), 2 vì hai sự kiện trỏ vào cùng một khung.
+
+**Kiểm bằng mắt — toàn bộ 12 mục mới, 36 sự kiện:** 34 khớp rõ (vật thể, chữ trên
+bao bì/phông nền, hành động đều đúng — ví dụ đúng túi "Bột mắm cá linh sấy khô",
+đúng phông "MOU SIGNING CEREMONY"), 2 khớp cảnh nhưng mô tả chi tiết hơn mức một
+khung đơn thể hiện được (pha nước rút đua xe đạp; cận cảnh kéo con lươn). Tỷ lệ
+tương đương đợt kiểm 4 sự kiện của bộ 12 cũ.
+
+**Phủ:** 24 video khác nhau, đủ cả 10 dải L21–L30 (1–3 mục/dải), mọi mục đúng 3
+sự kiện, khe keyframe quanh mốc trung vị ~67 frame (kho vốn thưa).
 
 ## 2. Kết quả — ba mức, ba nguồn mất điểm
 
@@ -75,12 +116,16 @@ TRAKE **khác hẳn** KIS — và giờ mới kiểm chứng được bằng s�
 
 ## 4. Giới hạn — nói thẳng
 
-- **n = 12** là rất nhỏ. Đủ để thấy phân rã 67/33 và trần 0,535; **không** đủ để
-  phân xử chênh lệch vài phần trăm giữa các cấu hình phân bổ.
-- Cả 12 mục đều có **đúng 3 sự kiện**. Đề thật có câu 4 sự kiện; chưa đo được ảnh
+*(Các con số §2–§3 đo trên bộ 12 mục ban đầu; phép đo lại trên n=24 ở §8.)*
+
+- **n = 24** (từ 02/09 tối). Đủ để thấy phân rã lớn và trần; chênh lệch vài phần
+  trăm giữa các cấu hình vẫn cần đọc thận trọng.
+- Cả 24 mục đều có **đúng 3 sự kiện**. Đề thật có câu 4 sự kiện; chưa đo được ảnh
   hưởng của N lớn hơn (mà theo (b), N càng lớn thì trần càng thấp).
-- Mốc do máy định vị, đã kiểm mắt 4/36 sự kiện. Sai sót còn lại chưa đo được.
-- Bộ sinh dừng ở 12/20 vì **hết quota cả 5 model**. Sinh tiếp khi quota hồi.
+- Mốc do máy định vị; đã kiểm mắt **40/72 sự kiện** (4 của bộ cũ + toàn bộ 36 của
+  12 mục mới). Sai sót còn lại chưa đo được.
+- Điểm chấm đến từ hai model (Gemini / gpt-5.2, §1.1) — lệch thang giữa mục không
+  đổi mốc vì argmax nội-sự-kiện, nhưng là một nguồn nhiễu cần nhớ.
 
 ---
 
@@ -230,3 +275,80 @@ với n=12, phần lớn mẫu bootstrap cho chênh **đúng bằng 0** (chỉ 1
 **Chưa ship.** Đây là manh mối đúng hướng với hồ sơ rủi ro tốt (không hại ai),
 nhưng n=12 quá nhỏ để chốt. Việc cần làm trước: sinh thêm mục TRAKE cho đủ 20+,
 rồi đo lại. Nếu giữ được dấu, đây là một cờ đổi mặc định rẻ (`align_mode`).
+
+**Cập nhật 03/09 — đã đo trên TEST: hiệu ứng đúng bằng 0, KHÔNG ship (§8.2).**
+
+---
+
+## 8. Đo lại trên n=24 (03/09) — soft_order: KHÔNG SHIP; các cửa khác giữ nguyên kết luận
+
+Ba script chạy lại nguyên trạng trên bộ 24 mục, qua wrapper tiết kiệm RAM
+`scripts/chay_gon_ram.py` (máy chỉ còn ~3GB trống vì lane pe-core đang encode;
+wrapper chỉ đổi *cách nạp* trọng số — fp32 giống hệt từng bit — và bỏ tháp thị
+giác không dùng đến, nên không đổi con số nào):
+
+    python -u scripts/chay_gon_ram.py scripts/do_trake_bo_moi.py --gt data/gt_trake.json
+    python -u scripts/chay_gon_ram.py scripts/do_soft_order_test.py --gt data/gt_trake_test_moi.json
+    python -u scripts/chay_gon_ram.py scripts/do_che_do_can_chinh.py --gt data/gt_trake.json
+    python -u scripts/chay_gon_ram.py scripts/do_hedge_video_trake.py --gt data/gt_trake.json
+
+### 8.1 Ba mức đo — bức tranh n=12 giữ nguyên, tin cậy hơn
+
+| mức | n=24 | so nền | (n=12 cũ) |
+|---|---|---|---|
+| **NỀN** (đường sản xuất) | **0,2275** | — | 0,2154 |
+| ORACLE-MỐC (video của nền, mốc thật) | 0,4727 | **+107,8%** | +100,0% |
+| ORACLE-VIDEO (video đúng + mốc thật) | 0,5645 | **+148,1%** | +148,4% |
+
+**Video ở dòng 1 đúng: 21/24** (12 cũ: 10/12 · 12 mới: 11/12). Phân rã khoảng
+cách: **định vị sự kiện 72,8%** / chọn sai video 27,2% (n=12: 67/33). Kết luận
+§3 không đổi chữ nào: nghẽn chính là định vị sự kiện trong video, không phải
+chọn video.
+
+### 8.2 soft_order trên TEST — hiệu ứng đúng bằng 0, cửa ĐÓNG
+
+Kỷ luật tiền-đăng-ký: giả thuyết `soft_order/gap=2` chốt trên TUNE (12 mục cũ,
+§7), TEST là 12 mục mới (`data/gt_trake_test_moi.json`), đọc **đúng một lần**
+qua `scripts/do_soft_order_test.py` — chỉ so đúng cặp đã đăng ký, không quét.
+
+| chế độ | video đúng | **±6 (quyết định)** | ±10 | ±20 |
+|---|---|---|---|---|
+| ordered/gap=2 (sản xuất) | **11/12** | 0,1863 | 0,2179 | 0,2923 |
+| soft_order/gap=2 | 10/12 | 0,1863 | 0,2179 | 0,2923 |
+
+Chênh **+0,0000 ở cả ba cửa sổ; 0/12 mục đổi điểm**. Tệ hơn: soft_order lật
+video của một mục từ ĐÚNG thành SAI — mất 0 điểm chỉ vì mục đó vốn 0 điểm ở
+mọi cửa sổ, tức một rủi ro thật đang được che bởi may mắn.
+
+Trên n=24 gộp (quét đầy đủ, chỉ để đối chiếu): soft_order/gap=2 còn +1,7% ở ±6
+(chênh +0,0032, KTC [+0,0000, +0,0095], P(≤0)=36,5%) — **toàn bộ phần dương là
+dư ảnh của chính các mục TUNE đã dùng để chọn giả thuyết**. Hiệu ứng co từ
++0,0063 (TUNE) về +0,0032 (gộp) về **0,0000 (TEST)** — đúng chữ ký của thổi
+phồng (luật đo lường #7).
+
+> **KẾT LUẬN: KHÔNG ship soft_order. Giữ `align_mode=ordered`, `min_gap=2`.
+> Cửa này ĐÓNG trên bộ đo mới, có TEST đứng sau.**
+
+### 8.3 Các cửa khác — xác nhận lại trên n=24, không cửa nào mở lại
+
+Từ bảng quét `do_che_do_can_chinh.py` (±6, n=24, nền ordered/gap=2 = 0,1823):
+
+- **unordered vẫn THUA rõ**: 0,1372 (−24,7%), mọi gap. Thứ tự kể chuyện vẫn là
+  thông tin tiên nghiệm thật (§7 giữ nguyên).
+- **min_gap=2 vẫn đúng**: ordered/gap 0–1 = 0,1646 (−9,7%), video đúng tụt
+  21→20. Ràng buộc chống nghiệm suy biến vẫn cần.
+- **Hedge video vẫn bất khả thi về cấu trúc** (`do_hedge_video_trake.py`):
+  video đúng ở hạng 1 = trong top-3 = **21/24** — sự thật "hoặc hạng 1 hoặc
+  ngoài top-3" tái lập nguyên vẹn trên gấp đôi dữ liệu. Mọi mức chia đơn điệu
+  giảm ở cả ba cửa sổ (không hedge 0,1823 > 85/15 0,1817 > … > 50/30/20
+  0,1800). Cửa ĐÓNG, lần hai.
+
+### 8.4 Hướng còn mở sau §8
+
+1. **Định vị sự kiện trong video** — 72,8% khoảng cách, chưa có tín hiệu nào
+   ăn được (soft_order vừa rụng). Cùng nghẽn với KIS tầng 2; encoder thứ hai
+   (lane pe-core) là hướng chưa thử duy nhất còn lại.
+2. **Phân bổ dòng quanh mốc** — trần ORACLE-VIDEO vẫn chỉ 0,5645: lưới bù trừ
+   phi-đều theo độ bất định từng sự kiện (§3b) vẫn chưa ai đo.
+3. **3/24 mục sai video** — cần tín hiệu xếp hạng video khác; chia lại dòng
+   trong top-3 hiện tại đã chứng minh vô nghĩa hai lần.

@@ -4,8 +4,12 @@ Chốt 02/09/2026, lane `paper`. **Sửa lần 2 cùng ngày**, sau khi cổng t
 đề xuất ① chạy xong và ra ÂM (phụ lục cuối tài liệu + §9 đọc lại phạm vi cổng).
 **Sửa lần 3, 03/09** — lượt soát độc lập: tìm lại cả bốn hướng được giao bằng
 truy vấn mới, đối chiếu lại số của nguồn chịu-tải (NNN — khớp từng chữ số),
-cập nhật bảng xếp hạng sau khi cổng V2 chạy QUA 57%, và bổ sung bốn nguồn mới
-(§8, §10). Bản đồ đề xuất KHÔNG đổi — lượt soát hội tụ về đúng bốn trục cũ.
+bổ sung nguồn mới (§8) và tổng kết lượt soát (§10). Cùng ngày, phiên đo song
+song đóng nốt TOÀN TRỤC ① (V2 qua cổng đếm 57% sát nút rồi ÂM ở phép đo đầy đủ,
+TEST −1,7% — phụ lục cuối) và trả lời câu hỏi mở của §9.1 bằng phép đếm bão hoà
+(nhóm một cảnh = trận tay đôi hạng 1↔2). Bảng xếp hạng §0 và trình tự §7 đã
+viết lại theo cả hai kết quả ấy. Bản đồ bốn trục đề xuất KHÔNG đổi — lượt soát
+hội tụ về đúng bản đồ cũ.
 **Đọc và đánh giá, không chạy thí nghiệm.** Mọi con
 số trong tài liệu này thuộc một trong hai loại: (i) số đã có trong tài liệu nội bộ
 (luôn ghi nguồn nội bộ); (ii) số của paper, luôn kèm URL **đã đọc thật** (§8).
@@ -27,26 +31,26 @@ của nhóm này là **thứ tự dòng** (0,2040), lớn hơn deficit đặt-fr
 
 Xếp theo (tác động vào tầng XẾP HẠNG 40%) × (khả thi trong ràng buộc: không huấn
 luyện, không video gốc, quota Gemini cạn) × (độ tin bằng chứng). **Bảng đã cập
-nhật lần 2 sau cổng V2 ngày 03/09** (① nguyên bản đứng đầu bảng cũ; V1 ĐÓNG
-02/09; V2 QUA sát nút 03/09 — ①′ leo lên trên ③ vì là đề xuất còn sống DUY NHẤT
-có phép đếm cơ chế trên chính kho này nghiêng đúng chiều):
+nhật lần 3, sau khi TOÀN TRỤC ① đóng ngày 03/09** (V1 ÂM 51% ngày 02/09; cổng
+V2 qua sát nút 57% sáng 03/09; đo đầy đủ V2 ra ÂM cùng ngày — TEST −1,7%,
+P(≤0)=77,7%, xem phụ lục):
 
-| # | đề xuất | trục thông tin MỚI | chi phí | trạng thái sau cổng 03/09 |
+| # | đề xuất | trục thông tin MỚI | chi phí | trạng thái sau 03/09 |
 |---|---|---|---|---|
-| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) — §3 | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | **SỐNG — trần cao nhất** (chạm được cả R@1 lẫn tầng sinh ứng viên). Ba đội đối thủ của chính giải đã dùng tại trận; chưa có phép đếm trên kho |
-| ①′ | **Khử bias-hub NNN — trục THỨ TỰ DÒNG liên-video (V2)** — §9.3 | trục **CÂU KHÁC**, so **liên-video** | 0 API, một lần đọc TEST | **CỔNG V2 ĐÃ QUA 57% (03/09, sát nút, n=17).** Bằng chứng-trên-kho tốt nhất trong các đề xuất còn sống; kỳ vọng dồn vào R@20/50/100, khó cứu R@1/R@5 |
-| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** — §4 | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | **SỐNG — chạy độc lập**, không còn chờ ① (§9.2); bằng chứng cùng họ: SuperGlobal + WeiMoCIR (trộn ảnh-chữ zero-shot); pseudo-cho-CLIP vẫn chưa có số văn liệu |
+| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) — §3 | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | **SỐNG — đứng đầu, trần cao nhất** (chạm được cả R@1 lẫn tầng sinh ứng viên). Ba đội đối thủ của chính giải đã dùng tại trận; chưa có phép đếm trên kho |
+| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** — §4 | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | **SỐNG — chạy độc lập** (§9.2); bằng chứng cùng họ: SuperGlobal + WeiMoCIR (trộn ảnh-chữ zero-shot); pseudo-cho-CLIP vẫn chưa có số văn liệu |
 | ④ | **Chấm dưới-khung: max-pool trên crop** — §5 | trục **DƯỚI-KHUNG** của ảnh ứng viên | ~200 lượt mã hoá ảnh/câu (GPU nhẹ) | SỐNG — cuối hàng, bằng chứng chuyển miền yếu nhất |
-| — | *(cửa đóng: ①-V1 nội-video — phụ lục; shot-pooling/cửa sổ trượt — nay có thêm ví dụ cùng-bài-toán 2025 dùng đúng cơ chế đã ÂM, §6.1; mở rộng bằng keyframe HÀNG XÓM thời gian, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, bộ rerank cần model mới — §6)* | | | |
+| — | *(cửa đóng: **TOÀN TRỤC ① khử-bias** — V1 nội-video 51%, V2 liên-video đo đầy đủ −1,7% (phụ lục); shot-pooling/cửa sổ trượt — nay có thêm ví dụ cùng-bài-toán 2025 dùng đúng cơ chế đã ÂM, §6.1; mở rộng bằng keyframe HÀNG XÓM thời gian, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, bộ rerank cần model mới — §6)* | | | |
 
-**Một câu tóm tắt:** sau hai cổng đếm 0 đồng, họ khử-bias chết hẳn ở trục
-nội-video (51% = tung đồng xu) nhưng **sống sát nút ở trục thứ tự dòng
-liên-video (57%)** — đúng trục mà bằng chứng COCO của NNN nằm và đúng deficit
-lớn nhất của nhóm một cảnh (0,2040); đề xuất trần cao nhất vẫn là GQE
-(**+5,2 điểm R@1** zero-shot CLIP MSR-VTT, ba đội đối thủ của chính giải dùng
-tại trận 2025) nhưng nó chưa có phép đếm nào trên kho; việc 0 đồng tiếp theo là
-phép-đếm-trước của ② và ③, việc tiêu-một-lần-đọc-TEST tiếp theo là đo đầy đủ
-①′-V2 (§7).
+**Một câu tóm tắt:** họ khử-bias chết đủ ba tầng đo trong hai ngày (V1 51% =
+tung đồng xu; V2 qua cổng đếm 57% sát nút nhưng đo đầy đủ −1,7% — hub liên-video
+có thật về thống kê mà không quy đổi thành điểm); đề xuất đứng đầu duy nhất còn
+lại có bằng chứng mạnh là GQE (**+5,2 điểm R@1** zero-shot CLIP MSR-VTT, ba đội
+đối thủ của chính giải dùng tại trận 2025), và phép đếm-trước của nó từ nay phải
+đo đúng HÌNH DẠNG chỗ ăn mà phép đếm bão hoà 03/09 chỉ ra: nhóm một cảnh là
+**trận tay đôi hạng 1↔2 nội-video** (đáp án trung vị hạng 2, ≤3 ở 68% số câu) —
+tín hiệu nào phân xử đúng ≥62% số trận là ăn, tín hiệu xáo cả pool là thua
+(xem "TRẢ LỜI §9.1" cuối tài liệu).
 
 ---
 
@@ -87,10 +91,11 @@ xuất ở đây vẫn áp được lên encoder mới y nguyên.
 
 ## 2. Đề xuất ① — Khử bias-hub theo bank câu hỏi (NNN / QB-Norm / DBSN)
 
-> **TRẠNG THÁI 02/09: biến thể V1 (chọn Ô nội-video) đã ĐÓNG** bằng cổng đếm tất
-> định 51% ≈ tung đồng xu (phụ lục cuối tài liệu). Phần dưới đây giữ nguyên làm
-> hồ sơ cơ chế. **Cổng ấy KHÔNG đo biến thể V2 (thứ tự dòng liên-video)** — mọi
-> phép so của nó đều nội-video. Đọc §9 trước khi trích dẫn kết luận đóng.
+> **TRẠNG THÁI 03/09: TOÀN TRỤC ① ĐÃ ĐÓNG, đủ ba tầng đo.** V1 (chọn Ô
+> nội-video): cổng đếm 51% ≈ tung đồng xu, ĐÓNG 02/09. V2 (thứ tự dòng
+> liên-video): cổng đếm QUA sát nút 57% sáng 03/09, nhưng phép đo đầy đủ ra ÂM
+> cùng ngày (TEST −1,7%, P(≤0)=77,7% — phụ lục). Phần dưới đây giữ nguyên làm
+> hồ sơ cơ chế và làm hàng rào chống đề-xuất-lại-dưới-tên-khác.
 
 ### 2.1 Nguồn đã đọc
 
@@ -108,19 +113,22 @@ xuất ở đây vẫn áp được lên encoder mới y nguyên.
   MSR-VTT/MSVD/DiDeMo không cần huấn luyện lại. Chi tiết cơ chế **DIS** (đọc
   thêm 03/09): dựng trước tập "ứng-viên-hub" = các mục lọt top-k của BẤT KỲ câu
   bank nào; chỉ áp chuẩn hoá khi mục đứng đầu là ứng-viên-hub, ngược lại giữ
-  điểm gốc — chính là khuôn "chỉ can thiệp khi có mục tiêu" nên vay cho phép đo
-  V2 (§9.3), nơi tín hiệu chỉ qua cổng sát nút 57%.
+  điểm gốc — khuôn "chỉ can thiệp khi có mục tiêu", đáng nhớ cho mọi tín hiệu
+  yếu về sau. *(Ghi chú 03/09: khi phép đo NNN-liên-video ra ÂM −1,7% cùng
+  ngày, toàn trục ① đã đóng — khuôn DIS không còn chỗ dùng trong trục này;
+  giữ lại làm mẫu thiết kế chung.)*
 - **DBNorm — dual bank** (2023): [arXiv:2310.11612](https://arxiv.org/html/2310.11612)
   — thêm bank GALLERY bên cạnh bank câu (DualIS/DualDIS); trên MSR-VTT
   CLIP4Clip R@1 44,20 → 45,00, và ablation của chính nó: **bank câu ảnh hưởng
-  mạnh hơn bank gallery**. Đáng ghi vì bank gallery của ta MIỄN PHÍ (177k khung
-  đã mã hoá) trong khi bank câu chỉ có 141 — nếu V2 sống mà cần thêm lực, đây
-  là biến thể rẻ kế tiếp, trước khi nghĩ tới DBSN.
+  mạnh hơn bank gallery**. *(Ghi chú 03/09: trục ① đã đóng toàn phần bằng phép
+  đo −1,7% — DBNorm/DBSN ghi ở đây làm hàng rào chống đề-xuất-lại-dưới-tên-khác,
+  cùng vai trò với §9.4: chúng là biến thể của đúng cơ chế đã đóng, không phải
+  cửa mới.)*
 - **DBSN — Dual Bank Sinkhorn Normalization** (2025):
   [arXiv:2508.02538](https://arxiv.org/html/2508.02538) — bản mạnh nhất của họ
   này (Sinkhorn 10 vòng lặp, thêm target-bank), nhưng chính nó ghi rõ: **suy giảm
   đáng kể khi bank nhỏ**. Với bank ~141 câu của ta (xem dưới), NNN top-k là lựa
-  chọn đúng, DBSN là việc thử sau nếu ① sống.
+  chọn đúng; DBSN chưa bao giờ đến lượt — trục ① đóng ở tầng NNN.
 
 ### 2.2 Cơ chế — và nó khác gì thứ đã ÂM
 
@@ -470,43 +478,39 @@ thấy khung đứng trên đáp án trong cùng video **không** "hấp dẫn m
 hiện trường" không có mục tiêu để bắn **bên trong video đúng** — nếu khung chặn
 là studio thì bias bank của nó đã phải cao hơn. Toàn bộ hướng khai thác cấu trúc
 bản-tin (studio vs hiện trường) cho xếp hạng nội-video coi như đóng; phần còn
-sống duy nhất của ý tưởng là trục liên-video §9.3 (khung studio của video SAI
-chen vào giữa 100 dòng).
+sống duy nhất của ý tưởng khi ấy là trục liên-video §9.3 (khung studio của video
+SAI chen vào giữa 100 dòng). **Cập nhật 03/09: phần đó cũng đã chết** — phép đo
+NNN-liên-video đầy đủ ra ÂM (TEST −1,7%, phụ lục) ⇒ ý tưởng studio-vs-hiện-trường
+đóng ở CẢ HAI trục, bằng số.
 
 ---
 
 ## 7. Trình tự thi hành đề nghị (cho người điều phối — lane này không chạy gì)
 
-*(Cập nhật 03/09 lượt soát 3 — hai trạm gác 0 đồng của trục ① ĐÃ chạy cả hai:
-V1 ÂM 51% ⇒ đóng; V2 QUA 57% sát nút ⇒ được phép viết phép đo đầy đủ. Trình tự
-dưới đây thay bản cũ.)*
+*(Cập nhật 03/09 lượt soát 3, lần hai trong ngày — trục ① đã đi TRỌN đường đo:
+V1 ÂM 51% ⇒ đóng; V2 QUA cổng đếm 57% sát nút ⇒ đo đầy đủ ⇒ **ÂM −1,7%** ⇒
+toàn trục đóng, không viết thêm script khử-bias nào. Trình tự dưới đây thay
+bản cũ, và mọi phép-đếm-trước từ nay đo theo HÌNH DẠNG chỗ ăn mà phép đếm bão
+hoà đã chỉ ra: trận tay đôi hạng 1↔2 nội-video, ngưỡng thắng ≥62% số trận —
+xem "TRẢ LỜI §9.1" cuối tài liệu.)*
 
-1. **②-phép-đếm-trước** (~$0,3 sinh paraphrase + đếm hạng, 0 lần đọc TEST):
-   hạng nội-video VÀ hạng dòng của keyframe đáp án theo majority-vote(k=2) so
-   với câu gốc, trên 132 mục. Trung vị không nhích ⇒ dừng, ghi ÂM. Soi tay ~20
-   paraphrase tiếng Việt trước khi đếm; cân nhắc lọc-nhất-quán kiểu VIREO
-   (§3.1) nếu chất lượng lởm chởm.
-2. **①′-V2 đo đầy đủ** (0 API, tiêu MỘT lần đọc TEST, §9.3): sắp lại 100 dòng
-   theo `s_D` (NNN top-k, bank 141 câu) của ứng viên sinh ra dòng, chỉ nhóm một
-   cảnh; tập dòng không đổi ⇒ R@100 bất biến; nhóm hai cảnh giữ nguyên ⇒ nhóm
-   assert. Quét (α ∈ dải rộng, k ∈ {8,16}) trên TUNE, đường tham số phải
-   phẳng; cân nhắc khuôn DIS "chỉ can thiệp khi mục đứng trên là ứng-viên-hub"
-   (§2.1) làm biến thể an toàn. Đọc số với kỳ vọng ĐÚNG: cổng đếm nói hiệu ứng
-   nằm ở R@20/50/100, không phải R@1/R@5 — nếu TUNE chỉ dương ở R@1 thì đó là
-   nhiễu, không phải cơ chế.
-3. **③-phép-đếm-trước** (0 đồng, chạy độc lập — không còn chờ ①, §9.2): hạng
-   theo `q'` so với `q`, quét (λ, m) chỉ đọc hạng. Song song được với 1–2.
+1. **②-phép-đếm-trước** (~$0,3 sinh paraphrase + đếm hạng, 0 lần đọc TEST),
+   hai thước, thước (a) là thước quyết định:
+   (a) **thước trận-tay-đôi**: trên các câu một cảnh mà đáp án đứng hạng 2–3
+   nội-video, majority-vote(k=2) phân xử đúng bao nhiêu % trận hạng-1↔đáp-án?
+   ≥62% mới đi tiếp; (b) hạng nội-video VÀ hạng dòng trung vị trên cả 132 mục
+   (thước cũ, giữ để so). Soi tay ~20 paraphrase tiếng Việt trước khi đếm;
+   cân nhắc lọc-nhất-quán kiểu VIREO (§3.1) nếu chất lượng lởm chởm.
+2. ② đầy đủ (TUNE/TEST phân tầng, biến thể (a) hẹp trước) theo §3.3 + 5 cổng §2.5.
+3. **③-phép-đếm-trước** (0 đồng, chạy độc lập, §9.2): cùng thước trận-tay-đôi
+   với `q'` thay `q`, quét (λ, m) chỉ đọc hạng. Song song được với 1–2.
 4. ④ chỉ khi 1–3 xong mà nhóm một cảnh vẫn còn ≥20% headroom xếp hạng.
 
-Thứ tự 1↔2 đổi chỗ được: ② rẻ tiền nhưng cần LLM và soi tay; ①′-V2 0 API nhưng
-tiêu một lần đọc TEST của bộ đã bị đọc ≥4 lần — nếu đợt sinh thêm GT
-(`KE_HOACH_DINH_VI.md` §4.2b) sắp chạy, dời ①′-V2 lại sau đợt ấy là hợp lý.
-
-Nhắc hai điều từ kỷ luật đo: nửa TEST của bộ 132 đã bị đọc ≥4 lần — mọi số TEST
-mới của các đề xuất trên phải đọc với hiểu biết đó, và việc sinh thêm GT
-(`KE_HOACH_DINH_VI.md` §4.2b) càng làm càng đáng trước khi tiêu lần đọc TEST cho
-①. Và mọi kết luận hoà ở n=33/nhóm đọc là "chưa chứng minh được", không phải
-"không có".
+Nhắc hai điều từ kỷ luật đo: nửa TEST của bộ 132 đã bị đọc **≥5 lần** (thêm lần
+đọc của phép đo NNN-liên-video 03/09) — mọi số TEST mới của các đề xuất trên
+phải đọc với hiểu biết đó, và nếu đợt sinh thêm GT (`KE_HOACH_DINH_VI.md`
+§4.2b) sắp chạy thì dồn các lần đọc TEST mới lại sau đợt ấy. Và mọi kết luận
+hoà ở n=33/nhóm đọc là "chưa chứng minh được", không phải "không có".
 
 ---
 
@@ -548,6 +552,20 @@ majority vote 49,6 > average-similarity 46,1 — khớp bản gốc); DN đọc 
 2512.12935 đọc **nội dung**; bài CVPRW Nguyen-Nhu bị chặn 403, chỉ xác nhận được
 việc dùng SuperGlobal qua trích dẫn của máy tìm kiếm — ghi rõ để ai cần thì tải
 tay.
+
+Thêm ở lượt soát 3 (WebSearch/WebFetch thật, 03/09/2026):
+
+| nguồn | URL | mức đọc |
+|---|---|---|
+| DBNorm — dual bank (2023) | https://arxiv.org/html/2310.11612 | nội dung (công thức DualIS/DualDIS, số MSR-VTT, ablation bank) |
+| QB-Norm — chi tiết DIS | https://www.emergentmind.com/topics/querybank-normalisation-qb-norm | tóm lược thứ cấp có công thức (β≈20, bank 5–20k, cơ chế activation-set); trang abstract arXiv fetch lại cùng ngày |
+| Hệ moment-retrieval "neighbor score aggregation" (2025) | https://arxiv.org/html/2504.08384v1 | nội dung (thuật toán rerank, không có số định lượng) |
+| GenSearch/VIREO — fetch lại bản v2 | https://arxiv.org/html/2407.12341v2 | nội dung (KIS 12,08→6,33; lọc nhất quán 7 khía cạnh; trọng số T2I 0,5) |
+| NNN — đối chiếu lại số chịu-tải | https://arxiv.org/html/2410.24114v1 | nội dung; **47,15→50,24 SigLIP COCO, α/k cho bank lệch phân bố — khớp từng chữ số với bản 02/09** |
+| WeiMoCIR (TAAI 2024) | https://arxiv.org/abs/2409.04918 | abstract + tóm tắt máy tìm kiếm |
+| DN (NeurIPS 2023) — fetch lại trang abstract | https://arxiv.org/abs/2302.11084 | abstract (bản PDF không parse được ở lượt này) |
+| MTA — xác nhận lại phạm vi (chỉ phân loại) | https://github.com/MaxZanella/MTA · https://arxiv.org/abs/2405.02266 | tóm tắt máy tìm kiếm |
+| Kết quả VBS 2024/2025 (bối cảnh §6.1) | https://videobrowsershowdown.org/hall-of-fame/ | tóm tắt máy tìm kiếm |
 
 ---
 
@@ -731,3 +749,47 @@ khử-bias.** Trục sống còn lại của tài liệu này: ② GQE, ③ PRF,
 3. **HAI cảnh trượt hệ thống** (trung vị 752 frame — text khớp cảnh A, đáp án ở
    cảnh B): đúng cái đòn hoán-vi-cảnh-B đã ship khai thác; đừng mong encoder
    mới tự sửa nhóm này.
+
+---
+
+## 10. Tổng kết lượt soát độc lập 03/09 — bản đồ hội tụ, và điều đó nghĩa là gì
+
+Lượt soát này chạy lại từ đầu cả bốn hướng được giao (kỹ thuật query-time cho
+CLIP-family; temporal context kiểu VBS/TRECVID; khai thác cấu trúc bản tin;
+đo-trên-132-mục cho từng đề xuất) bằng truy vấn tìm kiếm MỚI, không nhìn bảng
+xếp hạng cũ trước khi tìm: 8 lượt WebSearch + 7 lượt WebFetch (danh sách §8,
+bảng "lượt soát 3"). Bốn kết quả:
+
+**(a) Bản đồ hội tụ.** Không tìm thấy họ cơ chế thứ năm nào vừa training-free,
+vừa áp được vào ràng buộc của ta (không huấn luyện, không video gốc, không vòng
+lặp người), vừa chưa nằm trong bốn trục của §1 hoặc bảng cửa đóng §6. Các "ứng
+viên mới" mà truy vấn mới trồi lên đều quy về chỗ cũ khi nhìn theo cơ chế:
+DBNorm/DBSN → biến thể của trục ① (đã đóng toàn phần); MTA/TTA-ảnh → §5/§6.3,
+và chính văn liệu TTA tự cảnh báo crop/flip phá ngữ nghĩa toàn ảnh ở bài
+retrieval; "neighbor score aggregation" của một hệ moment-retrieval 2025 →
+đúng cửa làm-mượt đã ÂM (§6.1); composed-retrieval training-free (WeiMoCIR,
+CIReVL) → phép cộng ảnh-chữ của ③; MUGI/PRF-LLM cho văn bản → họ của ② và ③.
+Hai lượt soát độc lập ra cùng một bản đồ là bằng chứng tốt nhất hiện có rằng
+bản đồ ấy **đủ** — cái còn thiếu không nằm trong văn liệu query-time
+training-free 2024–2026, nó nằm ở encoder (lane pe-core).
+
+**(b) Nguồn chịu-tải đã được đối chiếu lại.** Số NNN (SigLIP COCO 47,15→50,24;
+α/k cho bank lệch phân bố) khớp từng chữ số với bản 02/09 — quan trọng vì toàn
+bộ chuỗi cổng V1/V2 đứng trên trích dẫn ấy, và vì dự án từng có tiền lệ chép
+nhầm số từ tóm tắt máy tìm kiếm (ca TransNetV2, `KE_HOACH_DINH_VI.md` §4.5).
+
+**(c) Ba món mới thật sự, đều nhỏ:** bộ lọc-nhất-quán 7-khía-cạnh của VIREO
+cho rủi ro drift của ② (§3.1 — công cụ rẻ, đúng chỗ yếu nhất của đề xuất đứng
+đầu); WeiMoCIR làm bằng chứng cùng-họ cho phép cộng ảnh-chữ của ③ (§4.1); và
+khuôn DIS "chỉ can thiệp khi có mục tiêu" làm mẫu thiết kế cho mọi tín hiệu
+yếu (§2.1 — dù chỗ dùng dự kiến đã đóng cùng ngày).
+
+**(d) Điều lượt soát KHÔNG làm được — nói thẳng.** Nó không tìm ra tín hiệu
+nội-video mới nào cho nhóm một cảnh ngoài ba đề xuất còn sống (②③④), và cả ba
+đều chưa có phép đếm nào trên kho. Sau khi trục ① đi trọn ba tầng đo trong hai
+ngày và chết ở tầng cuối, quy trình cho ②③④ đã rõ: phép-đếm-trước theo thước
+trận-tay-đôi (§7, ngưỡng ≥62%), rồi mới tới 5 cổng. Nếu cả ba phép đếm cùng
+trượt, kết luận của lane này là: **không gian tín-hiệu-training-free cho trục
+nội-video nhóm một cảnh đã cạn theo văn liệu hiện có** — mọi đầu tư tiếp theo
+của nhóm này thuộc về encoder thứ hai (pe-core) và trục thứ tự dòng bằng tín
+hiệu ngoài-SigLIP, không thuộc về thêm một phép biến đổi điểm nào nữa.

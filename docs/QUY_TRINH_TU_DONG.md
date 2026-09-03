@@ -102,7 +102,7 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 
 ---
 
-## 6. Trạng thái hiện tại (cập nhật mỗi phiên)
+## 6. Trạng thái hiện tại (cập nhật 03/09/2026, sau ba lane trake-them / pe-core / paper)
 
 **Đã ship, có số đứng sau:**
 
@@ -112,6 +112,7 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 | đường Q&A đa kênh | 70,0% → 93,3% đáp án đúng | `--neo 0` |
 | `reserve_tail_rows` | vá lỗ hổng mất p1-19/p1-22 | — |
 | truy xuất thêm cảnh B | +23,3% nhóm qua cổng; pool 53%→76% | `--canh-b 0` |
+| hoán vị điểm nội-video theo cảnh B | +57,6% cả 66 câu hai cảnh, hạt độc lập; bền qua 4 mô hình bốc | `--hoan-vi-canh-b 0` |
 
 **Nghẽn đang nhắm:** định vị nội-video. Trần oracle **+139,7%** trên bộ mới sạch
 (câu hai cảnh +337,5%), đã **phân rã thành ba tầng rời nhau**
@@ -120,20 +121,50 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 | tầng | phần của trần | ai đang nhắm |
 |---|---|---|
 | 1. SINH ứng viên (keyframe đáp án có lọt vào 400 không) | **17%** | cảnh B đã ship (+23,3% nhóm qua cổng) |
-| 2. XẾP HẠNG nội-video (đã lọt thì có được hạng-1 không) | **40%** | encoder mạnh hơn / tín hiệu nội-video / VLM xếp lại |
+| 2. XẾP HẠNG nội-video (đã lọt thì có được hạng-1 không) | **40%** | hai cảnh: hoán vị cảnh B đã ship; MỘT cảnh: mọi tín hiệu 0 đồng đã chết → pre-test PE-Core (dở) + ②③ của lane paper |
 | 3. PHÂN BỔ dòng (đã hạng-1 thì 100 dòng có dồn quanh nó không) | **43%** | **thuần phân bổ — không cần model mới** |
 
-Hệ quả quan trọng nhất: **83% của trần nằm ở tầng 2 và 3**, không phải ở khâu
-sinh ứng viên. Và tầng 3 — chiếm 43%, lớn nhất — **không cần model mới**, chỉ cần
-tiêu 100 dòng khôn hơn. Đó là khoản rẻ nhất còn lại.
+**Hình dạng chỗ ăn ở nhóm MỘT cảnh** (`dem_bao_hoa_noi_video.py`, 03/09): đáp
+án đã đứng trung vị **hạng 2** nội-video (≤3 ở 68% câu) — bài toán là **trận
+tay đôi hạng 1↔2**, và mọi phép-đếm-trước từ nay đo theo thước ấy (ngưỡng
+thắng ≥62% số trận). Nhóm HAI cảnh trượt hệ thống (lệch 752 frame — text khớp
+cảnh A): encoder mới không tự sửa nhóm này.
 
-**Cửa đã đóng trên bộ đo MỚI (đáng tin):** cặp thời gian (+6,7%, KTC chứa 0,
-hiệu ứng co lại khi thêm dữ liệu — dừng đầu tư).
+**PE-Core (encoder thứ hai): cổng pre-test ĐANG DỞ — GPU Colab bị KHOÁ** cho
+tới khi `docs/PRETEST_ENCODER.md` §5 có số (ngưỡng đã tiền-đăng-ký ở §2b,
+không đổi sau khi nhìn số). Encode 3/~40 video, resumable:
+`python -u scripts/pretest_pe_core.py --giai-doan encode` rồi `--giai-doan cham`.
+Quyết định + lý do: `docs/QUYET_DINH_ENCODER_TRAKE.md`.
+
+**TRAKE: đã có bộ đo n=24** (`data/gt_trake.json`, `docs/GT_TRAKE.md`): nền
+0,2275, ORACLE-MỐC +107,8%, ORACLE-VIDEO +148,1%, video dòng 1 đúng 21/24;
+phân rã: định vị sự kiện 72,8% / sai video 27,2%. Sản xuất giữ
+`align_mode=ordered`, `min_gap=2`. Hướng còn mở: lưới bù trừ phi-đều theo bất
+định từng sự kiện (chưa ai đo); mục 4 sự kiện chưa có.
+
+**Cửa đã đóng trên bộ đo MỚI (đáng tin):**
+
+- cặp thời gian (+6,7%, KTC chứa 0, hiệu ứng co khi thêm dữ liệu);
+- 12 cửa phân bổ/quy tắc dòng (`KE_HOACH_DINH_VI.md` §2.1);
+- **toàn trục khử-hub NNN/QB-Norm** (paper ①): V1 cổng đếm 51%; V2 qua cổng
+  57% sát nút rồi đo đầy đủ **TEST −1,7%, P(≤0)=77,7%** (03/09);
+- **TRAKE, có TEST đứng sau:** soft_order (TEST +0,0000, 0/12 mục đổi điểm);
+  đóng lần hai trên n=24: unordered (−24,7%), min_gap 0–1 (−9,7%), hedge video
+  (hạng-1 = top-3 = 21/24 ⇒ bất khả thi cấu trúc). Lưu ý:
+  `data/gt_trake_test_moi.json` đã cháy vai trò TEST cho họ giả thuyết căn
+  chỉnh — giả thuyết mới cần TEST mới.
 
 **Cửa đóng trên bộ đo CŨ (đáng nghi ngờ, nên mở lại):** làm mượt thời gian,
 chuẩn hoá theo video, VLM xếp lại nội-video, chia lại ngân sách rộng/sâu,
 pha CLIP-B32. Tất cả đều đóng vì bộ cũ *không còn headroom nội-video* — điều
-kiện đó đã thay đổi.
+kiện đó đã thay đổi. (Riêng làm mượt và chuẩn hoá video đã ÂM lại cả trên bộ
+mới — xem §2.1 kế hoạch định vị.)
+
+**Việc xếp hàng kế tiếp** (thứ tự trong `docs/QUYET_DINH_ENCODER_TRAKE.md`):
+1) chạy nốt pre-test PE (~2,5 h CPU); 2) phép-đếm-trước ② GQE paraphrase
+(~$0,3) và ③ PRF Rocchio (0 đồng, song song); 3) đợt sinh thêm GT
+(`KE_HOACH_DINH_VI.md` §4.2b) **trước** mọi lần đọc TEST mới — nửa TEST bộ 132
+đã bị đọc ≥5 lần.
 
 **Việc treo cần người:** cookie YouTube cho 490 video còn thiếu lời thoại;
 chỉ mục batch 2 khi BTC phát dữ liệu.
