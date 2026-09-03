@@ -816,3 +816,19 @@ khoảng cách không phải loại nhiễu cứu được.
 
 **② GQE giờ là đề xuất sống CUỐI CÙNG của trục nội-video một cảnh** (§10d đã
 viết sẵn kết luận nếu nó trượt).
+
+---
+
+## ② GQE — BƯỚC 1 XONG, BƯỚC 2 CHỜ RAM (03/09)
+
+Bước 1 (`scripts/sinh_gqe_paraphrase.py`, gpt-5.2, cache theo câu): **132/132
+câu sạch có k=2 paraphrase**, chi phí trong trần $1. **Soi tay 20 mẫu: ĐẠT** —
+giữ nguyên chi tiết định danh (tên trang web, màu-hoạ tiết, chữ trên biển),
+chỉ đổi từ vựng/cú pháp, không drift ⇒ không cần bộ lọc-nhất-quán VIREO.
+
+Bước 2 (`scripts/dem_gqe_tran.py`): trận lấy y hệt phép đếm PRF (16 trận),
+thước chính công bố trước: **cả p1 VÀ p2 cùng cho sim(đáp án) > sim(hạng-1 cũ)
+ở ≥62% trận**. Chạy lần đầu **segfault khi nạp SigLIP** (exit 139): còn 2,0GB
+RAM trống vì tiến trình encode PE đang giữ 3,4GB — đúng ràng buộc RAM đã ghi
+trong `QUYET_DINH_ENCODER_TRAKE.md` §1. Không giết encode (ưu tiên 1 của
+quyết định D); phép đếm chạy ngay sau khi encode xong, sims cache vĩnh viễn.
