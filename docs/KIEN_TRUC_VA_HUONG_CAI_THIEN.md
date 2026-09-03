@@ -152,6 +152,9 @@ hợp: **`docs/KE_HOACH_DINH_VI.md`**.
 | **NNN khử bias-hub (EMNLP 2024) — TOÀN TRỤC ①** | dòng | V1 nội-video: cổng tất định **51% ≤ 55%** (bias gần hằng số trong video). V2 liên-video: cổng QUA sát nút (57%>55%, n=17) → đo đầy đủ sắp-lại-100-dòng (khoá r+k·z(bias), một cảnh, tập dòng bất biến): TUNE đỉnh chỉ **+1,2% phẳng không đơn điệu** → TEST k=1 **−1,7%**, P(≤0)=77,7%. Hub CÓ THẬT nhưng không quy đổi thành điểm | ❌ |
 | ↳ *nhưng* cosine SigLIP liền kề trên thang **tương đối trong video** | tiền xử lý | cú cắt thật ở phân vị **0,24**, đối chứng một cảnh **0,44** — **có tín hiệu, yếu**. Kết luận "cosine không đo được cú cắt" được chứng minh bằng một **ngưỡng tuyệt đối sai** (0,5 nằm dưới trung vị cặp ngẫu nhiên khác video) | ⏸ mở một nửa |
 
+| **soft_order TRAKE** (lead sống duy nhất từ n=12) | TRAKE | TEST 12 mục mới đọc một lần: **+0,0000 cả ba cửa sổ, 0/12 mục đổi điểm**; còn lật 1 video đúng→sai (bị may mắn che vì mục đó vốn 0 điểm); chuỗi co dần +0,0063→+0,0032→0,0000 = chu kỳ thổi phồng TUNE | ❌ |
+| ↳ đóng LẦN HAI trên n=24: unordered −24,7%; min_gap thấp −9,7%; hedge video (hạng1=top3=21/24, bất khả thi cấu trúc) | TRAKE | nền n=24: NEN 0,2275 / ORACLE-MOC 0,4727 / ORACLE-VIDEO 0,5645; phân rã 72,8% định vị sự kiện / 27,2% chọn video | ❌ |
+
 ### Ba dòng ⚠60 đã được MỞ LẠI bằng số
 
 | câu đã đóng cửa (bộ cũ) | sự thật trên bộ mới |
