@@ -402,3 +402,22 @@ sản xuất THẬT (align_sequence) trên cùng 12 mục; (2) cài λ_i theo kh
 chọn trên TUNE; (3) đọc 12 mục mới MỘT lần; ship chỉ khi TEST ≥ +5 điểm tuyệt
 đối ở ±6 VÀ so-sản-xuất-thật dương. Không đạt thì ghi "tín hiệu treo, cần n
 lớn hơn sau giải".
+
+---
+
+## KẾT QUẢ CHẠY R2 (đêm 03/09) — nhánh làm-mịn-lưới BỎ, kèm một lỗi công cụ đáng ghi
+
+`scripts/dem_luoi_thua.py` trên bộ đo: 0/8 câu một-cảnh trượt có GT cách
+keyframe >2s — nhưng số này **VÔ GIÁ TRỊ vì vòng lặp công cụ**: GT của bộ đo
+được SINH TỪ chính keyframe (neo là keyframe) nên khoảnh khắc GT nằm trên lưới
+THEO CẤU TRÚC. Bộ đo này mù bẩm sinh với câu hỏi mật độ lưới — suýt giết nhánh
+bằng một con số giả tạo.
+
+Đo lại KHÔNG-vòng-lặp trên **42 mốc người-xác-minh của đề thật vòng 2**
+(`picks_final*.txt` — mốc do người xem video chọn): trung vị 0,00s; p90 0,89s;
+**>2s: 3/42 = 7% < ngưỡng bỏ 10%** ⇒ **nhánh decode-làm-mịn-cục-bộ BỎ cho
+vòng 3** (không đáng GPU giờ chót). Caveat còn lại ghi trung thực: 34/42 mốc
+đúng 0 frame — một phần vì người soát chọn từ trang review (hiển thị keyframe),
+nên 7% là CẬN DƯỚI; nhưng khi người soát LỆCH khỏi lưới thì lệch nhỏ (≤3s,
+đa phần <1s) — kết luận BỎ vẫn đứng với dữ liệu tốt nhất hiện có. R6 (WRRF gộp
+nguồn) KHÔNG bị ảnh hưởng — vẫn chờ OCR toàn kho.
