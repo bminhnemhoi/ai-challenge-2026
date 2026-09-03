@@ -793,3 +793,26 @@ trượt, kết luận của lane này là: **không gian tín-hiệu-training-f
 nội-video nhóm một cảnh đã cạn theo văn liệu hiện có** — mọi đầu tư tiếp theo
 của nhóm này thuộc về encoder thứ hai (pe-core) và trục thứ tự dòng bằng tín
 hiệu ngoài-SigLIP, không thuộc về thêm một phép biến đổi điểm nào nữa.
+
+---
+
+## PHÉP-ĐẾM-TRƯỚC ③ PRF ROCCHIO — **ÂM** (03/09)
+
+`scripts/dem_prf_rocchio.py`, 0 API, 0 GPU, 0 lần đọc TEST. Thước trận-tay-đôi
+hạng-1↔đáp-án (câu một cảnh, đáp án hạng 2–3 nội-video, n=16 trận; đối chứng
+λ=0 thắng 0/16 đúng định nghĩa):
+
+| m \ λ | 0,25 | 0,5 | 1,0 |
+|---|---|---|---|
+| 3 | 6% | 12% | 19% |
+| 5 | 6% | 6% | 25% |
+| 10 | 12% | 12% | **31%** |
+
+Tốt nhất 31% ≪ ngưỡng ≥62% công bố trước ⇒ **DỪNG, cửa đóng**. Chứng cứ
+ảnh-với-ảnh từ top-m video khác kéo đáp án lên được vài trận (tăng đơn điệu
+theo λ, m) nhưng còn rất xa mức phân xử; đẩy λ cao hơn nữa chỉ là thay điểm
+truy vấn bằng độ giống hub. n=16 là nhỏ, nhưng 5/16 so với bar 10/16 thì
+khoảng cách không phải loại nhiễu cứu được.
+
+**② GQE giờ là đề xuất sống CUỐI CÙNG của trục nội-video một cảnh** (§10d đã
+viết sẵn kết luận nếu nó trượt).
