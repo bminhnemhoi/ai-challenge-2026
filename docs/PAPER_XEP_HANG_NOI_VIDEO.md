@@ -27,21 +27,26 @@ của nhóm này là **thứ tự dòng** (0,2040), lớn hơn deficit đặt-fr
 
 Xếp theo (tác động vào tầng XẾP HẠNG 40%) × (khả thi trong ràng buộc: không huấn
 luyện, không video gốc, quota Gemini cạn) × (độ tin bằng chứng). **Bảng đã cập
-nhật sau cổng tất định 02/09** (① nguyên bản đứng đầu bảng cũ, nay V1 đã ĐÓNG):
+nhật lần 2 sau cổng V2 ngày 03/09** (① nguyên bản đứng đầu bảng cũ; V1 ĐÓNG
+02/09; V2 QUA sát nút 03/09 — ①′ leo lên trên ③ vì là đề xuất còn sống DUY NHẤT
+có phép đếm cơ chế trên chính kho này nghiêng đúng chiều):
 
-| # | đề xuất | trục thông tin MỚI | chi phí | trạng thái sau cổng 02/09 |
+| # | đề xuất | trục thông tin MỚI | chi phí | trạng thái sau cổng 03/09 |
 |---|---|---|---|---|
-| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) — §3 | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | **SỐNG — đứng đầu.** Hai đội đối thủ của chính giải đã dùng tại trận |
-| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** — §4 | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | **SỐNG — chạy độc lập**, không còn chờ ① (§9.2); thêm bằng chứng cùng họ: SuperGlobal, được một đội moment-retrieval CVPRW 2025 dùng |
-| ①′ | **Khử bias-hub — CHỈ còn trục THỨ TỰ DÒNG liên-video (V2)** — §9.3 | trục **CÂU KHÁC**, so **liên-video** | 0 API, ~15 phút | **CHỜ CỔNG ĐẾM MỚI.** V1 (nội-video) đã ĐÓNG bằng cổng 51%; cổng ấy **chưa đo** trục liên-video |
+| ② | **Ensembling cách diễn đạt** (GQE k=2, majority vote) — §3 | trục **CÁCH TẢ KHÁC** của cùng câu | 1 lượt LLM/câu (~$0,3/132 câu gpt-5.2) | **SỐNG — trần cao nhất** (chạm được cả R@1 lẫn tầng sinh ứng viên). Ba đội đối thủ của chính giải đã dùng tại trận; chưa có phép đếm trên kho |
+| ①′ | **Khử bias-hub NNN — trục THỨ TỰ DÒNG liên-video (V2)** — §9.3 | trục **CÂU KHÁC**, so **liên-video** | 0 API, một lần đọc TEST | **CỔNG V2 ĐÃ QUA 57% (03/09, sát nút, n=17).** Bằng chứng-trên-kho tốt nhất trong các đề xuất còn sống; kỳ vọng dồn vào R@20/50/100, khó cứu R@1/R@5 |
+| ③ | **PRF Rocchio 1 bước trên embedding ẢNH** — §4 | trục **KHÔNG GIAN ẢNH** (đồng thuận kho) | 0 API, 0 GPU | **SỐNG — chạy độc lập**, không còn chờ ① (§9.2); bằng chứng cùng họ: SuperGlobal + WeiMoCIR (trộn ảnh-chữ zero-shot); pseudo-cho-CLIP vẫn chưa có số văn liệu |
 | ④ | **Chấm dưới-khung: max-pool trên crop** — §5 | trục **DƯỚI-KHUNG** của ảnh ứng viên | ~200 lượt mã hoá ảnh/câu (GPU nhẹ) | SỐNG — cuối hàng, bằng chứng chuyển miền yếu nhất |
-| — | *(cửa đóng: ①-V1 nội-video — phụ lục; shot-pooling/cửa sổ trượt, mở rộng bằng keyframe HÀNG XÓM thời gian, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, bộ rerank cần model mới — §6)* | | | |
+| — | *(cửa đóng: ①-V1 nội-video — phụ lục; shot-pooling/cửa sổ trượt — nay có thêm ví dụ cùng-bài-toán 2025 dùng đúng cơ chế đã ÂM, §6.1; mở rộng bằng keyframe HÀNG XÓM thời gian, phủ định bằng ngôn ngữ, TPT, relevance feedback tương tác, bộ rerank cần model mới — §6)* | | | |
 
-**Một câu tóm tắt:** sau khi cổng đếm giết đề xuất rẻ nhất ở đúng trạm gác rẻ
-nhất, đề xuất đứng đầu còn lại là GQE — kỹ thuật có số zero-shot **+5,2 điểm R@1**
-(CLIP, MSR-VTT) và đã được **hai đội đối thủ của chính giải này** dùng tại trận
-2025; cửa duy nhất còn mở cho họ khử-bias là trục **liên-video** mà cổng 02/09
-chưa hề chạm tới (§9.3), giá một phép đếm 0 đồng nữa.
+**Một câu tóm tắt:** sau hai cổng đếm 0 đồng, họ khử-bias chết hẳn ở trục
+nội-video (51% = tung đồng xu) nhưng **sống sát nút ở trục thứ tự dòng
+liên-video (57%)** — đúng trục mà bằng chứng COCO của NNN nằm và đúng deficit
+lớn nhất của nhóm một cảnh (0,2040); đề xuất trần cao nhất vẫn là GQE
+(**+5,2 điểm R@1** zero-shot CLIP MSR-VTT, ba đội đối thủ của chính giải dùng
+tại trận 2025) nhưng nó chưa có phép đếm nào trên kho; việc 0 đồng tiếp theo là
+phép-đếm-trước của ② và ③, việc tiêu-một-lần-đọc-TEST tiếp theo là đo đầy đủ
+①′-V2 (§7).
 
 ---
 
@@ -100,7 +105,17 @@ xuất ở đây vẫn áp được lên encoder mới y nguyên.
 - **QB-Norm** (CVPR 2022): [arXiv:2112.12777](https://arxiv.org/abs/2112.12777) +
   mã [github.com/ioanacroi/qb-norm](https://github.com/ioanacroi/qb-norm) —
   tiền thân, dynamic inverted softmax với β=20, tăng R@1 text-video trên
-  MSR-VTT/MSVD/DiDeMo không cần huấn luyện lại.
+  MSR-VTT/MSVD/DiDeMo không cần huấn luyện lại. Chi tiết cơ chế **DIS** (đọc
+  thêm 03/09): dựng trước tập "ứng-viên-hub" = các mục lọt top-k của BẤT KỲ câu
+  bank nào; chỉ áp chuẩn hoá khi mục đứng đầu là ứng-viên-hub, ngược lại giữ
+  điểm gốc — chính là khuôn "chỉ can thiệp khi có mục tiêu" nên vay cho phép đo
+  V2 (§9.3), nơi tín hiệu chỉ qua cổng sát nút 57%.
+- **DBNorm — dual bank** (2023): [arXiv:2310.11612](https://arxiv.org/html/2310.11612)
+  — thêm bank GALLERY bên cạnh bank câu (DualIS/DualDIS); trên MSR-VTT
+  CLIP4Clip R@1 44,20 → 45,00, và ablation của chính nó: **bank câu ảnh hưởng
+  mạnh hơn bank gallery**. Đáng ghi vì bank gallery của ta MIỄN PHÍ (177k khung
+  đã mã hoá) trong khi bank câu chỉ có 141 — nếu V2 sống mà cần thêm lực, đây
+  là biến thể rẻ kế tiếp, trước khi nghĩ tới DBSN.
 - **DBSN — Dual Bank Sinkhorn Normalization** (2025):
   [arXiv:2508.02538](https://arxiv.org/html/2508.02538) — bản mạnh nhất của họ
   này (Sinkhorn 10 vòng lặp, thêm target-bank), nhưng chính nó ghi rõ: **suy giảm
@@ -204,7 +219,15 @@ nhóm một cảnh** nếu phép đếm bước 1 nghiêng rõ; quy ra toàn b�
   CLIP mean-pooling: R@1 **31,2 → 36,4 (+5,2 điểm)**, R@5 +10,2 điểm.
 - **Query paraphrasing bằng LLM cho video search** (nhóm VIREO, TRECVID):
   [arXiv:2407.12341](https://arxiv.org/pdf/2407.12341) — cùng họ, training-free,
-  tìm-với-từng-bản-tả rồi hợp nhất danh sách.
+  tìm-với-từng-bản-tả rồi hợp nhất danh sách. Đọc lại nội dung 03/09, ba chi
+  tiết đáng vay: (i) trên **textual KIS** — bài giống ta nhất, không phải AVS —
+  mean median rank cải thiện **12,08 → 6,33**; (ii) trước khi dùng, mỗi bản tả
+  bị **lọc bằng kiểm tra nhất quán**: sinh cặp hỏi-đáp từ câu gốc trên 7 khía
+  cạnh (người/hành động/vật/nơi/thời gian/màu/số lượng) rồi chỉ giữ bản tả trả
+  lời khớp — đúng công cụ cho rủi ro drift mà §3.3 nêu, rẻ (thêm ~1 lượt
+  LLM/câu); (iii) nhánh sinh-ẢNH từ câu (T2I qua Stable Diffusion) bị chính họ
+  hạ trọng số còn 0,5 vì yếu với chuyển động — thêm một lý do để ta chỉ lấy
+  nhánh văn bản.
 - **Hai đội đối thủ của CHÍNH giải này đã dùng nó năm 2025** — bằng chứng khả thi
   tại trận, không phải phòng lab:
   [MADTempo, arXiv:2512.12929](https://arxiv.org/html/2512.12929) (GPT-5 phân rã
@@ -277,6 +300,14 @@ nhóm một cảnh** nếu phép đếm bước 1 nghiêng rõ; quy ra toàn b�
   với ta. Tức "tinh chỉnh truy vấn/ứng viên bằng hàng xóm trong KHÔNG GIAN ẢNH"
   đã có cả số benchmark lẫn tiền lệ dùng tại trận cùng miền — mạnh hơn hồ sơ
   "chưa có số pseudo cho CLIP" mà mục này tự khai ở trên.
+- **Bằng chứng cùng họ, thêm 03/09 (lượt soát 3):**
+  [WeiMoCIR, TAAI 2024, arXiv:2409.04918](https://arxiv.org/abs/2409.04918) —
+  composed image retrieval **training-free**: truy vấn = trung bình có trọng số
+  của embedding ẢNH tham chiếu và embedding CHỮ, không huấn luyện gì. Đây là
+  phép cộng `q' = q + λ·e_ảnh` của ③ dưới tên khác, được đo có số trên
+  FashionIQ/CIRR (mức đọc: abstract + tóm tắt máy tìm kiếm). Khác biệt duy
+  nhất: CIR có ảnh tham chiếu do NGƯỜI đưa, ③ lấy pseudo từ top-m — phần
+  "pseudo" vẫn là chỗ chưa có số, như tự khai ở trên.
 
 ### 4.2 Cơ chế — khác gì mọi thứ đã thử
 
@@ -373,6 +404,15 @@ làm-mượt-thời-gian với một nhân khác**, cửa đã ÂM trên TEST. M
 thông tin mới thì hàng xóm phải đến từ **ngoài video** (đồng thuận kho — tức ③),
 không phải từ trục thời gian đã vắt kiệt.
 
+Thêm 03/09, một ví dụ cùng-bài-toán để không ai mở lại cửa này vì "đội khác cũng
+làm": một hệ moment-retrieval 2025 (BEiT3 + OpenCLIP + TransNetV2,
+[arXiv:2504.08384](https://arxiv.org/html/2504.08384v1)) dùng "**neighbor score
+aggregation**" — cộng dồn điểm của các khung lân cận để thưởng ứng viên có hàng
+xóm ổn định — làm bước rerank chính. Khai triển ra, đó vẫn là tổ hợp tuyến tính
+của `s_q(i−w..i+w)`: đúng cơ chế đã ÂM trên bộ đo của ta (pool một cảnh 58→31),
+và paper ấy cũng **không có số định lượng** cho riêng bước này, chỉ có ví dụ
+định tính. Kỹ thuật phổ biến ≠ kỹ thuật đo được là dương trên phân bố của ta.
+
 ### 6.2 Phủ định bằng NGÔN NGỮ trong câu truy vấn — ĐÓNG
 
 [NegBench, CVPR 2025, arXiv:2501.09425](https://arxiv.org/abs/2501.09425): các
@@ -437,19 +477,30 @@ chen vào giữa 100 dòng).
 
 ## 7. Trình tự thi hành đề nghị (cho người điều phối — lane này không chạy gì)
 
-*(Cập nhật 02/09 lượt sửa 2 — trình tự cũ bắt đầu bằng ①-bước-1; bước ấy ĐÃ chạy,
-ra ÂM 51%, cửa V1 đóng ở trạm gác rẻ nhất, 0 đồng đã tiêu — đúng thiết kế.)*
+*(Cập nhật 03/09 lượt soát 3 — hai trạm gác 0 đồng của trục ① ĐÃ chạy cả hai:
+V1 ÂM 51% ⇒ đóng; V2 QUA 57% sát nút ⇒ được phép viết phép đo đầy đủ. Trình tự
+dưới đây thay bản cũ.)*
 
 1. **②-phép-đếm-trước** (~$0,3 sinh paraphrase + đếm hạng, 0 lần đọc TEST):
    hạng nội-video VÀ hạng dòng của keyframe đáp án theo majority-vote(k=2) so
-   với câu gốc, trên 132 mục. Trung vị không nhích ⇒ dừng, ghi ÂM.
-2. ② đầy đủ (TUNE/TEST phân tầng, biến thể (a) hẹp trước) theo §3.3 + 5 cổng §2.5.
+   với câu gốc, trên 132 mục. Trung vị không nhích ⇒ dừng, ghi ÂM. Soi tay ~20
+   paraphrase tiếng Việt trước khi đếm; cân nhắc lọc-nhất-quán kiểu VIREO
+   (§3.1) nếu chất lượng lởm chởm.
+2. **①′-V2 đo đầy đủ** (0 API, tiêu MỘT lần đọc TEST, §9.3): sắp lại 100 dòng
+   theo `s_D` (NNN top-k, bank 141 câu) của ứng viên sinh ra dòng, chỉ nhóm một
+   cảnh; tập dòng không đổi ⇒ R@100 bất biến; nhóm hai cảnh giữ nguyên ⇒ nhóm
+   assert. Quét (α ∈ dải rộng, k ∈ {8,16}) trên TUNE, đường tham số phải
+   phẳng; cân nhắc khuôn DIS "chỉ can thiệp khi mục đứng trên là ứng-viên-hub"
+   (§2.1) làm biến thể an toàn. Đọc số với kỳ vọng ĐÚNG: cổng đếm nói hiệu ứng
+   nằm ở R@20/50/100, không phải R@1/R@5 — nếu TUNE chỉ dương ở R@1 thì đó là
+   nhiễu, không phải cơ chế.
 3. **③-phép-đếm-trước** (0 đồng, chạy độc lập — không còn chờ ①, §9.2): hạng
    theo `q'` so với `q`, quét (λ, m) chỉ đọc hạng. Song song được với 1–2.
-4. **①′-V2-cổng-đếm** (0 đồng, ~15 phút, §9.3): bias-bank so **liên-video** trên
-   các dòng đứng trên dòng đúng đầu tiên. ≤55% ⇒ đóng nốt toàn trục ①, ghi vào
-   bảng cửa đóng; >55% ⇒ mới được viết script đo V2 đầy đủ.
-5. ④ chỉ khi 1–4 xong mà nhóm một cảnh vẫn còn ≥20% headroom xếp hạng.
+4. ④ chỉ khi 1–3 xong mà nhóm một cảnh vẫn còn ≥20% headroom xếp hạng.
+
+Thứ tự 1↔2 đổi chỗ được: ② rẻ tiền nhưng cần LLM và soi tay; ①′-V2 0 API nhưng
+tiêu một lần đọc TEST của bộ đã bị đọc ≥4 lần — nếu đợt sinh thêm GT
+(`KE_HOACH_DINH_VI.md` §4.2b) sắp chạy, dời ①′-V2 lại sau đợt ấy là hợp lý.
 
 Nhắc hai điều từ kỷ luật đo: nửa TEST của bộ 132 đã bị đọc ≥4 lần — mọi số TEST
 mới của các đề xuất trên phải đọc với hiểu biết đó, và việc sinh thêm GT
@@ -658,3 +709,25 @@ dòng-đúng-nằm-sâu chủ yếu ở vùng hạng mà BUCKET đã trả gần
 
 **Toàn trục ① đóng bằng số ở cả ba tầng đo. Không viết thêm script nào cho họ
 khử-bias.** Trục sống còn lại của tài liệu này: ② GQE, ③ PRF, ④ crop max-pool.
+
+---
+
+## TRẢ LỜI §9.1 — trục nội-video CHƯA bão hoà, và chỗ ăn có hình dạng cụ thể (03/09)
+
+`scripts/dem_bao_hoa_noi_video.py`, 0 API, 132 mục sạch:
+
+| nhóm | hạng-1 trong ±20 | lệch hạng-1→đáp án (trung vị) | hạng của keyframe-đáp-án |
+|---|---|---|---|
+| MỘT cảnh (pool 8 kf/video) | **38%** | 75 frame | **trung vị 2**; ≤3: 68% |
+| HAI cảnh (pool 16 kf/video) | **5%** | 752 frame | trung vị 6; ≤3: 31% |
+
+1. **Không bão hoà** — 38%/5% còn rất xa 100%, khớp với oracle tier-2 (+40%).
+   Pretest PE-Core vẫn đáng chạy đúng như ngưỡng tiền-đăng-ký.
+2. **Hình dạng chỗ ăn ở MỘT cảnh:** đáp án đã đứng trung vị HẠNG 2 nội-video —
+   bài toán không phải "tìm cho ra" mà là "thắng trận đấu tay đôi hạng 1↔2".
+   Tín hiệu nào phân xử được cặp đôi ấy (thắng 62% số trận trở lên) là ăn;
+   mọi tín hiệu đo kiểu "trung bình toàn pool" đã thử đều thua vì chúng
+   xáo cả 8 keyframe thay vì phân xử đúng một cặp.
+3. **HAI cảnh trượt hệ thống** (trung vị 752 frame — text khớp cảnh A, đáp án ở
+   cảnh B): đúng cái đòn hoán-vi-cảnh-B đã ship khai thác; đừng mong encoder
+   mới tự sửa nhóm này.
