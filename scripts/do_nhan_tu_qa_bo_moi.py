@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--m", type=int, default=100)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--xuat-sai", default=None,
+                    help="ghi JSON trang thai dung/sai tung muc cua tap NEN (0 API khi cache day)")
     args = ap.parse_args()
 
     data = Path(args.data)
@@ -178,6 +180,12 @@ def main() -> int:
             if (i + 1) % 20 == 0:
                 print(f"  {ten}: {i+1}/{len(sach)}", flush=True)
         ket[ten] = dung
+        if ten == "NEN" and args.xuat_sai:
+            Path(args.xuat_sai).write_text(json.dumps(
+                [{"chi_so_sach": i, "dung": r["dung"], "video_dung": r["video_dung"],
+                  "dap_an_may": r["dap_an"]} for i, r in enumerate(dung)],
+                ensure_ascii=False, indent=1), encoding="utf-8")
+            print(f"  -> da xuat trang thai dung/sai NEN: {args.xuat_sai}")
         n_ok = sum(1 for r in dung if r["dung"])
         print(f"{ten}: {n_ok}/{len(dung)} dap an dung", flush=True)
 
