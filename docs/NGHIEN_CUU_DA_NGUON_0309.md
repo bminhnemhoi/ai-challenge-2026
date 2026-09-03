@@ -370,3 +370,35 @@ Vì sao đếm và điểm ngược dấu — ghi để khỏi ai lặp lại:
 
 R1 ĐÓNG cho biến thể dòng-đơn. R11 (VRisk) tự động hoãn theo điều kiện ghi
 sẵn ("chạy SAU khi R1 chốt" — chốt ÂM thì độ ưu tiên tụt sau R5/R6).
+
+---
+
+## KẾT QUẢ CHẠY R5 BẬC ĐẾM (đêm 03/09) — DP-định-vị SỐNG, k-best-trải CHẾT
+
+`scripts/do_dp_trake.py` (sims KhoSims cache, TUNE = 12 mục cũ, chấm y
+`do_trake_bo_moi`, thang so sánh A = argmax độc lập + `allocate_trake_rows`
+trên CÙNG tín hiệu S):
+
+| cấu hình | ±6 (quyết định) | ±10 | ±20 |
+|---|---|---|---|
+| A argmax + thang | 0,1947 | 0,2301 | 0,3050 |
+| **B DP(λ=0,003) + thang** | **0,2308 (+18,5%)** | 0,2755 | 0,3661 |
+| C DP(λ=0,003) k-best-100 | 0,1389 (−28,6%) | 0,2137 | 0,3832 |
+
+- **B (DP chỉ làm ĐỊNH VỊ):** dương ở CẢ BA cửa sổ, đường λ có đỉnh
+  (0,001:+0,025 / 0,003:+0,036 / 0,01:−0,027 — khớp khuyến nghị dải λ của
+  DANTE, không phải đường phẳng nhiễu); bootstrap câu P(≤0)=8,3%. **NHƯNG
+  +3,6 điểm tuyệt đối < ngưỡng chặt +5 điểm đã đăng ký** (đọc "điểm %" theo
+  nghĩa chặt = điểm tuyệt đối ×100). Trạng thái: **TÍN HIỆU MẠNH, CHƯA XÁC
+  NHẬN** — không đọc 12 mục TEST đêm nay.
+- **C (k-best chuỗi làm cách TRẢI 100 dòng): ÂM dứt khoát** ở cột quyết định
+  (P(≤0)=100%): chuỗi không đệm trượt cửa sổ ±6, thang bù trừ dày thắng;
+  +0,078 ở ±20 xác nhận cơ chế phủ-rộng nhưng BTC nói cửa sổ <10 frame ⇒
+  đóng biến thể này, đừng thử lại với cửa sổ hẹp.
+- Chế độ drop-cost CHƯA cài (ghi rõ trong script); λ_i theo khe (R10) chưa đo.
+
+KẾ HOẠCH SÁNG MAI cho R5 (đăng ký trước khi nhìn thêm số): (1) so B với đường
+sản xuất THẬT (align_sequence) trên cùng 12 mục; (2) cài λ_i theo khe + drop-cost,
+chọn trên TUNE; (3) đọc 12 mục mới MỘT lần; ship chỉ khi TEST ≥ +5 điểm tuyệt
+đối ở ±6 VÀ so-sản-xuất-thật dương. Không đạt thì ghi "tín hiệu treo, cần n
+lớn hơn sau giải".
