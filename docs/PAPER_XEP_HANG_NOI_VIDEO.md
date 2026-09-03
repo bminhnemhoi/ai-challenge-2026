@@ -832,3 +832,38 @@ thước chính công bố trước: **cả p1 VÀ p2 cùng cho sim(đáp án) >
 RAM trống vì tiến trình encode PE đang giữ 3,4GB — đúng ràng buộc RAM đã ghi
 trong `QUYET_DINH_ENCODER_TRAKE.md` §1. Không giết encode (ưu tiên 1 của
 quyết định D); phép đếm chạy ngay sau khi encode xong, sims cache vĩnh viễn.
+
+---
+
+## ② GQE — PHÉP ĐẾM ÂM, VÀ KẾT LUẬN §10d KÍCH HOẠT (03/09)
+
+`scripts/dem_gqe_tran.py` qua `chay_gon_ram.py`, log `round2/gqe_tran.log`.
+16 trận tay đôi hạng-1↔đáp-án (y hệt phép đếm ③):
+
+| lá phiếu | thắng |
+|---|---|
+| câu gốc, sim thô (đối chiếu) | 2/16 = 12% |
+| p1 riêng lẻ | 3/16 = 19% |
+| p2 riêng lẻ | 3/16 = 19% |
+| **THƯỚC CHÍNH — cả p1 VÀ p2 (k=2)** | **2/16 = 12%** |
+| chẩn đoán — ensemble trung-bình-sim | 2/16 = 12% |
+
+12% ≪ ngưỡng ≥62% công bố trước ⇒ **DỪNG, cửa đóng**. Paraphrase chất lượng
+tốt (soi tay đạt, không drift) chỉ nâng mỗi lá phiếu từ 12%→19%: biến thể
+TỪ VỰNG không đổi được phán quyết của SigLIP về cặp khung trong cùng video —
+hai khung ấy giống nhau về ngữ nghĩa chữ, khác nhau ở chi tiết thị giác mà
+mọi cách diễn đạt lại đều không chạm tới.
+
+### §10d — KÍCH HOẠT (đã viết sẵn trước khi đo)
+
+Cả bốn trục của bản đồ văn liệu giờ đóng **bằng số, cùng một thước**:
+① NNN ba tầng (51% / 57%-rồi-TEST-−1,7%); ③ PRF 31%; ② GQE 12%;
+④ crop max-pool không chạy phép đo điểm nào vì bằng chứng chuyển miền yếu
+nhất và ba cơ chế mạnh hơn đều chết trên đúng thước trận-tay-đôi.
+
+**Không gian tín-hiệu training-free cho trục nội-video MỘT cảnh cạn theo văn
+liệu hiện có.** Đầu tư còn lại của tầng xếp hạng: (a) encoder thứ hai với
+text tower context ≥64 token (PE-Core NO_GO vì 32 token — xem
+`PRETEST_ENCODER.md` §5); (b) tín hiệu NGOÀI-SigLIP cho thứ tự dòng
+(VLM/OCR/lời thoại — các đường đã có hạ tầng); (c) sức đo: sinh thêm GT
+(`KE_HOACH_DINH_VI.md` §4.2b) vì nửa TEST của bộ 132 đã đọc ≥5 lần.
