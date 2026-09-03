@@ -156,6 +156,7 @@ hợp: **`docs/KE_HOACH_DINH_VI.md`**.
 | ↳ đóng LẦN HAI trên n=24: unordered −24,7%; min_gap thấp −9,7%; hedge video (hạng1=top3=21/24, bất khả thi cấu trúc) | TRAKE | nền n=24: NEN 0,2275 / ORACLE-MOC 0,4727 / ORACLE-VIDEO 0,5645; phân rã 72,8% định vị sự kiện / 27,2% chọn video | ❌ |
 
 | **③ PRF Rocchio ảnh-với-ảnh** (SuperGlobal/WeiMoCIR; leave-one-video-out) | frame | phép-đếm-trước thước trận-tay-đôi (16 trận hạng-1↔đáp-án, một cảnh hạng 2–3): tốt nhất λ=1/m=10 chỉ **31%** ≪ ngưỡng ≥62% công bố trước; đối chứng λ=0 = 0% ✓; 0 API 0 GPU 0 lần đọc TEST | ❌ |
+| **PE-Core-L làm encoder xếp-lại nội-video** (lever ④ tầng xếp hạng) | frame | cổng tiền-đăng-ký NO_GO: trung vị HAI cảnh 11,5 (cần ≤6,8); hạng-1 MỘT cảnh 45,0% (cần ≥47,0%), KTC Δ chứa 0; vi_thuần sập (trung vị 64, text tower 32 token BPE Anh — 40/40 câu vi bị cắt). GPU KHOÁ. Encoder tương lai cần context ≥64 token rồi đo lại đúng cổng này | ❌ |
 ### Ba dòng ⚠60 đã được MỞ LẠI bằng số
 
 | câu đã đóng cửa (bộ cũ) | sự thật trên bộ mới |

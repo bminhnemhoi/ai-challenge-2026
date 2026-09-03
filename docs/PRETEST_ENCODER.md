@@ -148,4 +148,36 @@ mục đầy đủ 177k keyframe không thể cho nó nhiều hơn: **đừng đ
 
 ## 5. KẾT QUẢ (điền sau khi chạy — không sửa gì phía trên)
 
-*(chưa chạy)*
+Chạy 03/09/2026, `round2/pe_cham.log`, `data/cache_pretest_pe/ket_qua.json`.
+Mẫu 20 MỘT / 20 HAI cảnh, seed 92026; PE nạp đường fp16 ít bộ nhớ.
+
+| cấu hình | MỘT: trung vị / hạng-1 / top-5 | HAI: trung vị / hạng-1 / top-5 |
+|---|---|---|
+| SigLIP (sản xuất) | 2,0 / 35,0% / 70,0% | 13,5 / 0,0% / 10,0% |
+| **PE A_ensemble_vi** | 2,0 / **45,0%** / 80,0% | 11,5 / 0,0% / 20,0% |
+| PE B_ensemble_en | 2,0 / 35,0% / 70,0% | 12,0 / 5,0% / 30,0% |
+| PE en_thuần | 2,0 / 35,0% / 75,0% | 11,5 / 10,0% / 30,0% |
+| PE vi_thuần | 64,0 / 5,0% / 10,0% | 84,5 / 5,0% / 5,0% |
+
+**Ngưỡng dịch §2b (chốt trước):** (1) trung vị HAI ≤ 6,8? PE 11,5 → KHÔNG.
+(2) hạng-1 MỘT ≥ 47,0%? PE 45,0% → KHÔNG. Bootstrap Δhạng-1 MỘT của A:
+KTC95 [−15,0%, +35,0%] — chứa 0.
+
+## ⇒ **NO_GO — GPU vẫn KHOÁ, cửa đóng KÈM SỐ.**
+
+Ba điều đọc được từ số, ghi lại cho trung thực:
+
+1. **Tín hiệu dương có thật nhưng dưới ngưỡng và không chắc:** A_ensemble_vi
+   +10pp hạng-1 một cảnh (9 thắng/5 thua), nhưng ngưỡng +12pp đặt trước để bù
+   rủi ro chỉ-mục-đầy-đủ, và KTC chứa 0 ở n=20. Ngưỡng không được hạ sau khi
+   nhìn số — đó là toàn bộ giá trị của cổng tiền-đăng-ký.
+2. **Nhóm HAI cảnh — lý do chính muốn encoder mới — PE gần như không nhúc
+   nhích** (11,5 so 13,5; cần ≤6,8): khớp chẩn đoán `dem_bao_hoa_noi_video.py`
+   (lệch hệ thống 752 frame vì text tả cảnh A) — đây là lỗi CẤU TRÚC đề, không
+   phải lỗi encoder; không encoder nào tự sửa.
+3. **Giới hạn công cụ phải mang theo:** text tower PE context 32 token BPE
+   tiếng Anh — 40/40 câu vi và 36/40 câu en BỊ CẮT; vi_thuần sập hoàn toàn
+   (trung vị 64). Cổng này đo "PE-Core-L trong điều kiện triển khai của TA"
+   (câu dài, tiếng Việt) — không phủ định PE trên benchmark câu ngắn của họ.
+   Encoder ứng viên tương lai phải có text tower context ≥64 token và đo lại
+   bằng đúng cổng này.
