@@ -441,3 +441,14 @@ Sáng 04/09 (đăng ký từ đêm qua, không đổi): so với đường sản
 (align_sequence) trên 12 TUNE; đọc 12 mục TEST **một lần** với cấu hình đã
 chốt `lam_i/λ=0,01`; ship qua cờ `--dp-trake` chỉ khi TEST ≥ +5 điểm tuyệt
 đối ở ±6 và so-sản-xuất dương.
+
+### R3 số đầy đủ (01h15 04/09) — ngưỡng QUA, kèm caveat một-chữ-số
+
+`dem_dap_an_trong_ocr.py --quet`, 158/158 mục có OCR quanh keyframe-đáp-án ±1:
+nhóm ĐANG SAI **8/81** có đáp án nằm sẵn trong OCR; nhóm đang đúng 3/77.
+Ngưỡng ≥1 QUA. **Caveat giữ nguyên:** cả 8 ví dụ đều là đáp án MỘT chữ số
+('1','2','3') — token đơn xuất hiện khắp nơi trong khung tin tức, khớp có thể
+ăn may. Trọng tài duy nhất: A/B chèn OCR-của-khung-model-đọc vào prompt
+(net ≥ +1 câu, 0 lật đúng→sai). Đang OCR đích danh các khung mà đường trả lời
+THẬT SỰ đọc (`quet_ocr_khung_doc.py` — top-4 điểm ±1 lân cận) để A/B chạy
+được ngay sáng.
