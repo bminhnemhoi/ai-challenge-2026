@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--m", type=int, default=100)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--probe-sai", type=int, default=0,
+                    help="R4: chay lai N lan temp=1.0 cac muc sai-dap-an/dung-video roi dung")
     ap.add_argument("--xuat-sai", default=None,
                     help="ghi JSON trang thai dung/sai tung muc cua tap NEN (0 API khi cache day)")
     args = ap.parse_args()
@@ -180,6 +182,43 @@ def main() -> int:
             if (i + 1) % 20 == 0:
                 print(f"  {ten}: {i+1}/{len(sach)}", flush=True)
         ket[ten] = dung
+        if ten == "NEN" and args.probe_sai:
+            # R4 — probe bất ổn định: chỉ mục SAI-đáp-án nhưng ĐÚNG-video (nhóm
+            # duy nhất voting cứu được). Ép temp=1.0 bằng vá cục bộ tiến trình
+            # này — KHÔNG đụng answer_qa sản xuất. Không cache (mỗi lần là một
+            # mẫu mới). Ngưỡng tiền-đăng-ký: ≥1/3 số mục có ≥1 lần đúng.
+            from google.genai import types as _t
+            goc_cfg = _t.GenerateContentConfig
+            _t.GenerateContentConfig = (
+                lambda **kw: goc_cfg(**{**kw, "temperature": 1.0}))
+            muc_tieu = [i for i, r in enumerate(dung)
+                        if not r["dung"] and r["video_dung"]]
+            print(f"\n=== PROBE R4: {len(muc_tieu)} mục × {args.probe_sai} lần "
+                  f"temp=1.0 ===", flush=True)
+            lat = 0
+            for i in muc_tieu:
+                g = sach[i]
+                cau = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
+                chuan = g.get("vqa_answer") or ""
+                ky = []
+                for _lan in range(args.probe_sai):
+                    try:
+                        da, _ghi = tra_loi_tu_ung_vien(judge, args.model, cl[i],
+                                                       meta_key, by_n, caps, cau)
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"  muc#{i}: LOI {type(exc).__name__}", flush=True)
+                        ky.append("?")
+                        continue
+                    ok = bool(_default_answer_match(da, chuan) or khop_rong(da, chuan))
+                    ky.append("D" if ok else "s")
+                lat += "D" in ky
+                print(f"  muc#{i}: {''.join(ky)}", flush=True)
+            _t.GenerateContentConfig = goc_cfg
+            can = (len(muc_tieu) + 2) // 3
+            print(f"\nPROBE R4: {lat}/{len(muc_tieu)} mục có ≥1 lần đúng "
+                  f"(ngưỡng ≥{can}) -> "
+                  f"{'VOTING CÓ CỬA' if lat >= can else 'ÂM — voting không có gì để cứu'}")
+            return 0
         if ten == "NEN" and args.xuat_sai:
             Path(args.xuat_sai).write_text(json.dumps(
                 [{"chi_so_sach": i, "dung": r["dung"], "video_dung": r["video_dung"],
