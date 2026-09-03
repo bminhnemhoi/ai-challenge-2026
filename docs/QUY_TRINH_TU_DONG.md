@@ -102,6 +102,20 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 
 ---
 
+## 6b. RACE-READY — sơ tuyển vòng 3, 19h30 03/09/2026 (kiểm lúc 16h)
+
+- Smoke test 5 câu vòng 2 (3 KIS + 1 QA + 1 TRAKE) với cờ thi MẶC ĐỊNH:
+  **5/5 × 100 dòng, format check qua, zip hợp lệ**; cảnh B (+78/+53/+9 ứng
+  viên) và hoán vị nội-video đều hoạt động; Q&A đọc 7 khung trả lời được.
+  Tốc độ ~2 phút/5 câu ⇒ 30 câu ≈ 12–15 phút.
+- Quota Gemini free ĐÃ HỒI sau reset 14h (gemini-3.5-flash-lite trả lời trong
+  smoke). `.env` đủ GEMINI_API_KEY + OPENAI_API_KEY. Đĩa D: trống 46 GB.
+- Test suite 223/223 xanh; cây git sạch; không thay đổi sản xuất nào chưa qua
+  cổng. Đấu pháp vòng thi: memory `aic-playbook-vong-thi` (7 ăn điểm / 5 mất
+  điểm).
+- Rủi ro còn treo cần NGƯỜI: dữ liệu batch 2 nếu vòng 3 dùng kho mới (phải
+  dựng chỉ mục ngay khi có link); cookies YouTube; HF token.
+
 ## 6. Trạng thái hiện tại (cập nhật 03/09/2026, sau ba lane trake-them / pe-core / paper)
 
 **Đã ship, có số đứng sau:**
