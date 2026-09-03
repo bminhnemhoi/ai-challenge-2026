@@ -348,3 +348,25 @@ Sai lệch đã sửa khi trích Quan CVPRW: SigLIP H@10 lưới dày = 0,6304 (
 
 **Nguyên tắc cắt khi thiếu giờ**: R1–R6 bắt buộc thử theo đúng thứ tự; R7–R13 tuỳ giờ;
 R14 là luật, không tốn giờ. CRC + semivariance: để sau giải.
+
+---
+
+## KẾT QUẢ CHẠY R1 — ĐẾM QUA, ĐIỂM ÂM, DỪNG TRƯỚC TEST (đêm 03/09)
+
+`dem_chi_lai_duoi.py` (bậc đếm): TUNE net **+7 mục** (cứu 8/mất 1; ngưỡng ≥+4)
+→ QUA. `do_diem_chi_lai_duoi.py` (bậc điểm, chấm y sản xuất {6,10,20} × 4 họ
+× 48 bốc): TUNE **−1,2%** (0,1962→0,1939; KTC [−0,0094,+0,0051]; P(≤0)=74,1%)
+→ **DỪNG, không đọc TEST, không ship.**
+
+Vì sao đếm và điểm ngược dấu — ghi để khỏi ai lặp lại:
+1. Hàng cứu được nằm hạng 51..100 ⇒ chỉ ăn số hạng R@100 (1/5 trọng số) với
+   BUCKET hạng sâu — mỗi mục cứu chỉ đáng vài phần nghìn điểm.
+2. Đuôi mới đặt dòng ĐƠN tại keyframe, giãn >20 frame; bộ chấm thật bốc cửa sổ
+   ±6/±10 quanh khoảnh khắc thật ⇒ dòng đơn trượt nhiều lần bốc mà thang bù
+   trừ dày (step 10) của đuôi cũ đỡ được. **Phép đếm tất định ±20 là thước
+   LẠC QUAN hơn bộ chấm thật** — bài học công cụ đo thứ tư của tuần.
+3. Biến thể "mini-ladder trong đuôi" = quay lại chỉnh tham số phủ/độ sâu —
+   lãnh thổ đã giết lane phân bổ HAI lần trên TEST. Không đi.
+
+R1 ĐÓNG cho biến thể dòng-đơn. R11 (VRisk) tự động hoãn theo điều kiện ghi
+sẵn ("chạy SAU khi R1 chốt" — chốt ÂM thì độ ưu tiên tụt sau R5/R6).
