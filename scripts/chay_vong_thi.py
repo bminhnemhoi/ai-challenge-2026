@@ -51,6 +51,14 @@ NGAY BÂY GIỜ, theo thứ tự:
     và đối chiếu chéo với người soát thứ hai. LƯỢT CUỐI MỚI ĐƯỢC TÍNH. Có 3 lượt — dùng sớm 1 lượt
     để giữ bản an toàn trên hệ thống BTC ngay khi máy chạy xong.
 
+ 8. Câu nào truy xuất ra RÁC (top toàn video lạc đề): VIẾT TAY bản dịch tiếng Anh
+    <tên câu>.en.txt đặt cạnh file đề rồi chạy lại RIÊNG câu đó (lever đã đo — bản
+    dịch tay thắng dịch máy; giúp TRAKE ít nhất ngang KIS):
+      python scripts/make_submission.py --queries <thư mục chỉ chứa câu đó> --out <out2>
+ 9. Rút lui khẩn cấp (đã diễn tập chiều 04/09, chạy sạch): thêm cờ
+      --ocr-prompt 0 --canh-b 0 --hoan-vi-canh-b 0 --allocator hybrid
+    để về đúng cấu hình vòng 2 cho một câu/một lượt chạy bất kỳ.
+
 BẪY ĐÃ TỪNG MẤT ĐIỂM: title bị cắt ngắn rồi suy diễn; hai bản tin sáng/chiều HTV phát cùng
 clip (phân xử bằng chi tiết ĐẾM ĐƯỢC); kết luận "video không có X" khi mới xem vài khung.
 ===========================================================================================
