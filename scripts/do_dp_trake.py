@@ -221,5 +221,116 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and "--chung-ket" not in sys.argv:
     raise SystemExit(main())
+
+
+def chung_ket() -> int:
+    """Bậc CUỐI R5: so với đường sản xuất THẬT + đọc 12 mục TEST đúng MỘT lần.
+
+    Cấu hình DP đóng băng TRƯỚC khi nhìn TEST: lam_i / λ=0.01 (chọn trên TUNE).
+    Sản xuất thật = align_sequence (ordered, gap=2) + allocate_trake_rows —
+    dựng ĐÚNG như do_che_do_can_chinh.py (luật ii: input y hệt sản xuất).
+    Ngưỡng ship (đăng ký từ đêm 03/09): TEST ≥ +5 điểm tuyệt đối ở ±6.
+
+        python -u scripts/chay_gon_ram.py scripts/do_dp_trake.py --chung-ket
+    """
+    import re as _re
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default=str(ROOT / "data"))
+    ap.add_argument("--gt", default=str(ROOT / "data" / "gt_trake.json"))
+    ap.add_argument("--chung-ket", action="store_true")
+    ap.add_argument("--seeds", type=int, default=4)
+    ap.add_argument("--draws", type=int, default=48)
+    ap.add_argument("--step", type=int, default=10)
+    args = ap.parse_args()
+    KIEU, LAM_CHOT = "lam_i", 0.01
+
+    gt = json.loads(Path(args.gt).read_text(encoding="utf-8"))
+    meta = json.loads((Path(args.data) / "metadata.json").read_text(encoding="utf-8"))
+    hang_of, kf_list, last_of = {}, {}, {}
+    for r, m in enumerate(meta):
+        hang_of[(m["video_id"], int(m["frame_idx"]))] = r
+        kf_list.setdefault(m["video_id"], []).append(int(m["frame_idx"]))
+        last_of[m["video_id"]] = max(last_of.get(m["video_id"], 0), int(m["frame_idx"]))
+    kf = {v: np.array(sorted(a), dtype=np.int64) for v, a in kf_list.items()}
+    del meta, kf_list
+
+    print("nap chi muc + engine san xuat ...", flush=True)
+    from src.core.kis_engine import KISEngine
+    from src.task3_trake import TRAKEEngine
+
+    eng = KISEngine(args.data).load()
+    trake = TRAKEEngine(engine=eng).load_index()
+    kho = KhoSims(args.data, False)
+
+    rows_sx, rows_dp = [], []
+    for m in gt:
+        de = (m.get("boi_canh", "") + "\n"
+              + "\n".join(f"E{j+1}: {s}" for j, s in enumerate(m["su_kien"])))
+        evs = split_events(de)
+        first = bool(_re.search(r"đầu tiên|lần đầu|first", de, _re.IGNORECASE))
+        try:
+            res = trake.align_sequence(evs, first_occurrence=first, top_k=1) or []
+        except Exception:  # noqa: BLE001
+            res = []
+        if res:
+            v = res[0]["video_id"]
+            rows_sx.append(allocate_trake_rows(v, res[0]["sequence_frames"],
+                                               budget=MAX_ROWS, step=args.step,
+                                               video_last_frame=last_of.get(v)))
+        else:
+            rows_sx.append([])
+        # DP trên video sản xuất CHỌN (không phải video GT) — đúng điều kiện thi;
+        # nếu sản xuất chọn sai video thì cả hai cùng 0 điểm (luật TRAKE).
+        v_sx = res[0]["video_id"] if res else m["video_id"]
+        a = kf[v_sx]
+        rws = np.array([hang_of[(v_sx, int(f))] for f in a])
+        S = np.stack([kho.lay(ev, "")[rws].astype(np.float64) for ev in evs])
+        # bien the lam_i (sao chep tu main de chay doc lap)
+        hs = []
+        for j in range(S.shape[0]):
+            p_ = np.exp(S[j] * 50)
+            p_ /= p_.sum()
+            H = -(p_ * np.log(p_ + 1e-12)).sum() / np.log(len(p_))
+            hs.append(LAM_CHOT * max(0.1, 1.0 - H))
+        top1, _kb = dp_kbest(S, hs, k_out=1)
+        c = [int(a[t]) for t in top1]
+        rows_dp.append(allocate_trake_rows(v_sx, c, budget=MAX_ROWS, step=args.step,
+                                           video_last_frame=last_of.get(v_sx)))
+
+    ho = []
+    for s in range(args.seeds):
+        bocs = [boc_moc(GOC + s * 1000 + t, gt, kf) for t in range(args.draws)]
+        ho.append([[b[i] for b in bocs] for i in range(len(gt))])
+
+    def diem_cau(rows_of, chi_so, w=6):
+        d = np.zeros(len(chi_so))
+        for b in ho:
+            for k, i in enumerate(chi_so):
+                d[k] += cham([rows_of[i]], [gt[i]], [b[i]], [w])
+        return d / len(ho)
+
+    for ten, chi_so, quyet in (("TUNE (12 cũ)", list(range(12)), False),
+                               ("TEST (12 mới, ĐỌC MỘT LẦN)", list(range(12, len(gt))), True)):
+        a_c = diem_cau(rows_sx, chi_so)
+        b_c = diem_cau(rows_dp, chi_so)
+        ch = b_c.mean() - a_c.mean()
+        rng = np.random.default_rng(4242)
+        lay = rng.integers(0, len(chi_so), size=(4000, len(chi_so)))
+        dd = b_c[lay].mean(axis=1) - a_c[lay].mean(axis=1)
+        lo, hi = np.percentile(dd, [2.5, 97.5])
+        print(f"\n=== {ten} (±6) ===")
+        print(f"  SẢN XUẤT {a_c.mean():.4f} -> DP lam_i/0.01 {b_c.mean():.4f} "
+              f"({ch:+.4f}); KTC [{lo:+.4f}, {hi:+.4f}]; P(<=0)={(dd <= 0).mean():.1%}")
+        if quyet:
+            print(f"\nNGƯỠNG SHIP (đăng ký 03/09 đêm): TEST ≥ +0,05 tuyệt đối ở ±6.")
+            print("  " + ("ĐỦ ĐIỀU KIỆN SHIP qua cờ --dp-trake."
+                          if ch >= 0.05 else
+                          "KHÔNG đủ — ghi 'tín hiệu treo, cần n lớn hơn', không ship."))
+    return 0
+
+
+if "--chung-ket" in sys.argv:
+    raise SystemExit(chung_ket())

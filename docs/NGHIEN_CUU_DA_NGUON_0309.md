@@ -475,3 +475,19 @@ nền chứ không đo cơ chế. **Đăng ký trước khi đọc thêm số:**
 chạy-lại-y-hệt-NEN bỏ cache trên 40 mục phân tầng (20 đúng + 20 sai); nếu
 down-rate A/B (4/77 = 5,2%) ≤ sàn tự-lật + 1 mục thì 4 cú lật là nhiễu nền —
 cơ chế OCR được xử theo NET; ngược lại thì OCR có tác dụng phụ thật → không ship.
+
+### R5 CHUNG KẾT (08h45 04/09) — dương nhất quán, DƯỚI ngưỡng ship, KHÔNG ship
+
+So với đường sản xuất THẬT (`align_sequence` ordered/gap=2, input y hệt luật
+ii), DP `lam_i/λ=0,01` chạy trên VIDEO SẢN XUẤT CHỌN (đúng điều kiện thi):
+
+| tập | sản xuất | DP | chênh |
+|---|---|---|---|
+| TUNE 12 cũ | 0,1717 | 0,1948 | **+0,0231 (+13,5%)**, P(≤0)=8,8% |
+| TEST 12 mới (đọc MỘT lần, đã cháy cho config này) | 0,1928 | 0,2152 | **+0,0224 (+11,6%)**, P(≤0)=23,5% |
+
+Hai nửa độc lập cùng dấu, biên độ gần nhau — cơ chế nhiều khả năng thật, nhưng
+**< ngưỡng ship +0,05 đã đăng ký** và KTC chứa 0 ở n=12. TRAKE đề thật chỉ
+~3–5 câu, một cú hỏng đắt hơn +2 điểm % kỳ vọng ⇒ **KHÔNG ship trước vòng 3.**
+Trạng thái: **TÍN HIỆU TREO ƯU TIÊN CAO SAU GIẢI** — việc cần làm: sinh thêm
+GT TRAKE (n≥40), đo lại đúng harness này, ship nếu giữ ≥ +10% với KTC loại 0.
