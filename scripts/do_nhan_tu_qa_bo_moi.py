@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--m", type=int, default=100)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--vote3", action="store_true",
+                    help="VOTE3: 3 mau temp=1.0 kem OCR, da so theo cum, so voi mot-phat-OCR")
     ap.add_argument("--nhieu-nen", action="store_true",
                     help="do san nhieu: chay lai NEN bo cache tren 40 muc phan tang")
     ap.add_argument("--ab-ocr", action="store_true",
@@ -222,6 +224,92 @@ def main() -> int:
             print(f"\nPROBE R4: {lat}/{len(muc_tieu)} mục có ≥1 lần đúng "
                   f"(ngưỡng ≥{can}) -> "
                   f"{'VOTING CÓ CỬA' if lat >= can else 'ÂM — voting không có gì để cứu'}")
+            return 0
+        if ten == "NEN" and args.vote3:
+            # VOTE3 — 3 mẫu temp=1.0 VỚI OCR-prompt (đúng cấu hình sản xuất
+            # 59eb3fe), đa số theo CỤM khớp (khop_rong đôi một; hoà → mẫu 1).
+            # Đối chứng = nhánh A/B OCR một-phát (đã cache). Ngưỡng đăng ký:
+            # net ≥ +2 VÀ đúng→sai ≤ sàn nhiễu (10% số câu đang đúng).
+            from google.genai import types as _t
+            from src.core.ocr import OCRIndex
+            goc_cfg = _t.GenerateContentConfig
+            _t.GenerateContentConfig = (
+                lambda **kw: goc_cfg(**{**kw, "temperature": 1.0}))
+            oidx = OCRIndex(args.data, langs=["vi", "en"])
+
+            def chu_ocr_v(cands_doc):
+                mau = []
+                for c in cands_doc[:2]:
+                    cv = oidx._video(c.video_id)
+                    a_kf = sorted(int(k) for k in cv.keys()) if cv else []
+                    gan = [f for f in a_kf if abs(f - int(c.frame_idx)) <= 150]
+                    for f in ([int(c.frame_idx)] + gan)[:3]:
+                        for x in cv.get(str(f)) or []:
+                            t = (x[1] if isinstance(x, (list, tuple)) and len(x) > 1
+                                 else str(x))
+                            if t and t not in mau:
+                                mau.append(str(t))
+                return " | ".join(mau)[:500]
+
+            print(f"\n=== VOTE3 (temp=1.0, kèm OCR) trên {len(sach)} mục ===",
+                  flush=True)
+            len_v, xuong_v, n_so = 0, 0, 0
+            for i, g in enumerate(sach):
+                cau = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
+                ocr_t = chu_ocr_v(cl[i])
+                cau2 = cau + ("\nChữ đọc được trên các khung hình (OCR tự động, "
+                              "có thể sai chính tả, chỉ dùng làm gợi ý): "
+                              + ocr_t if ocr_t else "")
+                khung_key = "|".join(f"{c.video_id}:{int(c.frame_idx)}"
+                                     for c in cl[i][:24])
+                # đối chứng một-phát (cache A/B)
+                h2 = hashlib.sha1(f"{args.model}|{cau2}|{khung_key}"
+                                  .encode("utf-8")).hexdigest()[:24]
+                f2 = cache / f"{h2}.json"
+                if not f2.is_file():
+                    continue  # chỉ so trên mục đã có nhánh đối chứng
+                rec2 = json.loads(f2.read_text(encoding="utf-8"))
+                chuan = g.get("vqa_answer") or ""
+                ok_1 = bool(_default_answer_match(rec2["dap_an"], chuan)
+                            or khop_rong(rec2["dap_an"], chuan))
+                mau3 = []
+                for k3 in range(3):
+                    h3 = hashlib.sha1(f"VOTE{k3}|{args.model}|{cau2}|{khung_key}"
+                                      .encode("utf-8")).hexdigest()[:24]
+                    f3 = cache / f"{h3}.json"
+                    if f3.is_file():
+                        mau3.append(json.loads(f3.read_text(encoding="utf-8"))["dap_an"])
+                        continue
+                    try:
+                        da3, _g3 = tra_loi_tu_ung_vien(judge, args.model, cl[i],
+                                                       meta_key, by_n, caps, cau2)
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"  muc#{i}: LOI {type(exc).__name__}", flush=True)
+                        da3 = ""
+                    f3.write_text(json.dumps({"dap_an": da3}, ensure_ascii=False),
+                                  encoding="utf-8")
+                    mau3.append(da3)
+                # đa số theo cụm: mẫu nào khớp với ≥1 mẫu khác thì cụm đó thắng
+                chon = mau3[0]
+                for x in mau3:
+                    if sum(1 for y in mau3 if y is not x
+                           and (khop_rong(x, y) or _default_answer_match(x, y))) >= 1:
+                        chon = x
+                        break
+                ok_v = bool(_default_answer_match(chon, chuan)
+                            or khop_rong(chon, chuan))
+                n_so += 1
+                if ok_v and not ok_1:
+                    len_v += 1
+                if ok_1 and not ok_v:
+                    xuong_v += 1
+                if n_so % 20 == 0:
+                    print(f"  {n_so} mục | lên {len_v} xuống {xuong_v}", flush=True)
+            _t.GenerateContentConfig = goc_cfg
+            print(f"\nVOTE3 vs một-phát-OCR (n={n_so}): lên {len_v} | xuống "
+                  f"{xuong_v} | NET {len_v - xuong_v:+d}")
+            print("NGƯỠNG: net ≥ +2 VÀ xuống ≤ 10% số câu đang đúng -> "
+                  + ("QUA" if (len_v - xuong_v >= 2) else "KHÔNG QUA"))
             return 0
         if ten == "NEN" and args.nhieu_nen:
             # SÀN NHIỄU của chính nền — đăng ký TRƯỚC khi đọc thêm số A/B nào:
