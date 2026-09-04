@@ -555,3 +555,32 @@ trước TEST.** Ứng viên hạng 400–800 điểm quá thấp để allocato
 còn pool đôi làm loãng object-boost xếp video (đúng cảnh báo cũ trong mã).
 Bài học công cụ đo thứ 5 của chiến dịch: một lần nữa *đếm-lạc-quan-hơn-điểm*,
 và một lần nữa quy trình hai bậc chặn đúng lúc. `RETRIEVE_TOP_N=400` ĐỨNG.
+
+---
+
+# HỒ SƠ VÒNG 3 (đêm 04-05/09) — chẩn đoán bằng chân lý THẬT và lever kế tiếp
+
+## Diễn biến điểm: 7.0 → 9.6 (máy-soát 17 sửa + 2 báo cáo đồng đội)
+
+## Bộ chân lý thật: `data/gt_vong3.json` — 15 mục (6 người-xác-minh, 9 máy-bằng-chứng)
+Đây là bộ GT KHÔNG-vòng-lặp đầu tiên từ đề thật + phân bố thật (giải quyết luôn
+nghi vấn công cụ đo của R2 cũ).
+
+## CHẨN ĐOÁN QUYẾT ĐỊNH (round3/do_hang_video_dung.py):
+| | |
+|---|---|
+| video đúng có trong pool truy xuất | **14/15 (93%)** |
+| video đúng ở hạng-1 | **3/15 (20%)** |
+| video đúng ở hạng 2–3 | 7/15 |
+
+⇒ ~80% thất bại thật = **thua trận hạng-1 trước video cùng-chuyên-mục**
+(VIVU món ăn, bài giảng L25, bản tin 60s). Khâu SINH ứng viên vô tội trên
+phân bố thật — trái với bức tranh bộ đo cũ. Ngoại lệ: TRAKE p2-34 (>400,
+event-text không kéo nổi video — lỗ riêng của đường TRAKE).
+
+## LEVER KẾ TIẾP — "TRỌNG TÀI DÒNG-1" (đã chứng minh bán-tự-động trong trận):
+chấm top-K video bằng VLM một-ảnh (giao thức kiem_neo) rồi xếp lại. Trong
+trận: video sai chấm 22–45, video đúng 80–95; pipeline tay đúng cơ chế này
+đưa 7.0→9.6. Đang đo tự động trên 14 chân lý (round3/do_trong_tai_dong1.py).
+Chi phí ước ~$0,05–0,1/câu (gpt-5.2) hoặc Gemini free. KHÁC các cửa đã đóng:
+đây là duel LIÊN-video hạng-1 (chưa từng đo), không phải nội-video.
