@@ -82,7 +82,13 @@ def fetch_one(video_id: str, url: str, langs, cookies=None, sleep=0.0) -> list |
         "retries": 2,
     }
     if cookies:
-        opts["cookiesfrombrowser"] = (cookies,)
+        if str(cookies).lower().endswith(".txt"):
+            # duong du phong khi Chrome khoa cookie DB (yt-dlp #7271):
+            # xuat cookies.txt bang extension "Get cookies.txt LOCALLY" roi
+            # --cookies-from-browser duong\dan\cookies.txt
+            opts["cookiefile"] = str(cookies)
+        else:
+            opts["cookiesfrombrowser"] = (cookies,)
     try:
         with yt_dlp.YoutubeDL(opts) as y:
             info = y.extract_info(url, download=False)
