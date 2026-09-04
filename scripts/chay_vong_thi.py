@@ -42,6 +42,9 @@ NGAY BÂY GIỜ, theo thứ tự:
  4. HEDGE THEO DÒNG — hai giả thuyết (video / đáp án / cách hiểu đề TRAKE) cùng nằm top-5.
     TRAKE không ràng buộc thứ tự cột: nộp song song "đầu-tiên-toàn-video" và "chuỗi-liên-tiếp".
  5. Câu "đầu tiên / tất cả": quét ĐỦ khung của video, cấm lấy mẫu thưa (suýt mất p2-8).
+    Đã có công cụ quét TỰ ĐỘNG toàn bộ keyframe + mã điểm nhiều lớp (~15-20 phút/video,
+    dừng/chạy lại thoải mái, in dải điểm thấy ngay khoảnh khắc đầu tiên):
+      python scripts/quet_video_hoi.py --video Lxx_Vyyy --hoi "...? 100=... 50=... 0=..."
  6. MỌI CHỈNH SỬA qua apply_picks (CẤM sửa CSV tay — vòng 2 từng làm hỏng file):
       python scripts/apply_picks.py --queries <q> --out <out> --picks "<query>=Lxx_Vyyy:frame,..."
  7. Trước lượt nộp cuối: python scripts/verify_zip.py <out>/submission.zip
