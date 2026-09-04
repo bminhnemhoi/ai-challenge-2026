@@ -100,7 +100,12 @@ def main() -> int:
                          args.queries, "--run-out", str(out),
                          "--out", str(out / "review.html")], log_dir)
 
+    # 5. cheat-sheet lời thoại + OCR cho từng câu (đấu pháp #1, tự động hoá)
+    chay("goi_y", ["scripts/do_tim_goi_y.py", "--queries", args.queries,
+                   "--ra", str(out / "goi_y.txt")], log_dir)
+
     print(CHECKLIST)
+    print(f"cheat-sheet lời thoại+OCR từng câu: {out / 'goi_y.txt'}")
     print(f"zip để nộp SỚM (giữ bản an toàn): {out / 'submission.zip'}")
     return 0
 
