@@ -618,9 +618,22 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
             # vien yeu hon han. Ghi lai de khong ai thu lai.
             ung_vien_doc = sorted(cands, key=lambda c: -float(c.score))
 
+            # Chèn chữ OCR của chính các khung sắp đọc (cổng đo NET +7/158,
+            # sàn nhiễu vô hiệu vế 0-lật — xem _DocDapAn.chu_ocr). Câu chữ
+            # chèn GIỮ NGUYÊN như bản A/B đã đo.
+            query_doc = query_text
+            if getattr(answerer, "dung_ocr", 0):
+                _ocr_t = answerer.chu_ocr(ung_vien_doc)
+                if _ocr_t:
+                    query_doc = (query_text
+                                 + "\nChữ đọc được trên các khung hình (OCR tự"
+                                   " động, có thể sai chính tả, chỉ dùng làm"
+                                   " gợi ý): " + _ocr_t)
+                    print("    + chen chu OCR vao prompt dap an")
+
             answer, ghi = tra_loi_tu_ung_vien(
                 answerer.judge, answerer.model, ung_vien_doc, answerer.meta,
-                answerer.by_n, answerer.caps, query_text)
+                answerer.by_n, answerer.caps, query_doc)
             if ghi:
                 print(f"    doc dap an: {ghi}")
         except Exception as exc:  # noqa: BLE001 - never lose the frames over this
@@ -704,6 +717,10 @@ def main() -> int:
         "s3b). 'hybrid' is the previous baseline and the one-flag rollback.",
     )
     ap.add_argument(
+        "--ocr-prompt", type=int, default=1,
+        help="1 = chen chu OCR cua khung-doc vao prompt dap an Q&A (do 04/09: "
+             "NET +7/158, 49%%->53%%; san nhieu vo hieu ve 0-lat). 0 = tat.")
+    ap.add_argument(
         "--canh-b", type=int, default=100,
         help="voi cau mo ta HAI CANH noi tiep: truy xuat them top-M keyframe theo "
         "rieng canh B roi gop vao pool ung vien (0 = tat). Do duoc: keyframe dap an "
@@ -771,6 +788,10 @@ def main() -> int:
     answerer = None
     if not args.no_answer:
         answerer = _make_answerer(engine, args.data)
+        if answerer is not None:
+            answerer.dung_ocr = int(getattr(args, "ocr_prompt", 1))
+            if answerer.dung_ocr:
+                print("  + OCR-prompt cho dap an: BAT (rut lui: --ocr-prompt 0)")
 
     counts = {"kis": 0, "qa": 0, "trake": 0}
     failed: List[str] = []
@@ -867,6 +888,53 @@ class _DocDapAn:
         from scripts.answer_qa import nap_loi_thoai
 
         self.caps = nap_loi_thoai(Path(data_dir)) if cua_so_loi > 0 else {}
+        self.data_dir = data_dir
+        self.dung_ocr = 0     # bật qua --ocr-prompt trong main
+        self._ocr_idx = None  # lười: chỉ dựng khi cần
+
+    def chu_ocr(self, ung_vien_doc, so_neo: int = 2, toi_da: int = 500) -> str:
+        """Chữ OCR của các khung sắp được đọc đáp án, để chèn vào prompt.
+
+        Cổng đo (04/09): A/B trên 158 mục NET +7 (sai→đúng 11 / đúng→sai 4,
+        49%→53%); 4 cú lật xuống NẰM DƯỚI sàn nhiễu nền (tự-lật 2/20 = 10% khi
+        chạy lại y hệt) nên vế 0-lật bị vô hiệu theo luật đã đăng ký trước.
+        Nguồn cơ chế: KOCRBench — Gemini +12 điểm % khi chèn OCR vào prompt VQA.
+
+        OCR tại chỗ đúng các khung neo + lân cận (≤6 khung, ~15s/câu lần đầu,
+        cache vĩnh viễn). MỌI lỗi đều nuốt — đáp án không bao giờ được chết vì
+        thiếu chữ OCR.
+        """
+        try:
+            if self._ocr_idx is None:
+                from src.core.ocr import OCRIndex
+
+                self._ocr_idx = OCRIndex(self.data_dir, langs=["vi", "en"])
+            idx = self._ocr_idx
+            khung = []
+            for c in ung_vien_doc[:so_neo]:
+                key = (c.video_id, int(c.frame_idx))
+                m0 = self.meta.get(key)
+                if not m0:
+                    continue
+                khung.append((c.video_id, int(c.frame_idx), m0["frame_filename"]))
+                n0 = int(m0["n"])
+                for nn in (n0 - 1, n0 + 1):
+                    m1 = self.by_n.get((c.video_id, nn))
+                    if m1:
+                        khung.append((c.video_id, int(m1["frame_idx"]),
+                                      m1["frame_filename"]))
+            thieu = [k for k in khung if str(k[1]) not in idx._video(k[0])]
+            if thieu:
+                idx.read_frames(thieu)
+            mau = []
+            for v, f, _fn in khung:
+                for x in idx._video(v).get(str(f)) or []:
+                    t = x[1] if isinstance(x, (list, tuple)) and len(x) > 1 else str(x)
+                    if t and t not in mau:
+                        mau.append(str(t))
+            return " | ".join(mau)[:toi_da]
+        except Exception:  # noqa: BLE001 - OCR là gợi ý, không bao giờ chặn đáp án
+            return ""
 
     @property
     def ready(self) -> bool:
