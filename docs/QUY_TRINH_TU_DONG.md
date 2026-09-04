@@ -102,19 +102,29 @@ Vòng nào không sinh ra được cái nào thì ghi rõ lý do trong báo cáo
 
 ---
 
-## 6b. RACE-READY — sơ tuyển vòng 3, 19h30 03/09/2026 (kiểm lúc 16h)
+## 6b. RACE-READY v2 — sơ tuyển vòng 3, 19h30 04/09/2026 (đông cứng 15h25)
 
-- Smoke test 5 câu vòng 2 (3 KIS + 1 QA + 1 TRAKE) với cờ thi MẶC ĐỊNH:
-  **5/5 × 100 dòng, format check qua, zip hợp lệ**; cảnh B (+78/+53/+9 ứng
-  viên) và hoán vị nội-video đều hoạt động; Q&A đọc 7 khung trả lời được.
-  Tốc độ ~2 phút/5 câu ⇒ 30 câu ≈ 12–15 phút.
-- Quota Gemini free ĐÃ HỒI sau reset 14h (gemini-3.5-flash-lite trả lời trong
-  smoke). `.env` đủ GEMINI_API_KEY + OPENAI_API_KEY. Đĩa D: trống 46 GB.
-- Test suite 223/223 xanh; cây git sạch; không thay đổi sản xuất nào chưa qua
-  cổng. Đấu pháp vòng thi: memory `aic-playbook-vong-thi` (7 ăn điểm / 5 mất
-  điểm).
-- Rủi ro còn treo cần NGƯỜI: dữ liệu batch 2 nếu vòng 3 dùng kho mới (phải
-  dựng chỉ mục ngay khi có link); cookies YouTube; HF token.
+**Nghi thức đông cứng:** pytest 223/223 ✓; runbook `chay_vong_thi.py` trọn 5
+giai đoạn trên 5 câu vòng 2 ✓ (5×100 dòng, OCR-prompt chạy, goi_y.txt sinh,
+format check ×2); cây git sạch; quota Gemini hồi từ 14h (probe ok).
+
+**Ship trong 24h cuối:** ① `--ocr-prompt` (A/B 158: net +7, 49→53%; sàn nhiễu
+vô hiệu vế 0-lật) ② cheat-sheet `do_tim_goi_y` (giai đoạn 5 runbook)
+③ `doc_dap_theo_video` (vá lỗi 57/158 nhầm-video, checklist 2b)
+④ `quet_video_hoi` (quét đủ khung + mã điểm lớp — đấu pháp #2/#5)
+⑤ cờ `--dp-trake` mặc định TẮT (đối chiếu từng câu TRAKE; OFF trùng byte).
+
+**Tổng duyệt:** trọn 30 câu đề vòng 2 qua runbook sạch; nghi án regression
+đóng bằng ablation 4 cấu hình (coverage trade-off đã gate TEST; kênh người
+đọc theo ranked_hits nên không ảnh hưởng). Checklist mới: hạng dòng CSV ≠
+hạng trên review.
+
+**Đóng trong 24h cuối (đủ số, khỏi thử lại):** R1 đuôi, R2 lưới, R6 fusion
+tìm-video, VOTE3, C-kbest, pool-800 (−3,1% TUNE dù đếm +13). **Treo có số
+hậu giải:** R5 DP TRAKE (+13,5%/+11,6%), R7 bảo lãnh (+0,6%/+0,7%).
+
+Việc người: cookies YouTube (chạy được tới sát giờ). Khi có đề:
+`python scripts/chay_vong_thi.py --queries <đề> --out round3/out`.
 
 ## 6. Trạng thái hiện tại (cập nhật 03/09/2026, sau ba lane trake-them / pe-core / paper)
 
