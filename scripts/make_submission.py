@@ -645,7 +645,8 @@ def build_qa_rows(engine, query_text: str, answerer, n_flat: int, depth_cost: fl
     return [(v, f, answer) for v, f in frame_rows]
 
 
-def build_trake_rows(engine, query_text: str, step: int, query_en: Optional[str] = None):
+def build_trake_rows(engine, query_text: str, step: int, query_en: Optional[str] = None,
+                     dp_trake: int = 0):
     """TRAKE rows: one video, many frame-tuple variants.
 
     A row on the wrong video scores exactly 0 (rules 2.1.3), so every row uses
@@ -686,6 +687,38 @@ def build_trake_rows(engine, query_text: str, step: int, query_en: Optional[str]
     if not results:
         return []
     best = results[0]
+    if dp_trake:
+        # DP lam_i/0.01 (DANTE + entropy khe, docs/NGHIEN_CUU_DA_NGUON_0309.md
+        # R5): +13,5% TUNE / +11,6% TEST so sản xuất nhưng DƯỚI ngưỡng ship
+        # +5 điểm ở n=12 ⇒ cờ MẶC ĐỊNH TẮT. Dùng ở giờ thi cho TỪNG câu nghi
+        # ngờ: chạy cả hai bản, người so bằng mắt trên review. Chuỗi DP chỉ
+        # thay MỐC, video giữ nguyên; lỗi nào cũng rơi về chuỗi sản xuất.
+        try:
+            import numpy as _np
+
+            from scripts.do_dp_trake import dp_kbest
+
+            rv = trake._videos[str(best["video_id"])]
+            s_v, e_v = int(rv["s_v"]), int(rv["e_v"])
+            S = _np.stack([
+                _np.asarray(engine.similarities(engine.query_vector(e)))
+                [s_v:e_v + 1].astype(_np.float64)
+                for e in events
+            ])
+            hs = []
+            for j in range(S.shape[0]):
+                p_ = _np.exp(S[j] * 50)
+                p_ /= p_.sum()
+                H = -(p_ * _np.log(p_ + 1e-12)).sum() / _np.log(len(p_))
+                hs.append(0.01 * max(0.1, 1.0 - H))
+            top1, _kb = dp_kbest(S, hs, k_out=1)
+            frames_dp = sorted(int(engine.frame_idx[s_v + t]) for t in top1)
+            print(f"    + dp-trake lam_i/0.01: moc {best['sequence_frames']}"
+                  f" -> {frames_dp}")
+            best = dict(best)
+            best["sequence_frames"] = frames_dp
+        except Exception as exc:  # noqa: BLE001 - giu chuoi san xuat
+            print(f"    ! dp-trake loi ({type(exc).__name__}) — giu chuoi san xuat")
     last = engine.last_frame.get(best["video_id"])
     return allocate_trake_rows(
         best["video_id"], best["sequence_frames"], budget=MAX_ROWS, step=step,
@@ -716,6 +749,11 @@ def main() -> int:
         "over hybrid on the two TEST halves, >2 sigma (docs/SHIP_PHU_XAC_SUAT.md "
         "s3b). 'hybrid' is the previous baseline and the one-flag rollback.",
     )
+    ap.add_argument(
+        "--dp-trake", type=int, default=0,
+        help="1 = chuoi moc TRAKE bang DP lam_i/0.01 (do: +13,5%%/+11,6%% so san "
+             "xuat nhung duoi nguong ship o n=12 — MAC DINH TAT; dung cho tung "
+             "cau nghi ngo o gio thi, so hai ban bang mat).")
     ap.add_argument(
         "--ocr-prompt", type=int, default=1,
         help="1 = chen chu OCR cua khung-doc vao prompt dap an Q&A (do 04/09: "
@@ -804,7 +842,8 @@ def main() -> int:
                 raise ValueError("could not decode the file in any known encoding")
             en = read_en_override(qf)
             if task == "trake":
-                rows = build_trake_rows(engine, text, args.step, query_en=en)
+                rows = build_trake_rows(engine, text, args.step, query_en=en,
+                                        dp_trake=getattr(args, "dp_trake", 0))
             elif task == "qa":
                 rows = build_qa_rows(
                     engine, text, answerer, args.n_flat, args.depth_cost, args.step,
