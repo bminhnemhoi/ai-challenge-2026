@@ -491,3 +491,14 @@ Hai nửa độc lập cùng dấu, biên độ gần nhau — cơ chế nhiều
 ~3–5 câu, một cú hỏng đắt hơn +2 điểm % kỳ vọng ⇒ **KHÔNG ship trước vòng 3.**
 Trạng thái: **TÍN HIỆU TREO ƯU TIÊN CAO SAU GIẢI** — việc cần làm: sinh thêm
 GT TRAKE (n≥40), đo lại đúng harness này, ship nếu giữ ≥ +10% với KTC loại 0.
+
+### VOTE3 (09h50 04/09) — NET +0, KHÔNG QUA, đóng
+
+156 mục so với một-phát-OCR (đối chứng cache): **lên 5 | xuống 5 | NET +0**
+(ngưỡng ≥+2). Đa số-3-mẫu không gặt được bất ổn định thành điểm — khớp với
+chính nguồn ASC (vote thuần 81,16 chỉ nhỉnh baseline của họ chút ít) và với
+tiên lượng của phản biện. Bất ổn định nền (probe 9/24, sàn tự-lật 10%) là
+NHIỄU ĐỐI XỨNG quanh cấu hình hiện tại chứ không phải điểm hệ thống bị kẹt
+dưới. **Giữ một-phát + OCR-prompt (đã ship 59eb3fe) — không thêm vote.**
+Cửa này đóng cho biến thể K=3-cụm-khớp; ai muốn mở lại cần K lớn hơn nhiều
++ chi phí ×K ở giờ thi — không đáng với headroom còn lại.
