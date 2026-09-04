@@ -502,3 +502,21 @@ NHIỄU ĐỐI XỨNG quanh cấu hình hiện tại chứ không phải điểm
 dưới. **Giữ một-phát + OCR-prompt (đã ship 59eb3fe) — không thêm vote.**
 Cửa này đóng cho biến thể K=3-cụm-khớp; ai muốn mở lại cần K lớn hơn nhiều
 + chi phí ×K ở giờ thi — không đáng với headroom còn lại.
+
+### R6 + R7 (trưa 04/09) — fusion tìm-video ĐÓNG; bảo lãnh top-5 dương nhỏ, chưa đủ
+
+**R6 WRRF (nửa TUNE, TEST giữ trinh):** vision-only R@10-video 71% / R@1 42%;
+GHÉP chữ 35%; OCR-đơn **0%** (chữ băng rôn không khớp truy vấn tả-cảnh);
+mọi fusion ≤ vision-only (WRRF hoà 71%, thua R@1 36%<42%) — **NGAY CẢ VỚI
+thiên vị phủ nịnh kênh chữ** (143/143 video đúng có OCR, distractor ~43%).
+⇒ **Đóng trục fusion-tìm-video cho phân bố truy vấn tả-cảnh của AIC**; caveat
+MultiVENT của phản biện được xác nhận thực nghiệm. Giá trị OCR nằm ở nơi đã
+ship: đọc đáp án (+7) và cheat-sheet cho người.
+
+**R7 bảo lãnh top-5 kênh chữ (VISIONE):** tiền đề sống (6/78 câu TUNE vision
+trượt top-5 mà kênh chữ nắm video đúng), cơ chế chèn hạng 18-20 (17 dòng đầu
+bất biến, assert). Kết quả: TUNE +0,6% / TEST +0,7% — **cùng dấu hai nửa
+nhưng KTC chứa 0, không ship.** Nút thắt lộ rõ: video được cứu nhưng FRAME
+(từ timestamp đoạn thoại) quá thô cho cửa sổ ±6. Lead hậu giải ghi rõ: bảo
+lãnh + ĐỊNH VỊ frame trong video được cứu (VLM chấm ~8 keyframe/video —
+$0,001/câu) — hai mảnh đã có sẵn, chỉ thiếu phép đo ghép.
