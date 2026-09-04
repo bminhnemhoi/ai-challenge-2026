@@ -520,3 +520,27 @@ nhưng KTC chứa 0, không ship.** Nút thắt lộ rõ: video được cứu n
 (từ timestamp đoạn thoại) quá thô cho cửa sổ ±6. Lead hậu giải ghi rõ: bảo
 lãnh + ĐỊNH VỊ frame trong video được cứu (VLM chấm ~8 keyframe/video —
 $0,001/câu) — hai mảnh đã có sẵn, chỉ thiếu phép đo ghép.
+
+---
+
+## TỔNG DUYỆT TOÀN PHẦN (trưa 04/09) — 30 câu đề thật vòng 2, máy-mới vs máy-cũ
+
+Runbook trọn 5 giai đoạn chạy sạch trên 30 câu thật (16 phút máy chính + OCR
+21 phút nền + review + cheat-sheet). Chấm trên 13 mốc người-xác-minh
+(`cham_tong_duyet.py`; xác nhận `round2/base` = máy-cũ nguyên bản vì rerun
+cấu-hình-cũ trùng byte):
+
+- **3 hơn / 4 hoà / 6 kém** ở thước hạng-dòng-đúng. Ablation 4 cấu hình trên
+  2 câu tụt nặng nhất chỉ đích danh: **allocator coverage** là nguồn tụt
+  hạng-video giữa-danh-sách (9→57, 7→23); cảnh-B + hoán-vị vô can.
+- **Đọc cho đúng — không phải regression phải sửa:** (1) coverage đã qua cổng
+  TEST +15,3%/+16,0% trên toàn phân bố — nó đánh đổi hạng-video-giữa-list lấy
+  độ phủ frame quanh video tin cậy, đúng thiết kế; (2) 13 mốc này thiên về
+  câu KHÓ mà người phải sửa ở vòng 2 — mẫu bất lợi có chủ đích; (3) **kênh
+  NGƯỜI không bị ảnh hưởng**: review page + đường trả lời đọc theo
+  `ranked_hits`/điểm pool, KHÔNG theo dòng allocator (kiểm mã dòng 1151);
+  cheat-sheet goi_y thêm kênh chữ độc lập.
+- Giá trị tổng duyệt: xác nhận toàn chuỗi runbook sạch trên phân bố thật;
+  phát hiện + đóng hồ sơ một "nghi án regression" bằng ablation 4 cấu hình
+  trong 20 phút; thêm một dòng cho checklist: *hạng dòng CSV ≠ hạng trên
+  review — đừng đánh giá độ tin bằng vị trí dòng CSV.*
