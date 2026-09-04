@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--m", type=int, default=100)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--nhieu-nen", action="store_true",
+                    help="do san nhieu: chay lai NEN bo cache tren 40 muc phan tang")
     ap.add_argument("--ab-ocr", action="store_true",
                     help="R3: A/B chen chu OCR cua khung-doc vao prompt roi dung")
     ap.add_argument("--probe-sai", type=int, default=0,
@@ -220,6 +222,38 @@ def main() -> int:
             print(f"\nPROBE R4: {lat}/{len(muc_tieu)} mục có ≥1 lần đúng "
                   f"(ngưỡng ≥{can}) -> "
                   f"{'VOTING CÓ CỬA' if lat >= can else 'ÂM — voting không có gì để cứu'}")
+            return 0
+        if ten == "NEN" and args.nhieu_nen:
+            # SÀN NHIỄU của chính nền — đăng ký TRƯỚC khi đọc thêm số A/B nào:
+            # chạy lại y hệt NEN (không OCR, không temp patch) bỏ cache trên mẫu
+            # phân tầng; đếm tự-lật hai chiều. Nếu đúng→sai của A/B ≤ sàn nhiễu
+            # thì vế "0 lật" đang đo nhiễu nền, không đo cơ chế.
+            rng = np.random.default_rng(20260904)
+            m_dung = [i for i, r in enumerate(dung) if r["dung"]]
+            m_sai = [i for i, r in enumerate(dung) if not r["dung"]]
+            lay = (list(rng.choice(m_dung, size=min(20, len(m_dung)), replace=False))
+                   + list(rng.choice(m_sai, size=min(20, len(m_sai)), replace=False)))
+            print(f"\n=== SÀN NHIỄU NỀN: chạy lại {len(lay)} mục (20 đúng + 20 sai) ===",
+                  flush=True)
+            xuong, len_ = 0, 0
+            for i in sorted(lay):
+                g = sach[i]
+                cau = f"Bối cảnh: {g['vqa_context']}\nCâu hỏi: {g['vqa_question']}"
+                try:
+                    da3, _g3 = tra_loi_tu_ung_vien(judge, args.model, cl[i],
+                                                   meta_key, by_n, caps, cau)
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  muc#{i}: LOI {type(exc).__name__}", flush=True)
+                    continue
+                chuan = g.get("vqa_answer") or ""
+                ok3 = bool(_default_answer_match(da3, chuan) or khop_rong(da3, chuan))
+                if dung[i]["dung"] and not ok3:
+                    xuong += 1
+                if not dung[i]["dung"] and ok3:
+                    len_ += 1
+            print(f"\nSÀN NHIỄU: tự-lật đúng→sai {xuong}/20 | sai→đúng {len_}/20")
+            print("Đọc: down-rate A/B (4/77 = 5,2%) so với sàn đúng→sai này;")
+            print("nếu A/B ≤ sàn + 1 mục thì 4 cú lật là nhiễu nền, không phải do OCR.")
             return 0
         if ten == "NEN" and args.ab_ocr:
             # R3 bậc A/B — chèn chữ OCR của CHÍNH các khung model sẽ đọc vào

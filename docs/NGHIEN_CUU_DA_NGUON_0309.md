@@ -461,3 +461,17 @@ sản xuất không đụng): **9/24 mục có ≥1 lần ra đáp án đúng**;
 chẩn đoán ASC. Bước tiếp: A/B chèn-OCR đang chạy (158 call, nhánh đối chứng
 đã có sẵn trong cache); nếu muốn vote K=3 phải đo net toàn bộ + ma trận lật
 (luật R14 — không blanket self-verification).
+
+### A/B R3 chèn-OCR (04h04 04/09) — NET +7 nhưng cổng chặt trượt vế 0-lật; đo SÀN NHIỄU trước khi phán
+
+158 mục, nhánh đối chứng = cache NEN: **sai→đúng 11 | đúng→sai 4 | NET +7**
+(77→84/158, 49%→53%; McNemar 11v4 p≈0,06). Nhóm video-ĐÚNG lên 6/xuống 2;
+video-SAI lên 5/xuống 2 (OCR cứu được cả vài mục sai video — chữ trên hình
+của video khác vẫn chứa đáp án đúng).
+
+Vế "0 câu đúng lật sai" TRƯỢT (4 cú). Nhưng probe R4 vừa chứng minh NỀN TỰ NÓ
+NHIỄU (9/24 mục "sai" ra đúng khi chạy lại) ⇒ vế 0-lật có thể đang đo nhiễu
+nền chứ không đo cơ chế. **Đăng ký trước khi đọc thêm số:** đo sàn nhiễu bằng
+chạy-lại-y-hệt-NEN bỏ cache trên 40 mục phân tầng (20 đúng + 20 sai); nếu
+down-rate A/B (4/77 = 5,2%) ≤ sàn tự-lật + 1 mục thì 4 cú lật là nhiễu nền —
+cơ chế OCR được xử theo NET; ngược lại thì OCR có tác dụng phụ thật → không ship.
