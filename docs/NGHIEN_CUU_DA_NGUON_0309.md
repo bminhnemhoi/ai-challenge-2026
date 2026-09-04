@@ -544,3 +544,14 @@ cấu-hình-cũ trùng byte):
   phát hiện + đóng hồ sơ một "nghi án regression" bằng ablation 4 cấu hình
   trong 20 phút; thêm một dòng cho checklist: *hạng dòng CSV ≠ hạng trên
   review — đừng đánh giá độ tin bằng vị trí dòng CSV.*
+
+### NÚT CHỈNH CUỐI — pool truy xuất 400→800 (15h 04/09): ĐẾM DƯƠNG, ĐIỂM ÂM, ĐÓNG
+
+Kiểm kê nút-chưa-đo cuối cùng của pipeline: `RETRIEVE_TOP_N=400`. Đếm tất
+định: 800 đưa thêm đáp án vào pool cho **+6 câu một cảnh (82→89%) +7 hai cảnh
+(62→72%)**. Nhưng bậc điểm (sau khi sửa 2 lỗi dụng cụ: `video_last_frame` và
+`kis_query_en` — bản đầu cho −94% giả): **TUNE −3,1%, P(≤0)=95,1% → DỪNG
+trước TEST.** Ứng viên hạng 400–800 điểm quá thấp để allocator cấp dòng,
+còn pool đôi làm loãng object-boost xếp video (đúng cảnh báo cũ trong mã).
+Bài học công cụ đo thứ 5 của chiến dịch: một lần nữa *đếm-lạc-quan-hơn-điểm*,
+và một lần nữa quy trình hai bậc chặn đúng lúc. `RETRIEVE_TOP_N=400` ĐỨNG.
