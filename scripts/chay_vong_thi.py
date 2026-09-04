@@ -33,6 +33,9 @@ NGAY BÂY GIỜ, theo thứ tự:
       python scripts/search_transcripts.py "<cụm từ nghi là đáp án/bối cảnh>" -n 5
     Title video cũng là bằng chứng (MỰC QUE, tên đội...). Link YouTube in kèm — đưa người soát.
  2. Mở review.html — soát từng câu, ưu tiên: (a) câu Q&A, (b) câu hai cảnh, (c) TRAKE.
+ 2b. Câu Q&A mà video hệ chọn SAI (soát bằng goi_y.txt/lời thoại) → chạy lại đáp án
+    trên ĐÚNG video người tìm ra (57/158 câu sai của bộ đo là vì nhầm video):
+      python scripts/doc_dap_theo_video.py --query <file đề> --video Lxx_Vyyy
  3. Câu SỐ/CHỮ trên màn hình → ĐỌC ẢNH GỐC bằng gpt-5.2, bắt chép nguyên văn:
       python scripts/read_answer.py --video Lxx_Vyyy --frames <f> --provider openai --max-side 1900 --question "..."
     (answer_qa tự động chỉ là NHÁP — vòng 2 nó sai 4/9.)
