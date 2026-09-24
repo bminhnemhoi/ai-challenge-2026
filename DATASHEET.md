@@ -1,6 +1,6 @@
 # Datasheet: segment-authored KIS benchmark for the AI Challenge HCMC 2026 collection
 
-Release 2.0.0. This datasheet follows the questions in Gebru et al., "Datasheets for Datasets"
+Release 2.1.0. This datasheet follows the questions in Gebru et al., "Datasheets for Datasets"
 (Communications of the ACM 64(12), 2021). Defects and gaps are listed as such, with counts.
 
 ## 1. Motivation
@@ -60,7 +60,8 @@ C_BOTH_ANCHOR ⊂ P0; C_EITHER_ANCHOR ⊂ P2.
 **Is anything missing?** Yes. The videos, keyframe images, speech transcripts, OCR and captions are
 the organisers' material and are not included. A reader needs the AI Challenge HCMC 2026 collection
 (873 videos, 177,321 keyframes, Vietnamese television news and features) to look at any frame. The
-organisers' 91 queries are not included, and neither are the team's translations of them.
+organisers' 91 queries are not included, and neither are the team's translations of them;
+`benchmark/labels_organiser.tsv` holds the team's labels of them and their hashes, not their text.
 
 **Label fields, and how far they can be trusted.** No human labelled any item for this release.
 Every label is automatic, and each records which model family produced it (`two_scene_labels`):
@@ -75,6 +76,38 @@ Every label is automatic, and each records which model family produced it (`two_
 * `text_labels_two_scene`: the judgement of two text-only labellers (Gemini, prompt version
   2; GPT-5.2 with the same prompt), which read the query text and not the images:
   174 items and 60 B60 queries carry a GPT label.
+
+**Which label the paper uses for what.** The stratum label of the splits and of the two-scene
+comparisons is `both_judges_image_evidence`. For the share of the drop from B60 to the primary set
+that needs no two-scene query, the pre-registered analysis also used that label (70.1%,
+46.5 to 87.3). The paper leads with the `declared` label instead
+(57.0%, 26.5 to 79.2; 59.0% and 62.4% under
+the Gemini and GPT-5.2 text labels), because "needs no two-scene query" is a claim about how the
+query was written, and the image-evidence label is not: 14 primary items that the
+generator wrote as two-scene queries lack both judges' image evidence and so fall in the one-scene
+group under it, although they score like two-scene items (0.129 against
+0.119) and the text labellers flag 11 (GPT-5.2) and 13
+(Gemini) of them as two-scene. `code/reproduce.py` recomputes all four shares.
+
+**Labels of the organisers' queries** (`benchmark/labels_organiser.tsv`). One row per organiser
+query of the three 2026 rounds (91): round, file stem, task, the SHA-256 of the query file as
+the organisers distributed it, the two text labellers' two-scene labels (GPT-5.2 35 and
+Gemini 47 positives; they agree on 79), the surface features of the paper's
+comparison (word and sentence counts; numerals, transition cues, named entities, questions or
+imperatives, on-screen-text cues and templated openings as 0/1), and the out-of-fold probability
+that the character n-gram classifier assigns to the segment-authored class (five-fold, the paper's
+ROC-AUC 0.953 is computed from these scores and the primary items'). The file holds no query
+text; the build checks that it shares no run of eight tokens with any organiser query. With the
+hashes, a holder of the organisers' files can match every row to its query. One query
+(`round2 query-p2-17-kis`) reached both labellers double-encoded (its UTF-8 read as Latin-1, so every accented
+letter was garbled); its labels are kept as they are and marked `labeller_input = double_encoded`.
+The features and the classifier score use the file's text. The rates are not
+corrected for labeller error. The pre-registered Rogan-Gladen correction takes the labellers'
+sensitivity and specificity from the generated items, with the image audit's two-scene verdict as
+reference. That reference does not identify the specificity: the image check verified only
+generated items that the generator or the Gemini labeller had flagged as two-scene, so the
+specificity it yields is set mostly by the one-scene quota rather than measured. The correction also
+narrowly failed its pre-registered sensitivity check.
 
 **Splits.** `splits.E2` is the TUNE/TEST split of the 158 scored items, stratified by the
 declared flag: within each stratum the first floor(n/2) items of a seeded permutation go to TUNE
@@ -99,10 +132,15 @@ generator received one segment of consecutive keyframes: 12 keyframes for the tw
 and 9 for the one-scene quota, chosen before the segment was seen. The frames came in temporal
 order at 512 px, with the speech transcript of that segment when one existed. The generator wrote
 one query, chose the answer frame, and wrote a Q&A triple whose answer must be a concrete noun, at
-temperature 0.35, without any retrieval score. The prompt contained 11 real organiser queries
-as examples of style (five of the requested structure, four of the other, two contrast examples) and
-told the generator to copy their style and not their content. Those example texts are not released;
-`prompts/01_generation_prompt.txt` shows where they went (`{vi_du}`). When the model declared a
+temperature 0.35, without any retrieval score. The style examples were nine round-1 organiser
+queries, five labelled two-scene and four one-scene (by the Gemini text labeller; their rows in
+`benchmark/labels_organiser.tsv` are round1 `query-p1-12/13/18/19/2-kis` and `query-p1-1/10/11/14-kis`);
+a two-scene prompt showed the five plus two one-scene contrasts (7), a one-scene prompt the four
+plus two two-scene contrasts (6). The prompt told the generator to copy their style and not their
+content. Those example texts are not released;
+`prompts/01_generation_prompt.txt` shows where they went (`{vi_du}`). For a two-scene item the answer
+frame is the frame that opens the later scene (`prompts/01c_generation_anchor_rule_two_scene.txt`);
+for a one-scene item it is the frame the query describes (`01d_*`). When the model declared a
 segment unusable, another segment of the same video was drawn (`generator.resampled_segments`). No
 item was dropped because the retrieval system failed on it. Generator checkpoints: gemini-3.1-flash-lite 52, gemini-3.5-flash-lite 51, gemini-flash-lite-latest 45, gemini-2.5-flash-lite 26.
 
@@ -207,11 +245,13 @@ the 60 answers are keyframes (the correct video is among the coverage allocator'
 
 ## 6. Distribution
 
-This release is distributed as a public archive under CC BY 4.0 for the data and MIT for the code. It
+This release is distributed as the orphan branch `soict2026-release` of the team's repository
+(https://github.com/bminhnemhoi/ai-challenge-2026/tree/soict2026-release), under CC BY 4.0 for the data and MIT for the code. It
 contains only material the three authors produced: generated query and Q&A text, answer-frame
-numbers, audit scores and outcomes, retrieval scores, keyframe numbers, prompts and code. It contains
-no video, image, embedding, OCR, speech or caption text, no organiser query text and no submission
-file. `video_id` and frame numbers refer to the organisers' collection, which the organisers
+numbers, audit scores and outcomes, retrieval scores, keyframe numbers, prompts, code, and the
+team's labels, surface counts and classifier scores of the organisers' queries, keyed by file name
+and SHA-256. It contains no video, image, embedding, OCR, speech or caption text, no organiser query
+text and no submission file. `video_id` and frame numbers refer to the organisers' collection, which the organisers
 distribute under their own terms. `keyframes/keyframe_index.tsv` lists the frame numbers of the
 organisers' keyframes in the videos the items touch; it holds integers only and is needed to place
 the true moment inside a keyframe cell.

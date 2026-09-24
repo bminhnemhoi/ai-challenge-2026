@@ -1,0 +1,68 @@
+{
+ "declared_two_without_image_evidence": {
+  "flagged_by_gemini_text": 13,
+  "flagged_by_gpt_text": 11,
+  "n": 14,
+  "score": 0.12879464285714284,
+  "two_scene_stratum_score": 0.11897363465160074
+ },
+ "share_of_drop": {
+  "b60_fixed": 0.4003819444444444,
+  "both_judges_image_evidence": {
+   "ci95": [
+    0.46491001204460536,
+    0.8733653576208704
+   ],
+   "point": 0.7007828493379654
+  },
+  "declared": {
+   "ci95": [
+    0.26450159989701366,
+    0.7922668760737045
+   ],
+   "point": 0.5701298407965978
+  },
+  "gemini_text_labeller": {
+   "ci95": [
+    0.28683733010334056,
+    0.8072944763939249
+   ],
+   "point": 0.5897987532185933
+  },
+  "gpt_text_labeller": {
+   "ci95": [
+    0.3314347144332671,
+    0.8331302900000424
+   ],
+   "point": 0.6236746494233959
+  },
+  "one_scene_declared_score": 0.28983796296296294,
+  "primary_score_77000": 0.20648930180180178
+ },
+ "source": "results/primary_review2.json (scripts/review2_extras.py s1 and s2); the image-evidence share is R1b's Q5_authorship_share (data/cache_r1b/summary.json)",
+ "transfer": {
+  "b60_selected_cell": 0.32045138888888886,
+  "b60_shipped_cell": 0.4003819444444444,
+  "cell_selected_times_of_100": 76,
+  "cell_tau_sigma_h_g": [
+   0.015,
+   90.0,
+   6,
+   5
+  ],
+  "paired": {
+   "ci95": [
+    -0.1129114583333333,
+    -0.048203414351851846
+   ],
+   "diff": -0.07993055555555556,
+   "improved": 12,
+   "rel": -0.19963576446101816,
+   "rel_ci95": [
+    -0.29297547376579747,
+    -0.12297753938809232
+   ],
+   "worsened": 32
+  }
+ }
+}

@@ -1,7 +1,7 @@
 """Regenerate the allocation numbers of the paper from this release alone.
 
     python code/reproduce.py                 # everything except the fair comparison, ~6-8 min on one core
-    python code/reproduce.py --no-exact      # skip the exact optimum (section 8), ~3 min
+    python code/reproduce.py --no-exact      # skip the exact optimum (section 9), ~3 min
     python code/fair_comparison.py --workers 4   # the fair comparison (Sect. 5), about an hour on 4 cores
 
 Needs Python >= 3.9 and numpy. scipy is used if installed (normal quantile of the
@@ -26,9 +26,15 @@ embedding, no network. What it does, in order:
     of coverage-based over ranking-based allocation with its BCa interval and
     Holm-adjusted p, on all 148 items and on the held-out half;
  7. the robustness ladder (Table 1 and the five further policies);
- 8. greedy against the exact optimum of the coverage objective, the exact
+ 8. the transfer check: the keyframe-authored set (B60) scored with the coverage
+    cell that nested cross-validation selects most often on the primary set (read
+    from expected/fair_comparison.json), against the shipped cell; and the share
+    of the drop from B60 to the primary set that needs no two-scene query, under
+    the declared label (the paper's), the two text labellers' labels and the
+    pre-registered image-evidence label;
+ 9. greedy against the exact optimum of the coverage objective, the exact
     optimiser's score and the two oracles (the headroom decomposition);
- 9. compares all of it with expected/*.json, which the release builder took
+10. compares all of it with expected/*.json, which the release builder took
     from the original repository computations the paper's numbers come from,
     and prints PASS/FAIL.
 
@@ -120,7 +126,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--policy", default=PRIMARY, help="set printed as the headline table")
     ap.add_argument("--mode", default="OWN", help="its split mode, E2 or OWN")
-    ap.add_argument("--no-exact", action="store_true", help="skip section 8 (exact optimum)")
+    ap.add_argument("--no-exact", action="store_true", help="skip section 9 (exact optimum)")
     ap.add_argument("--out", default="out")
     args = ap.parse_args()
     t0 = time.time()
@@ -273,10 +279,62 @@ def main() -> int:
     compare("ladder = reference", rungs, exp_lad["rungs"], subset=True)
     res["ladder"] = {"rungs": rungs, "verdict": LD.verdict(rungs)}
 
-    # ---- 8. greedy against the exact optimum ------------------------------------------
+    # ---- 8. the transfer check and the share of the drop -------------------------------
+    print("8. transfer check (B60 at the cell tuning selects on the primary set) and the share of the drop",
+          flush=True)
+    from submission import MAX_ROWS, CoveragePlan, allocate_coverage_rows
+    exp_ts = json.loads((REL / "expected" / "transfer_and_share.json").read_text(encoding="utf-8"))
+    exp_fair = json.loads((REL / "expected" / "fair_comparison.json").read_text(encoding="utf-8"))
+    modal = exp_fair["ALL"]["pools"]["raw"]["DEU"]["selections"]["COV"]["top"][0]
+    tau, sigma, half, grid = modal["cell"]
+    plan = CoveragePlan(nhiet=tau, sigma=sigma, nua_cua_so=int(half), luoi=int(grid))
+
+    def alloc_selected(c):
+        return allocate_coverage_rows(c, plan=plan, tail_n_flat=AL.DEFAULT_N_FLAT, tail_plan=AL.PLAN_HYBRID)[:MAX_ROWS]
+
+    rows_sel = [AL.run(alloc_selected, cands_of(b60_raw[g["item_id"]])) for g in b60]
+    bsel, _ = P.score_rows(rows_sel, b60, t60)
+    bsel = bsel.mean(axis=(1, 2))
+    ship = np.array(b60_res["B"]["per_query"])
+    pr = P.paired(bsel, ship, P.boot_indices(len(b60)))
+    transfer = {"cell_tau_sigma_h_g": [float(tau), float(sigma), int(half), int(grid)],
+                "cell_selected_times_of_100": int(modal["times"]),
+                "b60_selected_cell": float(bsel.mean()), "b60_shipped_cell": float(ship.mean()),
+                "paired": {k: pr[k] for k in ("diff", "ci95", "rel", "rel_ci95", "improved", "worsened")}}
+    b60_fixed = float(b60_res["B"]["mean"])
+
+    def share_fn(d):   # (B60 - one-scene score) / (B60 - set score), B60 held fixed
+        on = d["s"][d["two"] < 0.5]
+        if on.size == 0 or abs(b60_fixed - d["s"].mean()) < 1e-12:
+            return np.nan
+        return (b60_fixed - on.mean()) / (b60_fixed - d["s"].mean())
+
+    def text_label(it, who):
+        lab = it["text_labels_two_scene"][who]
+        return bool(lab and lab["two_scene"])
+
+    share_labels = {
+        "declared": labels["declared"],
+        "gpt_text_labeller": np.array([text_label(it, "gpt_labeller") for it in clean]),
+        "gemini_text_labeller": np.array([text_label(it, "gemini_labeller") for it in clean]),
+        "both_judges_image_evidence": labels["both"],
+    }
+    shares = {}
+    for name, lab in share_labels.items():
+        st = S.boot_query({"s": perq77, "two": lab.astype(float)}, pmem, {"share": share_fn})["share"]
+        shares[name] = {"point": st["point"], "ci95": st["ci95"]}
+    decl = share_labels["declared"]
+    shares["one_scene_declared_score"] = float(perq77[[q for q in pmem if not decl[q]]].mean())
+    shares["primary_score_77000"] = float(perq77[pmem].mean())
+    shares["b60_fixed"] = b60_fixed
+    compare("transfer check = reference", transfer, exp_ts["transfer"])
+    compare("share of the drop under four labels = reference", shares, exp_ts["share_of_drop"])
+    res["transfer_and_share"] = {"transfer": transfer, "share_of_drop": shares}
+
+    # ---- 9. greedy against the exact optimum ------------------------------------------
     exact_md = ""
     if not args.no_exact:
-        print("8. greedy vs exact optimum of the coverage objective, exact optimiser, oracles", flush=True)
+        print("9. greedy vs exact optimum of the coverage objective, exact optimiser, oracles", flush=True)
         import greedy_vs_opt as GO
         pools_by_pos = {"raw": [raw[it["item_id"]] for it in clean], "prod": [prod[it["item_id"]] for it in clean]}
         recs, summ = GO.run(clean, pools_by_pos, {p: rows[p]["B"] for p in T.POOLS}, pmem, own["tune"], own["test"],
@@ -325,6 +383,15 @@ def main() -> int:
                  f"correct video {repl['video']}/{len(clean)}")
     lines.append(f"\nB60 (keyframe-authored, root 77000): coverage {b60_res['B']['mean']:.4f}, "
                  f"ranking-based {b60_res['A']['mean']:.4f}, correct video (coverage) {b60_res['B']['video_in_100']}/{len(b60)}")
+    tp = transfer["paired"]
+    lines.append(f"\nTransfer check: B60 at the cell selected on the primary set {tuple(transfer['cell_tau_sigma_h_g'])} "
+                 f"({transfer['cell_selected_times_of_100']} of 100 selections) scores {transfer['b60_selected_cell']:.4f} "
+                 f"against {transfer['b60_shipped_cell']:.4f} for the shipped cell (difference {tp['diff']:+.4f}, "
+                 f"95% CI {tp['ci95'][0]:+.4f} to {tp['ci95'][1]:+.4f})")
+    lines.append("\nShare of the drop from B60 to the primary set that needs no two-scene query "
+                 f"(one-scene items by the declared label score {shares['one_scene_declared_score']:.4f}): "
+                 + "; ".join(f"{k} {100 * v['point']:.1f}% [{100 * v['ci95'][0]:.1f}, {100 * v['ci95'][1]:.1f}]"
+                             for k, v in shares.items() if isinstance(v, dict)))
     (out / "paper_numbers.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     print("\n" + "\n".join(lines[:16]))

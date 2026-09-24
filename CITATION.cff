@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this benchmark or code, please cite the paper below (preferred-citation) and, where useful, this release."
 title: "Release for 'Test-Query Authorship and the Limits of Submission Allocation in Video Event Retrieval': segment-authored benchmark, audits, candidate pools and code"
-version: "2.0.0"
+version: "2.1.0"
 type: dataset
 license: CC-BY-4.0
-repository-code: "https://github.com/bminhnemhoi/ai-challenge-2026"
+repository-code: "https://github.com/bminhnemhoi/ai-challenge-2026/tree/soict2026-release"
 url: "https://github.com/bminhnemhoi/ai-challenge-2026/tree/soict2026-release"
 authors:
   - family-names: "Ngo"

@@ -1,6 +1,6 @@
 # Release for "Test-Query Authorship and the Limits of Submission Allocation in Video Event Retrieval"
 
-Version 2.0.0. This release accompanies the SOICT 2026 paper by Ngo Binh Minh, Le Xuan Khanh
+Version 2.1.0. This release accompanies the SOICT 2026 paper by Ngo Binh Minh, Le Xuan Khanh
 and Ngo Lam Tien (Ton Duc Thang University). It holds everything the three authors produced for the
 paper: the segment-authored benchmark with its generation and verification records, the verdicts of
 two automatic image audits by judges of different model families, the audit-policy memberships and
@@ -37,9 +37,12 @@ venv/bin/python code/fair_comparison.py --workers 4           # about an hour on
 5. recomputes the seed-root-77000 values and the keyframe-authored set's score;
 6. computes the headline gain on the primary set with its BCa interval and Holm-adjusted p;
 7. computes the robustness ladder (Table 1 of the paper and five further policies);
-8. compares the shipped greedy allocator with the exact optimum of its objective, scores the exact
+8. computes the transfer check (the keyframe-authored set scored with the coverage cell that tuning
+   selects on the primary set) and the share of the drop that needs no two-scene query, under four
+   labels (see "Further checks" below);
+9. compares the shipped greedy allocator with the exact optimum of its objective, scores the exact
    optimiser and the two oracles, and decomposes the headroom;
-9. compares all of it with `expected/`, which holds the values the original repository
+10. compares all of it with `expected/`, which holds the values the original repository
    computations produced (the values the paper prints), and prints `REPRODUCTION: PASS` or `FAIL`.
 
 `code/fair_comparison.py` tunes five allocator families by the same nested cross-validation on the
@@ -128,12 +131,49 @@ peak-capped NMS 0.2040, flat-belief coverage 0.0659. Coverage minus NMS:
 pre-registered rule of this comparison returns FAIL: covering the belief is not shown to
 beat equally tuned belief-free spacing.
 
+## Further checks
+
+These are reported briefly in the paper or not at all, for lack of space.
+
+- **Transfer check** (`code/reproduce.py`, step 8). The coverage cell that nested cross-validation
+  selects most often on the primary set (tau 0.015, sigma 90, h 6, g 5; 76 of 100 selections) scores
+  0.320 on the keyframe-authored set, against 0.400 for the shipped cell (difference
+  -0.080, paired 95% CI -0.113 to -0.048, seed root 77000): tuning does not transfer
+  back.
+- **Share of the drop, and which label** (`code/reproduce.py`, step 8). Items whose query the
+  generator wrote as one scene score 0.290, so everything else that differs between the
+  sets accounts for 57.0% of the drop from the keyframe-authored score to the primary
+  set's (26.5 to 79.2, keyframe-authored score fixed); 59.0% and
+  62.4% with the Gemini and GPT-5.2 text labels. The pre-registered analysis used the
+  both-judge image-evidence label instead (70.1%, 46.5 to 87.3).
+  The paper leads with the declared label because the claim is about how the query was written:
+  14 primary items written as two-scene queries lack image evidence and so count as
+  one-scene under the image label, yet score like two-scene items (0.129 against
+  0.119). See `DATASHEET.md`, section 2.
+- **Video-clustered intervals.** The primary set has 148 items in 133 videos.
+  Resampling videos instead of items changes the width of the 95% interval of coverage against each
+  of the three other allocators (all items, both pools) by a factor of 0.98 to
+  1.06, and no interval comes to include zero (`data/cache_chinh/e5/primary/e5_stats.json`
+  in the team's repository; not recomputed here).
+- **Where the answer frame of a two-scene item sits.** The generator was told to anchor a two-scene
+  query on the first frame of the later scene, the moment that scene begins
+  (`prompts/01c_generation_anchor_rule_two_scene.txt`); a one-scene query is anchored on the frame it
+  describes (`prompts/01d_generation_anchor_rule_one_scene.txt`).
+- **Organiser-query labels** (`benchmark/labels_organiser.tsv`). With this table the organiser side
+  of the paper's label comparison can be checked without the query text: 35 of 91
+  organiser queries are two-scene under GPT-5.2 and 47 under Gemini, the two labellers agree
+  on 79, and the surface counts give the organiser column of the paper's comparison. The
+  classifier scores are the organiser half of the out-of-fold scores behind the paper's ROC-AUC of
+  0.953; rerunning that classifier needs the organisers' query texts, which are not released.
+  See `DATASHEET.md`, section 2.
+
 ## Contents
 
 | Path | What it is |
 |---|---|
 | `benchmark/items.jsonl` | the 174 generated items: queries, scene clauses, Q&A triple, answer frame, generation record, anchor verification, both image audits per gate, two-scene labels, text labels, membership in all twelve audit policies, TUNE/TEST splits |
 | `benchmark/b60.jsonl` | the 60 keyframe-authored in-house queries with their keyframe answers |
+| `benchmark/labels_organiser.tsv` | for each of the organisers' 91 queries: round, file stem, task, SHA-256 of the file, both text labellers' two-scene labels, surface features, out-of-fold classifier score; no query text |
 | `pools/b174_raw.jsonl` | for each item, the 400 retrieved candidates `[video_id, frame_idx, similarity, last frame of the video]` |
 | `pools/scene_b.jsonl` | for each item, the scene-B top-100 keyframes and the scene-B similarity of every keyframe the permutation reads |
 | `pools/b174_prod.jsonl` | the production pool that `code/allocators.py::build_production_pool` rebuilds from the two files above |
@@ -152,7 +192,8 @@ beat equally tuned belief-free spacing.
 ## Not included
 
 This release does not contain the organisers' videos or keyframe images, embeddings, OCR, speech
-transcripts, captions, the organisers' 91 query texts, or any round submission file. Every
+transcripts, captions, the organisers' 91 query texts (`benchmark/labels_organiser.tsv` has our
+labels of them and their SHA-256 hashes, not the texts), or any round submission file. Every
 `video_id` refers to the AI Challenge HCMC 2026 collection; to look at a frame, request the
 collection from the organisers under their terms. The candidate pools are the similarity scores our
 system computed, and the keyframe table holds only frame numbers.
@@ -173,3 +214,12 @@ licensed under MIT (`LICENSE-CODE`). Please cite the paper; see `CITATION.cff`.
 ## Integrity
 
 `SHA256SUMS` lists the SHA-256 of every file. To check it: `sha256sum -c SHA256SUMS`.
+
+## Changes
+
+- **2.1.0** (25 Sep 2026). `DATASHEET.md` states the generator's style examples correctly (nine
+  round-1 organiser queries; seven shown in a two-scene prompt, six in a one-scene prompt; version
+  2.0.0 said eleven). New: `benchmark/labels_organiser.tsv`; the transfer check and the share of the
+  drop in `code/reproduce.py` and `expected/transfer_and_share.json`; the "Further checks" section;
+  `CITATION.cff` points at this branch.
+- **2.0.0** (24 Sep 2026). First public version.
