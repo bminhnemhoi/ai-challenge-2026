@@ -1,0 +1,21 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 Ngo Binh Minh, Le Xuan Khanh, Ngo Lam Tien
+
+Every file of this release outside code/ (benchmark/, pools/, keyframes/,
+prompts/, expected/ and the documentation) is licensed under the Creative
+Commons Attribution 4.0 International licence. The full legal code is at
+https://creativecommons.org/licenses/by/4.0/legalcode
+
+You are free to share and adapt the material for any purpose, including
+commercially, provided you give appropriate credit (cite the paper, see
+CITATION.cff), provide a link to the licence, and indicate if changes were
+made.
+
+Scope. The licence covers only material the authors produced: generated query
+and question-answer text, anchor frame numbers, audit scores and outcomes,
+retrieval scores and prompts. It grants no rights in the AI Challenge HCMC 2026
+video collection, its keyframes or its metadata, which this release does not
+contain and which are distributed by the competition organisers under their own
+terms. The video identifiers and frame numbers in this release refer to that
+collection.

@@ -1,0 +1,18 @@
+Đây là MỘT khung hình duy nhất lấy từ một video tin tức tiếng Việt.
+
+Mô tả cần kiểm: "{mo_ta}"
+
+Khung hình này có đúng là cảnh được mô tả không?
+
+Chấm điểm:
+- 90-100: khớp rõ ràng, mọi chi tiết chính đều thấy được trong ảnh
+- 60-89 : đúng loại cảnh nhưng thiếu hoặc lệch một vài chi tiết
+- 30-59 : cùng bối cảnh chung nhưng KHÔNG phải cảnh này
+- 0-29  : khác hẳn
+
+Chỉ chấm những gì THẤY trong ảnh. Đừng suy đoán từ ngữ cảnh video.
+Liệt kê ở "khop" các chi tiết của mô tả mà bạn THẤY, ở "thieu" các chi tiết
+mô tả có mà ảnh KHÔNG có.
+
+Trả về DUY NHẤT JSON:
+{{"diem": 0-100, "khop": "...", "thieu": "..."}}

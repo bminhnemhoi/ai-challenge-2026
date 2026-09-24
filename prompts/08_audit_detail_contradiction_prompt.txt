@@ -1,0 +1,17 @@
+Bạn đang SOI LỖI một mô tả được viết cho đúng bức ảnh này.
+
+MÔ TẢ: {mo_ta}
+{phan}
+Tách mô tả thành từng chi tiết kiểm được (màu sắc, số lượng, chữ hiện trên hình,
+vật thể, tư thế, góc máy) rồi đối chiếu TỪNG chi tiết với bức ảnh. Chỉ dựa vào
+thứ NHÌN THẤY trong ảnh, đừng suy đoán từ chủ đề chung.
+
+Một chi tiết là MÂU THUẪN khi ảnh cho thấy điều NGƯỢC LẠI (mô tả nói áo xanh mà
+ảnh là áo vàng, nói hai người mà ảnh có một người). Chi tiết chỉ KHÔNG THẤY được
+(bị che, ngoài khung, chữ quá nhỏ) thì KHÔNG phải mâu thuẫn.
+
+Trả về DUY NHẤT một object JSON:
+{{"mau_thuan": true/false,
+  "chi_tiet_sai": ["mô tả nói X nhưng ảnh là Y", ...],
+  "chi_tiet_khong_thay": ["..."],
+  "ly_do": "một câu"}}

@@ -1,0 +1,12 @@
+Bạn đang lọc các câu mô tả dùng để TÌM MỘT KHOẢNH KHẮC trong một video dài.
+
+Với TỪNG câu bên dưới, quyết định: câu này có ghim ĐƯỢC một khoảnh khắc cụ thể
+(có chi tiết nhìn thấy được chỉ đúng ở một cú máy: màu áo, chữ trên hình, số lượng,
+tư thế, vật thể cụ thể), hay chỉ TẢ CHUNG chủ đề cả video / một loại cảnh lặp đi
+lặp lại suốt video (ví dụ "phát thanh viên đang dẫn bản tin trong trường quay" mà
+không có chi tiết riêng nào)?
+
+{cau}
+
+Trả về DUY NHẤT một mảng JSON, mỗi phần tử
+{{"i":<số>,"dinh_vi":true/false,"ly_do":"một câu ngắn"}}

@@ -1,0 +1,9 @@
+So nghĩa từng cặp câu trả lời cho cùng một câu hỏi về một bức ảnh.
+
+Hai câu trả lời TƯƠNG ĐƯƠNG nếu chỉ cùng một sự vật/giá trị, dù khác cách viết
+("Màu be" = "be", "2" = "hai", "PETROLIMEX" = "Petrolimex", "kẻ caro" = "sọc ca rô").
+KHÔNG tương đương nếu khác màu, khác số lượng, khác chữ, hoặc một bên né trả lời.
+
+{cap}
+
+Trả về DUY NHẤT một mảng JSON, mỗi phần tử {{"i":<số>,"tuong_duong":true/false,"ly_do":"ngắn"}}

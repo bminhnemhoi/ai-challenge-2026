@@ -1,0 +1,11 @@
+Bạn CHỈ được nhìn đúng một khung hình dưới đây, không có gì khác.
+
+BỐI CẢNH (do người ra đề ghi): {ctx}
+CÂU HỎI: {q}
+
+Trả lời NGẮN GỌN đúng thứ nhìn thấy trong khung hình này. Nếu khung hình không đủ
+thông tin để trả lời (chữ quá mờ, vật thể không có trong khung, phải xem khung khác
+mới biết) thì tra_loi_duoc = false và giải thích vì sao.
+
+Trả về DUY NHẤT một object JSON:
+{{"tra_loi_duoc": true/false, "dap_an": "câu trả lời ngắn", "ly_do": "một câu"}}

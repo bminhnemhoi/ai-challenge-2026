@@ -1,0 +1,5 @@
+YÊU CẦU LẦN NÀY — câu MỘT CẢNH:
+Câu chỉ được mô tả những gì nhìn thấy trong MỘT khung hình duy nhất. TUYỆT ĐỐI
+KHÔNG dùng từ chỉ trình tự thời gian ("sau đó", "tiếp theo", "rồi", "chuyển
+sang"). Hãy chọn trong {n} khung hình trên một khoảnh khắc giàu chi tiết và tả
+thật chính xác chi tiết của riêng khung hình đó.

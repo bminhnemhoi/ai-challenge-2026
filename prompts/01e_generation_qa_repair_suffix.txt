@@ -1,0 +1,3 @@
+
+
+LƯU Ý SỬA: đáp án vqa_answer bạn vừa định đưa ra là một TỪ HẠNG MỤC CHUNG, không đạt. Hãy đổi vqa_question sang thứ trả lời được bằng TÊN RIÊNG, MÀU CỤ THỂ, CON SỐ hoặc CHỮ đọc được trên khung neo. Giữ nguyên kis_query_vi/kis_query_en/khung_neo.

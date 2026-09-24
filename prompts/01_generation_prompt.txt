@@ -1,0 +1,43 @@
+Bạn là người RA ĐỀ cho cuộc thi tìm khoảnh khắc trong video tiếng Việt.
+
+Dưới đây là {n} khung hình LIÊN TIẾP cắt từ MỘT đoạn video, đánh số 1..{n} theo
+đúng thứ tự thời gian (1 sớm nhất, {n} muộn nhất), cách nhau khoảng {dt:.1f} giây,
+đoạn dài khoảng {tong:.0f} giây.
+{loi_thoai}
+NHIỆM VỤ: viết MỘT câu truy vấn tiếng Việt theo đúng văn phong ban tổ chức.
+
+{yeu_cau}
+
+VĂN PHONG BAN TỔ CHỨC — đây là đề THẬT của họ. Học CÁCH VIẾT, đừng chép nội dung:
+{vi_du}
+
+RÀNG BUỘC:
+1. Câu phải ĐỊNH VỊ MỘT KHOẢNH KHẮC CỤ THỂ trong đoạn này — người đọc phải chỉ
+   ra được đúng một chỗ. Tuyệt đối không mô tả chung chung cả video.
+2. CHỈ nói thứ NHÌN THẤY ĐƯỢC trong các khung hình trên (hoặc nghe rõ trong lời
+   thoại kèm theo). Không suy đoán, không bịa tên riêng, không bịa số liệu.
+3. Nêu chi tiết phân biệt được: màu sắc, số lượng, chữ hiện trên hình, tư thế,
+   hướng di chuyển, vị trí trong khung.
+4. KHÔNG được nhắc "khung hình số 3", "ảnh thứ 5" trong câu truy vấn.
+5. Dài 1-3 câu, như đề thật.
+
+KHUNG NEO: chọn số thứ tự khung hình mà câu truy vấn trỏ tới.
+{neo}
+
+CÂU HỎI KÈM (Q&A): thêm một câu hỏi trả lời được CHỈ BẰNG khung neo đó.
+Đáp án BẮT BUỘC là một DANH TỪ CỤ THỂ: tên riêng, màu cụ thể, con số, hoặc chữ
+đọc được trên hình. TUYỆT ĐỐI KHÔNG dùng từ hạng mục chung ("cái xe", "một
+người", "thức ăn", "cái bảng"). vqa_context là một câu nêu bối cảnh chung.
+
+Nếu đoạn này KHÔNG viết được câu đạt yêu cầu (các khung hình gần như y hệt nhau,
+không có khoảnh khắc nào để định vị{them}), hãy trả dung_duoc=false kèm lý do —
+ĐỪNG cố viết một câu mơ hồ.
+
+Trả về DUY NHẤT một object JSON, không giải thích:
+{{"dung_duoc": true hoặc false, "ly_do_bo": "",
+  "kis_query_vi": "", "kis_query_en": "",
+  "khung_neo": <số nguyên 1..{n}>,
+  "canh_A": "", "canh_B": "",
+  "vqa_context": "", "vqa_question": "", "vqa_answer": ""}}
+kis_query_en là bản dịch tiếng Anh tự nhiên của kis_query_vi.
+canh_A/canh_B chỉ điền khi câu có hai cảnh nối tiếp, ngược lại để chuỗi rỗng.

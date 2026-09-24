@@ -1,0 +1,16 @@
+Bạn đang giúp tìm một khoảnh khắc trong kho video tiếng Việt.
+
+CÂU HỎI TÌM KIẾM:
+{query}
+
+Dưới đây là {n} khung hình, đánh số 1..{n}. Với TỪNG khung hình hãy chấm điểm 0-100 mức độ khung hình đó ĐÚNG là cảnh mà câu hỏi mô tả.
+
+Chấm nghiêm khắc theo các chi tiết cụ thể trong câu hỏi:
+- MÀU SẮC nêu trong câu hỏi phải khớp (áo vàng ≠ áo đỏ)
+- SỐ LƯỢNG phải khớp (bốn em nhỏ ≠ hai em nhỏ)
+- HÀNH ĐỘNG/TƯ THẾ phải đúng khoảnh khắc được mô tả
+- CHỮ hiện trên hình, nếu câu hỏi có nhắc, phải khớp
+Cảnh cùng chủ đề nhưng sai chi tiết thì cho 20-40, không cho điểm cao.
+
+Trả về DUY NHẤT một mảng JSON, không giải thích:
+[{{"i":1,"d":85,"vi":"lý do rất ngắn"}}, ...]

@@ -1,0 +1,7 @@
+YÊU CẦU LẦN NÀY — câu HAI CẢNH NỐI TIẾP:
+Câu phải mô tả cảnh A xảy ra TRƯỚC rồi cảnh B xảy ra SAU, hai cảnh khác nhau tới
+mức KHÔNG thể nhìn thấy cả hai trong cùng một khung hình, và phải dùng từ chỉ
+trình tự ("sau đó", "tiếp theo", "rồi", "chuyển sang", "bắt đầu bằng ... rồi").
+Trong {n} khung hình trên hãy tìm chỗ CHUYỂN CẢNH thật sự rồi viết bám vào nó.
+Quan hệ KHÔNG GIAN trong cùng một khung ("A đứng cạnh B", "phía sau là C") và
+một hành động liên tục trong một cảnh đều KHÔNG tính là hai cảnh.

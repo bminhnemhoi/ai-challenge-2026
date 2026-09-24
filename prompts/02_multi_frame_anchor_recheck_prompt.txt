@@ -1,0 +1,13 @@
+Dưới đây là {n} khung hình LIÊN TIẾP của một đoạn video, đánh số
+1..{n} theo đúng thứ tự thời gian.
+
+CÂU TRUY VẤN:
+{q}
+
+CÂU HỎI: trong {n} khung hình trên, khung nào là ĐÚNG khoảnh khắc mà câu truy vấn
+trỏ tới?
+{luat}
+
+Chỉ được chọn theo thứ NHÌN THẤY trong ảnh. Nếu không khung nào khớp, trả khung=0.
+
+Trả về DUY NHẤT: {{"khung": <0..{n}>, "ly_do": "một câu ngắn"}}

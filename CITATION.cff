@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this benchmark or code, please cite the paper below (preferred-citation) and, where useful, this release."
+title: "Release for 'Test-Query Authorship and the Limits of Submission Allocation in Video Event Retrieval': segment-authored benchmark, audits, candidate pools and code"
+version: "2.0.0"
+type: dataset
+license: CC-BY-4.0
+repository-code: "https://github.com/bminhnemhoi/ai-challenge-2026"
+url: "https://github.com/bminhnemhoi/ai-challenge-2026/tree/soict2026-release"
+authors:
+  - family-names: "Ngo"
+    given-names: "Binh Minh"
+    orcid: "https://orcid.org/0009-0002-4141-3867"
+    affiliation: "Faculty of Information Technology, Ton Duc Thang University, Ho Chi Minh City, Vietnam"
+  - family-names: "Le"
+    given-names: "Xuan Khanh"
+    orcid: "https://orcid.org/0009-0002-7973-1027"
+    affiliation: "Faculty of Information Technology, Ton Duc Thang University, Ho Chi Minh City, Vietnam"
+  - family-names: "Ngo"
+    given-names: "Lam Tien"
+    orcid: "https://orcid.org/0009-0008-2436-8623"
+    affiliation: "Faculty of Information Technology, Ton Duc Thang University, Ho Chi Minh City, Vietnam"
+keywords:
+  - "video event retrieval"
+  - "known-item search"
+  - "test collection"
+  - "submission allocation"
+  - "AI Challenge HCMC"
+preferred-citation:
+  type: conference-paper
+  title: "Test-Query Authorship and the Limits of Submission Allocation in Video Event Retrieval"
+  authors:
+    - family-names: "Ngo"
+      given-names: "Binh Minh"
+      orcid: "https://orcid.org/0009-0002-4141-3867"
+    - family-names: "Le"
+      given-names: "Xuan Khanh"
+      orcid: "https://orcid.org/0009-0002-7973-1027"
+    - family-names: "Ngo"
+      given-names: "Lam Tien"
+      orcid: "https://orcid.org/0009-0008-2436-8623"
+  collection-title: "SOICT 2026: International Symposium on Information and Communication Technology"
+  year: 2026
+  notes: "Submitted; update with the published reference."

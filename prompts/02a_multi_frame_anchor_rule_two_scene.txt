@@ -1,0 +1,2 @@
+Câu này mô tả HAI cảnh nối tiếp. Hãy chọn khung hình ĐẦU TIÊN của
+cảnh SAU (cảnh B) — khung đầu tiên mà cảnh B đã hiện ra trên màn hình.

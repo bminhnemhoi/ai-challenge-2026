@@ -1,0 +1,3 @@
+
+Bức ảnh này là cảnh SAU trong mô tả (cảnh B). Phần mô tả nói về cảnh TRƯỚC đó xếp vào chi_tiet_khong_thay, KHÔNG tính là mâu thuẫn.
+CẢNH SAU là: {q_b}
