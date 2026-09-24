@@ -8,6 +8,10 @@ splits, the keyframe-authored in-house queries, the candidate pools, every promp
 regenerates the paper's allocation numbers. It contains no data that belongs to the competition
 organisers (see "Not included").
 
+The release is the branch `soict2026-release` and nothing else. It is an orphan branch: it shares no
+history with the other branches of this repository, which hold the team's competition-time working
+code and files, are not part of this release, and are not covered by its licences or its datasheet.
+
 ## Reproduce the paper's allocation numbers
 
 You need Python 3.9 or newer and numpy. scipy is used when it is installed (for the normal quantile
